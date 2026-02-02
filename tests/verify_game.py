@@ -1,19 +1,47 @@
 from playwright.sync_api import sync_playwright
 import os
 import sys
+import threading
+import http.server
+import socketserver
+import time
+
+def start_server():
+    # Use port 0 to let the OS choose an available port
+    handler = http.server.SimpleHTTPRequestHandler
+
+    # Suppress logging to keep output clean
+    def log_message(self, format, *args):
+        pass
+    handler.log_message = log_message
+
+    httpd = socketserver.TCPServer(("", 0), handler)
+    port = httpd.server_address[1]
+
+    server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    server_thread.start()
+
+    return port
 
 def run():
+    # Start server
+    try:
+        port = start_server()
+        print(f"Server started on port {port}")
+    except Exception as e:
+        print(f"Failed to start server: {e}")
+        sys.exit(1)
+
+    # Give it a moment to ensure it's ready (though usually instant)
+    time.sleep(1)
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
-        # Get absolute path to index.html relative to this script
-        # Assuming script is in tests/ and index.html is in root
-        cwd = os.getcwd()
-        path = os.path.join(cwd, 'index.html')
-        url = f'file://{path}'
-
+        url = f'http://localhost:{port}/index.html'
         print(f"Navigating to {url}")
+
         try:
             page.goto(url)
 
