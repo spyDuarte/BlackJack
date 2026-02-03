@@ -582,6 +582,16 @@ class BlackjackGame {
         this.ui.toggleSettingsModal(false);
     }
 
+    getCardNumericValue(card) {
+        if (card.value === 'A') {
+            return 11;
+        } else if (['J', 'Q', 'K'].includes(card.value)) {
+            return 10;
+        } else {
+            return parseInt(card.value);
+        }
+    }
+
     calculateHandValue(hand) {
         let value = 0;
         let aces = 0;
@@ -589,13 +599,11 @@ class BlackjackGame {
         for (let card of hand) {
             if (!card) continue; // Safety check for undefined cards
 
-            if (card.value === 'A') {
-                value += 11;
+            const cardValue = this.getCardNumericValue(card);
+            value += cardValue;
+
+            if (cardValue === 11) {
                 aces++;
-            } else if (['J', 'Q', 'K'].includes(card.value)) {
-                value += 10;
-            } else {
-                value += parseInt(card.value);
             }
         }
 
@@ -614,13 +622,11 @@ class BlackjackGame {
         for (let card of hand) {
             if (!card) continue;
 
-            if (card.value === 'A') {
-                value += 11;
+            const cardValue = this.getCardNumericValue(card);
+            value += cardValue;
+
+            if (cardValue === 11) {
                 aces++;
-            } else if (['J', 'Q', 'K'].includes(card.value)) {
-                value += 10;
-            } else {
-                value += parseInt(card.value);
             }
         }
 
