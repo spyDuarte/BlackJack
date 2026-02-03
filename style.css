@@ -937,6 +937,10 @@ button:disabled {
     opacity: 1;
 }
 
+#dealer-cards {
+    justify-content: center;
+}
+
 #player-cards {
     justify-content: center;
     gap: 10px;
