@@ -725,10 +725,7 @@ class BlackjackGame {
 
         if (this.balance < 10) {
             setTimeout(() => {
-                this.ui.showMessage('Você ficou sem dinheiro! Reiniciando...', 'lose');
-                setTimeout(() => {
-                    this.resetGame();
-                }, 2000);
+                this.resetGame();
             }, 2000);
         }
     }
