@@ -87,9 +87,11 @@ class SoundManager {
 
 // Deck Class
 class Deck {
-    constructor() {
+    constructor(numberOfDecks = 6) {
+        this.numberOfDecks = numberOfDecks;
         this.cards = [];
         this.reset();
+        this.shuffle();
     }
 
     reset() {
@@ -97,11 +99,17 @@ class Deck {
         const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
         this.cards = [];
 
-        for (let suit of suits) {
-            for (let value of values) {
-                this.cards.push({ suit, value });
+        for (let i = 0; i < this.numberOfDecks; i++) {
+            for (let suit of suits) {
+                for (let value of values) {
+                    this.cards.push({ suit, value });
+                }
             }
         }
+    }
+
+    get remainingCards() {
+        return this.cards.length;
     }
 
     shuffle() {
@@ -599,6 +607,31 @@ class BlackjackGame {
         return value;
     }
 
+    isSoftHand(hand) {
+        let value = 0;
+        let aces = 0;
+
+        for (let card of hand) {
+            if (!card) continue;
+
+            if (card.value === 'A') {
+                value += 11;
+                aces++;
+            } else if (['J', 'Q', 'K'].includes(card.value)) {
+                value += 10;
+            } else {
+                value += parseInt(card.value);
+            }
+        }
+
+        while (value > 21 && aces > 0) {
+            value -= 10;
+            aces--;
+        }
+
+        return aces > 0;
+    }
+
     updateDisplay() {
         this.ui.updateBalance(this.balance);
 
@@ -705,7 +738,10 @@ class BlackjackGame {
         this.updateDisplay();
 
         const dealerTurn = () => {
-             if (this.calculateHandValue(this.dealerHand) < 17) {
+             const value = this.calculateHandValue(this.dealerHand);
+             const isSoft = this.isSoftHand(this.dealerHand);
+
+             if (value < 17 || (value === 17 && isSoft)) {
                  this.dealerHand.push(this.deck.draw());
                  this.soundManager.play('card');
                  this.updateDisplay();
@@ -736,8 +772,13 @@ class BlackjackGame {
         this.dealerRevealed = false;
         this.gameStarted = true;
 
-        this.deck.reset();
-        this.deck.shuffle();
+        // Shuffle logic if penetration > 80% (remaining < 20%)
+        const totalCards = this.deck.numberOfDecks * 52;
+        if (this.deck.remainingCards < totalCards * 0.2) {
+             this.ui.showMessage('Embaralhando...', '');
+             this.deck.reset();
+             this.deck.shuffle();
+        }
 
         this.playerHands = [{
             cards: [this.deck.draw(), this.deck.draw()],
