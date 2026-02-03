@@ -146,6 +146,7 @@ class UIManager {
             newGameBtn: this.safeGetElement('new-game-btn'),
             betDecrease: this.safeGetElement('bet-decrease'),
             betIncrease: this.safeGetElement('bet-increase'),
+            splitBtn: this.safeGetElement('split-btn'),
             settingsBtn: this.safeGetElement('settings-btn'),
             settingsModal: this.safeGetElement('settings-modal'),
             statsContainer: this.safeGetElement('stats-container'),
@@ -340,6 +341,49 @@ class UIManager {
         });
     }
 
+    renderPlayerHands(hands, currentHandIndex) {
+        const container = this.elements.playerCards;
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (hands.length === 1) {
+             this.renderHand(container, hands[0].cards, false, false);
+             return;
+        }
+
+        hands.forEach((hand, index) => {
+            const handWrapper = document.createElement('div');
+            handWrapper.className = 'hand-container';
+            if (index === currentHandIndex) {
+                handWrapper.classList.add('active-hand');
+            }
+
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'hand-info';
+            infoDiv.textContent = `$${hand.bet}`;
+            handWrapper.appendChild(infoDiv);
+
+            const cardsContainer = document.createElement('div');
+            cardsContainer.style.display = 'flex';
+            cardsContainer.style.gap = '10px';
+            cardsContainer.style.justifyContent = 'center';
+            cardsContainer.style.flexWrap = 'wrap';
+
+            this.renderHand(cardsContainer, hand.cards, false, false);
+            handWrapper.appendChild(cardsContainer);
+
+            container.appendChild(handWrapper);
+        });
+    }
+
+    toggleSplitBtn(show, enabled = true) {
+        if (this.elements.splitBtn) {
+            this.elements.splitBtn.style.display = show ? 'inline-block' : 'none';
+            this.elements.splitBtn.disabled = !enabled;
+        }
+    }
+
     toggleSettingsModal(show) {
         if (this.elements.settingsModal) {
             this.elements.settingsModal.style.display = show ? 'block' : 'none';
@@ -401,7 +445,8 @@ class BlackjackGame {
     }
 
     initializeGameState() {
-        this.playerHand = [];
+        this.playerHands = [];
+        this.currentHandIndex = 0;
         this.dealerHand = [];
         this.balance = 1000;
         this.currentBet = 0;
@@ -431,6 +476,7 @@ class BlackjackGame {
         if (el.hitBtn) el.hitBtn.addEventListener('click', () => this.hit());
         if (el.standBtn) el.standBtn.addEventListener('click', () => this.stand());
         if (el.doubleBtn) el.doubleBtn.addEventListener('click', () => this.double());
+        if (el.splitBtn) el.splitBtn.addEventListener('click', () => this.split());
         if (el.newGameBtn) el.newGameBtn.addEventListener('click', () => this.newGame());
 
         if (el.betDecrease) el.betDecrease.addEventListener('click', () => this.adjustBet(-10));
@@ -557,27 +603,121 @@ class BlackjackGame {
 
     updateDisplay() {
         this.ui.updateBalance(this.balance);
-        this.ui.updateCurrentBet(this.currentBet);
+
+        let totalBet = 0;
+        if (this.playerHands && this.playerHands.length > 0) {
+            totalBet = this.playerHands.reduce((sum, h) => sum + h.bet, 0);
+        } else {
+            totalBet = this.currentBet;
+        }
+        this.ui.updateCurrentBet(totalBet);
+
         this.ui.updateWins(this.wins);
         this.ui.updateLosses(this.losses);
 
         this.ui.renderHand(this.ui.elements.dealerCards, this.dealerHand, true, this.dealerRevealed);
-        this.ui.renderHand(this.ui.elements.playerCards, this.playerHand, false, false);
+        this.ui.renderPlayerHands(this.playerHands, this.currentHandIndex);
 
         // Check for empty dealer hand to avoid error
         const dealerValue = (this.dealerHand && this.dealerHand.length > 0) ?
             this.calculateHandValue(this.dealerRevealed ? this.dealerHand : [this.dealerHand[0]]) : 0;
 
-        const playerValue = this.calculateHandValue(this.playerHand);
+        let playerValue = 0;
+        if (this.playerHands.length > 0 && this.playerHands[this.currentHandIndex]) {
+             playerValue = this.calculateHandValue(this.playerHands[this.currentHandIndex].cards);
+        }
 
         this.ui.updateDealerScore(this.dealerRevealed ? dealerValue : '?');
         this.ui.updatePlayerScore(playerValue);
 
         this.ui.updateStats(this.wins, this.losses, this.totalWinnings, this.blackjacks);
 
+        // Update buttons state
+        if (this.playerHands.length > 0 && !this.gameOver) {
+            const currentHand = this.playerHands[this.currentHandIndex];
+
+            // Split check
+            const canSplit = currentHand.cards.length === 2 &&
+                             currentHand.cards[0].value === currentHand.cards[1].value &&
+                             this.balance >= currentHand.bet;
+            this.ui.toggleSplitBtn(canSplit);
+
+            // Double check
+            if (this.ui.elements.doubleBtn) {
+                const canDouble = currentHand.status === 'playing' &&
+                                  this.balance >= currentHand.bet &&
+                                  currentHand.cards.length === 2;
+                this.ui.elements.doubleBtn.disabled = !canDouble;
+            }
+        } else {
+            this.ui.toggleSplitBtn(false);
+        }
+
         if (this.settings.autoSave && this.gameStarted) {
             this.saveGame();
         }
+    }
+
+    split() {
+        if (this.playerHands.length === 0) return;
+        const currentHand = this.playerHands[this.currentHandIndex];
+
+        if (currentHand.cards.length !== 2 ||
+            currentHand.cards[0].value !== currentHand.cards[1].value ||
+            this.balance < currentHand.bet) {
+            return;
+        }
+
+        this.balance -= currentHand.bet;
+
+        const newHand = {
+            cards: [currentHand.cards.pop()],
+            bet: currentHand.bet,
+            status: 'playing'
+        };
+
+        currentHand.cards.push(this.deck.draw());
+        newHand.cards.push(this.deck.draw());
+
+        // Insert new hand after current hand
+        this.playerHands.splice(this.currentHandIndex + 1, 0, newHand);
+
+        this.soundManager.play('card');
+        this.updateDisplay();
+    }
+
+    nextHand() {
+        if (this.currentHandIndex < this.playerHands.length - 1) {
+            this.currentHandIndex++;
+            this.updateDisplay();
+        } else {
+            this.playDealer();
+        }
+    }
+
+    playDealer() {
+        // Check if all hands busted
+        const allBusted = this.playerHands.every(h => h.status === 'busted');
+        if (allBusted) {
+             this.endGame();
+             return;
+        }
+
+        this.dealerRevealed = true;
+        this.updateDisplay();
+
+        const dealerTurn = () => {
+             if (this.calculateHandValue(this.dealerHand) < 17) {
+                 this.dealerHand.push(this.deck.draw());
+                 this.soundManager.play('card');
+                 this.updateDisplay();
+                 setTimeout(dealerTurn, 1000);
+             } else {
+                 setTimeout(() => this.endGame(), 500);
+             }
+        };
+
+        setTimeout(dealerTurn, 1000);
     }
 
     startGame() {
@@ -601,7 +741,13 @@ class BlackjackGame {
         this.deck.reset();
         this.deck.shuffle();
 
-        this.playerHand = [this.deck.draw(), this.deck.draw()];
+        this.playerHands = [{
+            cards: [this.deck.draw(), this.deck.draw()],
+            bet: this.currentBet,
+            status: 'playing'
+        }];
+        this.currentHandIndex = 0;
+
         this.dealerHand = [this.deck.draw(), this.deck.draw()];
 
         this.ui.toggleGameControls(true);
@@ -610,110 +756,148 @@ class BlackjackGame {
 
         this.updateDisplay();
 
-        if (this.calculateHandValue(this.playerHand) === 21) {
+        if (this.calculateHandValue(this.playerHands[0].cards) === 21) {
             setTimeout(() => this.endGame(), 1000);
-        }
-
-        if (this.ui.elements.doubleBtn) {
-            this.ui.elements.doubleBtn.disabled = this.balance < this.currentBet;
         }
     }
 
     hit() {
         if (this.gameOver) return;
 
-        this.playerHand.push(this.deck.draw());
+        const hand = this.playerHands[this.currentHandIndex];
+        hand.cards.push(this.deck.draw());
         this.soundManager.play('card');
         this.updateDisplay();
 
-        if (this.calculateHandValue(this.playerHand) > 21) {
-            setTimeout(() => this.endGame(), 500);
-        }
-
-        if (this.ui.elements.doubleBtn) {
-            this.ui.elements.doubleBtn.disabled = true;
+        if (this.calculateHandValue(hand.cards) > 21) {
+            hand.status = 'busted';
+            this.ui.showMessage('Estourou!', 'lose');
+            setTimeout(() => this.nextHand(), 500);
         }
     }
 
     stand() {
         if (this.gameOver) return;
-
-        this.dealerRevealed = true;
-        this.soundManager.play('card');
-
-        const dealerDraw = setInterval(() => {
-            if (this.calculateHandValue(this.dealerHand) < 17) {
-                this.dealerHand.push(this.deck.draw());
-                this.soundManager.play('card');
-                this.updateDisplay();
-            } else {
-                clearInterval(dealerDraw);
-                setTimeout(() => this.endGame(), 500);
-            }
-        }, 600);
+        const hand = this.playerHands[this.currentHandIndex];
+        hand.status = 'stand';
+        this.nextHand();
     }
 
     double() {
-        if (this.gameOver || this.balance < this.currentBet) return;
+        if (this.gameOver) return;
 
-        this.balance -= this.currentBet;
-        this.currentBet *= 2;
-        this.hit();
+        const hand = this.playerHands[this.currentHandIndex];
+        if (this.balance < hand.bet) return;
 
-        if (!this.gameOver) {
-            setTimeout(() => this.stand(), 500);
+        this.balance -= hand.bet;
+        hand.bet *= 2;
+
+        hand.cards.push(this.deck.draw());
+        this.soundManager.play('card');
+
+        const value = this.calculateHandValue(hand.cards);
+
+        if (value > 21) {
+            hand.status = 'busted';
+            this.ui.showMessage('Estourou!', 'lose');
+            setTimeout(() => this.nextHand(), 500);
+        } else {
+            hand.status = 'stand';
+            setTimeout(() => this.nextHand(), 500);
         }
+
+        this.updateDisplay();
     }
 
     endGame() {
         this.gameOver = true;
         this.dealerRevealed = true;
-
-        const playerValue = this.calculateHandValue(this.playerHand);
         const dealerValue = this.calculateHandValue(this.dealerHand);
+
+        let totalWin = 0;
+        let anyWin = false;
+        let allLost = true;
+        let initialTotalBet = 0;
+
+        this.playerHands.forEach(hand => {
+            initialTotalBet += hand.bet;
+            const playerValue = this.calculateHandValue(hand.cards);
+            let handWin = 0;
+            let result = '';
+
+            if (hand.status === 'busted') {
+                result = 'lose';
+                this.losses++;
+            } else if (dealerValue > 21) {
+                result = 'win';
+                handWin = hand.bet * 2;
+                this.wins++;
+            } else if (playerValue > dealerValue) {
+                result = 'win';
+                handWin = hand.bet * 2;
+                this.wins++;
+            } else if (dealerValue > playerValue) {
+                result = 'lose';
+                this.losses++;
+            } else {
+                result = 'tie';
+                handWin = hand.bet;
+            }
+
+            // Blackjack logic (simplified for split: no 3:2 payout on split typically)
+            // Only apply 3:2 on single hand original blackjack
+            if (this.playerHands.length === 1 && playerValue === 21 && hand.cards.length === 2 && result === 'win') {
+                 // Check if dealer also has 21 (already handled by tie logic above, but dealer blackjack beats player 21 usually)
+                 // Assuming tie logic handled same-value 21.
+                 // Bonus for Blackjack
+                 handWin = Math.floor(hand.bet * 2.5);
+                 this.blackjacks++;
+            }
+
+            totalWin += handWin;
+
+            if (result === 'win') anyWin = true;
+            if (result !== 'lose') allLost = false;
+        });
+
+        this.balance += totalWin;
+        this.totalWinnings += (totalWin - initialTotalBet);
 
         let message = '';
         let messageClass = '';
-        let winAmount = 0;
 
-        if (playerValue > 21) {
-            message = 'Você estourou! Dealer vence!';
-            messageClass = 'lose';
-            this.losses++;
-            this.soundManager.play('lose');
-        } else if (dealerValue > 21) {
-            message = 'Dealer estourou! Você venceu!';
-            messageClass = 'win';
-            winAmount = this.currentBet * 2;
-            this.wins++;
-            this.soundManager.play('win');
-            this.ui.showWinAnimation();
-        } else if (playerValue > dealerValue) {
-            message = 'Você venceu!';
-            messageClass = 'win';
-            winAmount = this.currentBet * 2;
-            this.wins++;
-            this.soundManager.play('win');
-            this.ui.showWinAnimation();
-        } else if (dealerValue > playerValue) {
-            message = 'Dealer vence!';
-            messageClass = 'lose';
-            this.losses++;
-            this.soundManager.play('lose');
+        if (this.playerHands.length === 1) {
+             const hand = this.playerHands[0];
+             const pVal = this.calculateHandValue(hand.cards);
+
+             if (hand.status === 'busted') { message = 'Você estourou! Dealer vence!'; messageClass = 'lose'; }
+             else if (dealerValue > 21) { message = 'Dealer estourou! Você venceu!'; messageClass = 'win'; }
+             else if (pVal > dealerValue) {
+                 if (totalWin > hand.bet * 2) message = 'BLACKJACK! Você venceu!';
+                 else message = 'Você venceu!';
+                 messageClass = 'win';
+             }
+             else if (dealerValue > pVal) { message = 'Dealer vence!'; messageClass = 'lose'; }
+             else { message = 'Empate!'; messageClass = 'tie'; }
         } else {
-            message = 'Empate!';
-            messageClass = 'tie';
-            winAmount = this.currentBet;
+             if (totalWin > initialTotalBet) {
+                 message = `Ganhou $${totalWin}!`;
+                 messageClass = 'win';
+             } else if (totalWin > 0) {
+                 message = `Recuperou $${totalWin}.`;
+                 messageClass = 'tie';
+             } else {
+                 message = 'Dealer venceu todas!';
+                 messageClass = 'lose';
+             }
         }
 
-        if (playerValue === 21 && this.playerHand.length === 2 && messageClass === 'win') {
-            message = 'BLACKJACK! Você venceu!';
-            winAmount = Math.floor(this.currentBet * 2.5);
-            this.blackjacks++;
+        if (anyWin) {
+            this.soundManager.play('win');
+            this.ui.showWinAnimation();
+        } else if (allLost) {
+            this.soundManager.play('lose');
         }
-
-        this.balance += winAmount;
-        this.totalWinnings += (winAmount - this.currentBet);
 
         this.ui.showMessage(message, messageClass);
         this.updateDisplay();
@@ -721,6 +905,7 @@ class BlackjackGame {
         if (this.ui.elements.hitBtn) this.ui.elements.hitBtn.disabled = true;
         if (this.ui.elements.standBtn) this.ui.elements.standBtn.disabled = true;
         if (this.ui.elements.doubleBtn) this.ui.elements.doubleBtn.disabled = true;
+        if (this.ui.elements.splitBtn) this.ui.elements.splitBtn.disabled = true;
         this.ui.showNewGameButton();
 
         if (this.balance < 10) {
@@ -731,7 +916,8 @@ class BlackjackGame {
     }
 
     newGame() {
-        this.playerHand = [];
+        this.playerHands = [];
+        this.currentHandIndex = 0;
         this.dealerHand = [];
         this.currentBet = 0;
         this.gameOver = false;
@@ -783,6 +969,9 @@ class BlackjackGame {
                 break;
             case 'd':
                 if (this.ui.elements.doubleBtn && !this.ui.elements.doubleBtn.disabled) this.double();
+                break;
+            case 'p':
+                if (this.ui.elements.splitBtn && !this.ui.elements.splitBtn.disabled && this.ui.elements.splitBtn.style.display !== 'none') this.split();
                 break;
             case 'escape':
                 this.ui.toggleSettingsModal(false);
