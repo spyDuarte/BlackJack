@@ -566,14 +566,12 @@ class BlackjackGame {
     }
 
     resetGame() {
-        if (confirm('Tem certeza que deseja resetar o jogo? Todos os dados serão perdidos.')) {
-            this.initializeGameState();
-            this.newGame();
-            this.updateDisplay();
-            StorageManager.remove('blackjack-premium-save');
-            this.ui.showMessage('Jogo resetado!');
-            this.ui.toggleSettingsModal(false);
-        }
+        this.initializeGameState();
+        this.newGame();
+        this.updateDisplay();
+        StorageManager.remove('blackjack-premium-save');
+        this.ui.showMessage('Jogo resetado!');
+        this.ui.toggleSettingsModal(false);
     }
 
     calculateHandValue(hand) {
