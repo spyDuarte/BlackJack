@@ -190,34 +190,75 @@ export class UIManager {
 
     renderHand(container, hand, isDealer, revealDealer) {
         if (!container) return;
-        container.innerHTML = '';
-        if (!hand) return;
 
+        if (!hand || hand.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        // Sync hand cards with DOM elements to support transitions
         hand.forEach((card, index) => {
             const isHidden = isDealer && index === 1 && !revealDealer;
-            const cardEl = this.createCardElement(card, isHidden);
-            if (this.animationsEnabled) {
-                cardEl.style.animationDelay = `${index * 0.05}s`;
+            let cardEl = container.children[index];
+
+            if (cardEl) {
+                // Check if card content matches (to detect new vs same card)
+                const currentVal = cardEl.querySelector('.value')?.textContent;
+                const currentSuit = cardEl.querySelector('.suit')?.textContent;
+
+                if (currentVal !== card.value || currentSuit !== card.suit) {
+                    // Mismatch: Replace element to trigger deal animation
+                    const newCardEl = this.createCardElement(card, isHidden);
+                    if (this.animationsEnabled) newCardEl.style.animationDelay = `${index * 0.05}s`;
+                    container.replaceChild(newCardEl, cardEl);
+                } else {
+                    // Match: Just handle flip
+                    if (isHidden) {
+                        cardEl.classList.add('flipped');
+                    } else {
+                        cardEl.classList.remove('flipped');
+                    }
+                }
+            } else {
+                // New card
+                cardEl = this.createCardElement(card, isHidden);
+                if (this.animationsEnabled) {
+                    cardEl.style.animationDelay = `${index * 0.05}s`;
+                }
+                container.appendChild(cardEl);
             }
-            container.appendChild(cardEl);
         });
+
+        // Remove excess cards
+        while (container.children.length > hand.length) {
+            container.removeChild(container.lastChild);
+        }
     }
 
     createCardElement(card, hidden = false) {
         const cardEl = document.createElement('div');
         cardEl.className = 'card';
+        if (hidden) cardEl.classList.add('flipped');
 
-        if (hidden) {
-            cardEl.classList.add('card-back');
-        } else {
-            const isRed = card.suit === '♥' || card.suit === '♦';
-            cardEl.classList.add(isRed ? 'red' : 'black');
-            cardEl.innerHTML = `
-                <div class="suit">${card.suit}</div>
-                <div class="suit-bottom">${card.suit}</div>
-                <div class="value">${card.value}</div>
-            `;
-        }
+        const inner = document.createElement('div');
+        inner.className = 'card-inner';
+
+        const front = document.createElement('div');
+        const isRed = card.suit === '♥' || card.suit === '♦';
+        front.className = `card-face card-front ${isRed ? 'red' : 'black'}`;
+        front.innerHTML = `
+            <div class="suit">${card.suit}</div>
+            <div class="suit-bottom">${card.suit}</div>
+            <div class="value">${card.value}</div>
+        `;
+
+        const back = document.createElement('div');
+        back.className = 'card-face card-back';
+
+        inner.appendChild(front);
+        inner.appendChild(back);
+        cardEl.appendChild(inner);
+
         return cardEl;
     }
 

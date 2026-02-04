@@ -234,26 +234,56 @@ h1 {
     padding: 10px;
 }
 
+/* 3D Card Structure */
 .card {
     width: 90px;
     height: 126px;
-    background: linear-gradient(145deg, #ffffff, #f5f5f5);
+    perspective: 1000px; /* Enable 3D space */
+    background-color: transparent; /* Move background to faces */
+    display: flex; /* For alignment in container if needed, or inline-block */
+    /* Remove shadow/border from container, put on inner */
+    /* transition: var(--transition-smooth); - removed, inner handles transition */
+    animation: cardDeal 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+    box-shadow: var(--card-shadow);
     border-radius: 12px;
+}
+
+.card.flipped .card-inner {
+    transform: rotateY(180deg);
+}
+
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    border-radius: 12px;
+    top: 0;
+    left: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 2.2em;
-    font-weight: bold;
-    box-shadow: var(--card-shadow);
-    position: relative;
-    animation: cardDeal 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    transition: var(--transition-smooth);
     border: 2px solid #e0e0e0;
-    transform-style: preserve-3d;
 }
 
-.card::before {
+.card-front {
+    background: linear-gradient(145deg, #ffffff, #f5f5f5);
+    color: #2c3e50; /* Default color */
+    transform: rotateY(0deg);
+}
+
+.card-front::before {
     content: '';
     position: absolute;
     top: 8px;
@@ -265,7 +295,7 @@ h1 {
     pointer-events: none;
 }
 
-.card::after {
+.card-front::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -278,14 +308,23 @@ h1 {
     transition: opacity 0.15s ease;
 }
 
-.card:hover {
+/* Hover effect on the card container affects the inner */
+.card:hover .card-inner {
+    /* Basic hover lift, maybe small rotation? */
+    /* Be careful not to conflict with flipped state. */
+    /* If flipped, we rotate Y 180. If hover, we might want +3deg. */
+    /* Simplify: just lift */
+    transform: translateY(-8px) rotateY(var(--rotation, 0deg));
+}
+.card.flipped:hover .card-inner {
+    --rotation: 180deg;
+}
+.card:not(.flipped):hover .card-inner {
+    --rotation: 0deg; /* Actually existing hover was rotateY(3deg) */
     transform: translateY(-8px) rotateY(3deg) rotateX(3deg);
-    box-shadow:
-        0 20px 40px rgba(0, 0, 0, 0.4),
-        0 0 20px rgba(255, 215, 0, 0.2);
 }
 
-.card:hover::after {
+.card:hover .card-front::after {
     opacity: 1;
 }
 
@@ -303,23 +342,23 @@ h1 {
     }
 }
 
-.card.red {
+.card-front.red {
     color: #e74c3c;
 }
 
-.card.red .suit {
+.card-front.red .suit {
     text-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
 }
 
-.card.black {
+.card-front.black {
     color: #2c3e50;
 }
 
-.card.black .suit {
+.card-front.black .suit {
     text-shadow: 0 0 10px rgba(44, 62, 80, 0.3);
 }
 
-.card .suit {
+.card-front .suit {
     position: absolute;
     top: 8px;
     left: 8px;
@@ -327,7 +366,7 @@ h1 {
     line-height: 1;
 }
 
-.card .suit-bottom {
+.card-front .suit-bottom {
     position: absolute;
     bottom: 8px;
     right: 8px;
@@ -336,7 +375,7 @@ h1 {
     transform: rotate(180deg);
 }
 
-.card .value {
+.card-front .value {
     font-size: 1.8em;
     font-weight: 700;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
@@ -344,7 +383,8 @@ h1 {
 
 .card-back {
     background: linear-gradient(135deg, #2c3e50, #34495e);
-    position: relative;
+    transform: rotateY(180deg);
+    position: absolute; /* Already in .card-face but explicit is fine */
     overflow: hidden;
 }
 
