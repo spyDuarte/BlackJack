@@ -16,7 +16,7 @@
     --win-color: #2ecc71;
     --lose-color: #e74c3c;
     --tie-color: #f39c12;
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
@@ -81,7 +81,7 @@ h1 {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    animation: goldShine 3s ease-in-out infinite;
+    animation: goldShine 1.5s ease-in-out infinite;
     text-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
     position: relative;
 }
@@ -145,7 +145,7 @@ h1 {
     height: 200%;
     background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%);
     transform: rotate(45deg);
-    transition: all 0.5s ease;
+    transition: all 0.25s ease;
     opacity: 0;
 }
 
@@ -247,7 +247,7 @@ h1 {
     font-weight: bold;
     box-shadow: var(--card-shadow);
     position: relative;
-    animation: cardDeal 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    animation: cardDeal 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     transition: var(--transition-smooth);
     border: 2px solid #e0e0e0;
     transform-style: preserve-3d;
@@ -275,7 +275,7 @@ h1 {
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask-composite: exclude;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.15s ease;
 }
 
 .card:hover {
@@ -357,7 +357,7 @@ h1 {
     font-size: 1.3em;
     color: var(--primary-gold);
     text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-    animation: pulse 2s ease-in-out infinite;
+    animation: pulse 1s ease-in-out infinite;
 }
 
 @keyframes pulse {
@@ -409,7 +409,7 @@ button::before {
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.3);
     transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
+    transition: width 0.3s, height 0.3s;
 }
 
 button:hover::before {
@@ -493,7 +493,7 @@ button:disabled {
     font-weight: 700;
     margin: 25px 0;
     min-height: 45px;
-    animation: messageSlide 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    animation: messageSlide 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     text-transform: uppercase;
     letter-spacing: 1px;
     display: flex;
@@ -719,7 +719,7 @@ button:disabled {
     border: 4px solid rgba(255, 215, 0, 0.3);
     border-left: 4px solid var(--primary-gold);
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    animation: spin 0.5s linear infinite;
 }
 
 @keyframes spin {
@@ -782,11 +782,11 @@ button:disabled {
     align-items: center;
     justify-content: center;
     z-index: 2000;
-    animation: fadeIn 1s ease-in-out;
+    animation: fadeIn 0.5s ease-in-out;
 }
 
 .welcome-screen.hidden {
-    animation: fadeOut 0.5s ease-in-out forwards;
+    animation: fadeOut 0.25s ease-in-out forwards;
 }
 
 @keyframes fadeIn {
@@ -850,7 +850,7 @@ button:disabled {
     z-index: 2000;
     opacity: 0;
     transform: translateX(100%);
-    transition: all 0.3s ease;
+    transition: all 0.15s ease;
     max-width: 300px;
     font-size: 0.9em;
 }
@@ -879,7 +879,7 @@ button:disabled {
     border: 2px solid rgba(255, 255, 255, 0.1);
     background: rgba(0, 0, 0, 0.2);
     min-width: 150px;
-    transition: all 0.3s ease;
+    transition: all 0.15s ease;
     position: relative;
     margin: 5px;
 }
@@ -905,7 +905,7 @@ button:disabled {
     font-weight: bold;
     white-space: nowrap;
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.15s;
 }
 
 .hand-container:hover .hand-info,
