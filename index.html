@@ -96,6 +96,7 @@
             <button id="hit-btn" title="Pedir carta (H)">Pedir Carta</button>
             <button id="stand-btn" title="Parar (S)">Parar</button>
             <button id="double-btn" title="Dobrar aposta (D)">Dobrar</button>
+            <button id="surrender-btn" title="Desistir (L)">Desistir</button>
             <button id="split-btn" style="display: none;" title="Dividir (P)">Dividir</button>
             <button id="new-game-btn" style="display: none;">Nova Rodada</button>
         </div>
@@ -151,6 +152,20 @@
             
             <div style="margin-top: 30px; text-align: center;">
                 <button id="btn-reset-game" style="background: linear-gradient(45deg, #e74c3c, #c0392b);">🔄 Resetar Jogo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Insurance Modal -->
+    <div id="insurance-modal" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <span class="close" style="visibility: hidden;">&times;</span>
+            <h2 style="color: var(--primary-gold); margin-bottom: 20px;">🛡️ Seguro?</h2>
+            <p>O Dealer tem um Ás. Deseja fazer um seguro?</p>
+            <p style="font-size: 0.9em; color: rgba(255,255,255,0.7); margin: 15px 0;">Custa metade da sua aposta. Paga 2:1 se o Dealer tiver Blackjack.</p>
+            <div style="margin-top: 25px; display: flex; justify-content: center; gap: 20px;">
+                <button id="insurance-yes-btn" class="start-btn" style="font-size: 1em; padding: 10px 30px; min-width: auto;">Sim</button>
+                <button id="insurance-no-btn" class="start-btn" style="font-size: 1em; padding: 10px 30px; min-width: auto; background: linear-gradient(45deg, #e74c3c, #c0392b); box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);">Não</button>
             </div>
         </div>
     </div>

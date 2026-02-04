@@ -6,7 +6,8 @@ const CONFIG = {
     ANIMATION_SPEED: 1000,
     PAYOUT: {
         BLACKJACK: 2.5, // 3:2 payout on original bet (1.5 + 1) -> 2.5x total return logic
-        REGULAR: 2.0
+        REGULAR: 2.0,
+        INSURANCE: 3.0
     }
 };
 
@@ -167,8 +168,12 @@ class UIManager {
             betDecrease: this.safeGetElement('bet-decrease'),
             betIncrease: this.safeGetElement('bet-increase'),
             splitBtn: this.safeGetElement('split-btn'),
+            surrenderBtn: this.safeGetElement('surrender-btn'),
             settingsBtn: this.safeGetElement('settings-btn'),
             settingsModal: this.safeGetElement('settings-modal'),
+            insuranceModal: this.safeGetElement('insurance-modal'),
+            insuranceYesBtn: this.safeGetElement('insurance-yes-btn'),
+            insuranceNoBtn: this.safeGetElement('insurance-no-btn'),
             statsContainer: this.safeGetElement('stats-container'),
             loading: document.querySelector('.loading'),
             welcomeScreen: document.getElementById('welcome-screen'),
@@ -417,6 +422,19 @@ class UIManager {
         }
     }
 
+    toggleInsuranceModal(show) {
+        if (this.elements.insuranceModal) {
+            this.elements.insuranceModal.style.display = show ? 'block' : 'none';
+        }
+    }
+
+    toggleSurrenderBtn(show, enabled = true) {
+        if (this.elements.surrenderBtn) {
+            this.elements.surrenderBtn.style.display = show ? 'inline-block' : 'none';
+            this.elements.surrenderBtn.disabled = !enabled;
+        }
+    }
+
     toggleGameControls(inGame) {
         if (this.elements.betControls) this.elements.betControls.style.display = inGame ? 'none' : 'flex';
         if (this.elements.gameControls) this.elements.gameControls.style.display = inGame ? 'flex' : 'none';
@@ -471,6 +489,18 @@ class BlackjackGame {
         }
     }
 
+
+    addTimeout(fn, delay) {
+        const id = window.setTimeout(fn, delay);
+        this.timeouts.push(id);
+        return id;
+    }
+
+    clearTimeouts() {
+        this.timeouts.forEach(id => clearTimeout(id));
+        this.timeouts = [];
+    }
+
     initializeGameState() {
         this.playerHands = [];
         this.currentHandIndex = 0;
@@ -484,6 +514,8 @@ class BlackjackGame {
         this.gameOver = false;
         this.dealerRevealed = false;
         this.gameStarted = false;
+        this.insuranceTaken = false;
+        this.timeouts = [];
     }
 
     initializeSettings() {
@@ -503,7 +535,10 @@ class BlackjackGame {
         if (el.hitBtn) el.hitBtn.addEventListener('click', () => this.hit());
         if (el.standBtn) el.standBtn.addEventListener('click', () => this.stand());
         if (el.doubleBtn) el.doubleBtn.addEventListener('click', () => this.double());
-        if (el.splitBtn) el.splitBtn.addEventListener('click', () => this.split());
+                if (el.splitBtn) el.splitBtn.addEventListener('click', () => this.split());
+        if (el.surrenderBtn) el.surrenderBtn.addEventListener('click', () => this.surrender());
+        if (el.insuranceYesBtn) el.insuranceYesBtn.addEventListener('click', () => this.respondToInsurance(true));
+        if (el.insuranceNoBtn) el.insuranceNoBtn.addEventListener('click', () => this.respondToInsurance(false));
         if (el.newGameBtn) el.newGameBtn.addEventListener('click', () => this.newGame());
 
         if (el.betDecrease) el.betDecrease.addEventListener('click', () => this.adjustBet(-10));
@@ -593,6 +628,7 @@ class BlackjackGame {
     }
 
     resetGame() {
+        this.clearTimeouts();
         this.initializeGameState();
         this.newGame();
         this.updateDisplay();
@@ -692,6 +728,12 @@ class BlackjackGame {
                              this.balance >= currentHand.bet;
             this.ui.toggleSplitBtn(canSplit);
 
+            // Surrender check
+            const canSurrender = currentHand.cards.length === 2 &&
+                                 this.playerHands.length === 1 && // Can't surrender after split usually
+                                 currentHand.status === 'playing';
+            this.ui.toggleSurrenderBtn(canSurrender, canSurrender);
+
             // Double check
             if (this.ui.elements.doubleBtn) {
                 const canDouble = currentHand.status === 'playing' &&
@@ -764,13 +806,81 @@ class BlackjackGame {
                  this.dealerHand.push(this.deck.draw());
                  this.soundManager.play('card');
                  this.updateDisplay();
-                 setTimeout(dealerTurn, 1000);
+                 this.addTimeout(dealerTurn, 1000);
              } else {
-                 setTimeout(() => this.endGame(), 500);
+                 this.addTimeout(() => this.endGame(), 500);
              }
         };
 
-        setTimeout(dealerTurn, 1000);
+        this.addTimeout(dealerTurn, 1000);
+    }
+
+
+    checkDealerBlackjack() {
+        const val = this.calculateHandValue(this.dealerHand);
+        if (val === 21 && this.dealerHand.length === 2) {
+             this.dealerRevealed = true;
+             this.updateDisplay();
+             this.ui.showMessage('Dealer tem Blackjack!', 'lose');
+             this.addTimeout(() => this.endGame(), 1500);
+        } else {
+             if (this.dealerHand[0].value === 'A' || this.getCardNumericValue(this.dealerHand[0]) === 10) {
+                 this.ui.showMessage('Dealer não tem Blackjack.', '');
+             }
+             this.addTimeout(() => this.startPlayerTurn(), 1000);
+        }
+    }
+
+    respondToInsurance(accept) {
+        this.ui.toggleInsuranceModal(false);
+
+        if (accept) {
+            const insuranceCost = Math.floor(this.currentBet / 2);
+            if (this.balance >= insuranceCost) {
+                this.balance -= insuranceCost;
+                this.insuranceTaken = true;
+                this.ui.showMessage('Seguro apostado.', '');
+                this.soundManager.play('chip');
+            } else {
+                this.ui.showMessage('Saldo insuficiente para seguro.', 'lose');
+            }
+        } else {
+            this.ui.showMessage('Seguro recusado.', '');
+        }
+
+        this.updateDisplay();
+        this.addTimeout(() => this.checkDealerBlackjack(), 1000);
+    }
+
+    surrender() {
+        if (this.gameOver || this.playerHands.length === 0) return;
+        const hand = this.playerHands[this.currentHandIndex];
+        if (hand.cards.length !== 2) return;
+
+        this.soundManager.play('chip');
+        hand.status = 'surrender';
+
+        // Refund half
+        const refund = Math.floor(hand.bet / 2);
+        this.balance += refund;
+
+        this.ui.showMessage('Você desistiu.', 'tie');
+        this.endGame();
+    }
+
+    startPlayerTurn() {
+        this.ui.toggleGameControls(true);
+        this.ui.showMessage('Sua vez!');
+
+        // Enable Surrender only if first turn
+        this.ui.toggleSurrenderBtn(true, true);
+
+        this.updateDisplay();
+
+        const pVal = this.calculateHandValue(this.playerHands[0].cards);
+        if (pVal === 21) {
+             this.addTimeout(() => this.endGame(), 1000);
+        }
     }
 
     startGame() {
@@ -808,14 +918,22 @@ class BlackjackGame {
 
         this.dealerHand = [this.deck.draw(), this.deck.draw()];
 
-        this.ui.toggleGameControls(true);
-        this.ui.showMessage('Boa sorte!');
-        this.soundManager.play('card');
-
         this.updateDisplay();
+        this.soundManager.play('card');
+        this.ui.toggleGameControls(false);
+        this.ui.showMessage('Boa sorte!');
 
-        if (this.calculateHandValue(this.playerHands[0].cards) === 21) {
-            setTimeout(() => this.endGame(), 1000);
+        const dealerUpCard = this.dealerHand[0];
+        const dealerUpVal = this.getCardNumericValue(dealerUpCard);
+
+        if (dealerUpCard.value === 'A') {
+             setTimeout(() => {
+                 this.ui.toggleInsuranceModal(true);
+             }, 1000);
+        } else if (dealerUpVal === 10) {
+             this.addTimeout(() => this.checkDealerBlackjack(), 1000);
+        } else {
+             this.addTimeout(() => this.startPlayerTurn(), 1000);
         }
     }
 
@@ -830,7 +948,7 @@ class BlackjackGame {
         if (this.calculateHandValue(hand.cards) > 21) {
             hand.status = 'busted';
             this.ui.showMessage('Estourou!', 'lose');
-            setTimeout(() => this.nextHand(), 500);
+            this.addTimeout(() => this.nextHand(), 500);
         }
     }
 
@@ -858,10 +976,10 @@ class BlackjackGame {
         if (value > 21) {
             hand.status = 'busted';
             this.ui.showMessage('Estourou!', 'lose');
-            setTimeout(() => this.nextHand(), 500);
+            this.addTimeout(() => this.nextHand(), 500);
         } else {
             hand.status = 'stand';
-            setTimeout(() => this.nextHand(), 500);
+            this.addTimeout(() => this.nextHand(), 500);
         }
 
         this.updateDisplay();
@@ -871,6 +989,20 @@ class BlackjackGame {
         this.gameOver = true;
         this.dealerRevealed = true;
         const dealerValue = this.calculateHandValue(this.dealerHand);
+        const dealerBJ = (dealerValue === 21 && this.dealerHand.length === 2);
+
+        // Resolve Insurance
+        if (this.insuranceTaken) {
+            if (dealerBJ) {
+                const insuranceWin = Math.floor(this.currentBet / 2) * CONFIG.PAYOUT.INSURANCE;
+                this.balance += insuranceWin;
+                this.totalWinnings += (insuranceWin - Math.floor(this.currentBet / 2));
+                this.ui.showMessage('Seguro paga 2:1!', 'win');
+            } else {
+                // Already deducted
+            }
+        }
+
 
         let totalWin = 0;
         let anyWin = false;
@@ -883,7 +1015,10 @@ class BlackjackGame {
             let handWin = 0;
             let result = '';
 
-            if (hand.status === 'busted') {
+            if (hand.status === 'surrender') {
+                result = 'surrender';
+                this.losses++;
+            } else if (hand.status === 'busted') {
                 result = 'lose';
                 this.losses++;
             } else if (dealerValue > 21) {
@@ -928,7 +1063,7 @@ class BlackjackGame {
              const hand = this.playerHands[0];
              const pVal = this.calculateHandValue(hand.cards);
 
-             if (hand.status === 'busted') { message = 'Você estourou! Dealer vence!'; messageClass = 'lose'; }
+             if (hand.status === 'surrender') { message = 'Você desistiu.'; messageClass = 'tie'; } else if (hand.status === 'busted') { message = 'Você estourou! Dealer vence!'; messageClass = 'lose'; }
              else if (dealerValue > 21) { message = 'Dealer estourou! Você venceu!'; messageClass = 'win'; }
              else if (pVal > dealerValue) {
                  if (totalWin > hand.bet * 2) message = 'BLACKJACK! Você venceu!';
@@ -964,6 +1099,7 @@ class BlackjackGame {
         if (this.ui.elements.standBtn) this.ui.elements.standBtn.disabled = true;
         if (this.ui.elements.doubleBtn) this.ui.elements.doubleBtn.disabled = true;
         if (this.ui.elements.splitBtn) this.ui.elements.splitBtn.disabled = true;
+        if (this.ui.elements.surrenderBtn) this.ui.elements.surrenderBtn.disabled = true;
         this.ui.showNewGameButton();
 
         if (this.balance < 10) {
@@ -1028,8 +1164,11 @@ class BlackjackGame {
             case 'd':
                 if (this.ui.elements.doubleBtn && !this.ui.elements.doubleBtn.disabled) this.double();
                 break;
-            case 'p':
+                        case 'p':
                 if (this.ui.elements.splitBtn && !this.ui.elements.splitBtn.disabled && this.ui.elements.splitBtn.style.display !== 'none') this.split();
+                break;
+            case 'l':
+                if (this.ui.elements.surrenderBtn && !this.ui.elements.surrenderBtn.disabled && this.ui.elements.surrenderBtn.style.display !== 'none') this.surrender();
                 break;
             case 'escape':
                 this.ui.toggleSettingsModal(false);
