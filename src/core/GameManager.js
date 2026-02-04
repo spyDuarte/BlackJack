@@ -2,6 +2,7 @@ import { Deck } from './Deck.js';
 import { CONFIG } from './Constants.js';
 import { StorageManager } from '../utils/StorageManager.js';
 import { debounce } from '../utils/debounce.js';
+import * as HandUtils from '../utils/HandUtils.js';
 
 export class GameManager {
     static instance = null;
@@ -92,7 +93,7 @@ export class GameManager {
             setTimeout(() => {
                 this.ui.toggleLoading(false);
                 this.updateUI();
-            }, 400);
+            }, CONFIG.DELAYS.LOADING);
         }
     }
 
@@ -217,16 +218,16 @@ export class GameManager {
         }
 
         const dealerUpCard = this.dealerHand[0];
-        const dealerUpVal = this.getCardNumericValue(dealerUpCard);
+        const dealerUpVal = HandUtils.getCardNumericValue(dealerUpCard);
 
         if (dealerUpCard.value === 'A') {
              setTimeout(() => {
                  if (this.ui) this.ui.toggleInsuranceModal(true);
-             }, 1000);
+             }, CONFIG.DELAYS.INSURANCE_MODAL);
         } else if (dealerUpVal === 10) {
-             this.addTimeout(() => this.checkDealerBlackjack(), 500);
+             this.addTimeout(() => this.checkDealerBlackjack(), CONFIG.DELAYS.DEAL);
         } else {
-             this.addTimeout(() => this.startPlayerTurn(), 500);
+             this.addTimeout(() => this.startPlayerTurn(), CONFIG.DELAYS.DEAL);
         }
     }
 
@@ -237,22 +238,22 @@ export class GameManager {
         }
         this.updateUI();
 
-        const pVal = this.calculateHandValue(this.playerHands[0].cards);
+        const pVal = HandUtils.calculateHandValue(this.playerHands[0].cards);
         if (pVal === 21) {
-             this.addTimeout(() => this.endGame(), 500);
+             this.addTimeout(() => this.endGame(), CONFIG.DELAYS.TURN);
         }
     }
 
     checkDealerBlackjack() {
-        const val = this.calculateHandValue(this.dealerHand);
+        const val = HandUtils.calculateHandValue(this.dealerHand);
         if (val === 21 && this.dealerHand.length === 2) {
              this.dealerRevealed = true;
              this.updateUI();
              if (this.ui) this.ui.showMessage('Dealer tem Blackjack!', 'lose');
-             this.addTimeout(() => this.endGame(), 750);
+             this.addTimeout(() => this.endGame(), CONFIG.DELAYS.GAME_OVER);
         } else {
              if (this.ui) this.ui.showMessage('Dealer não tem Blackjack.', '');
-             this.addTimeout(() => this.startPlayerTurn(), 500);
+             this.addTimeout(() => this.startPlayerTurn(), CONFIG.DELAYS.TURN);
         }
     }
 
@@ -274,7 +275,7 @@ export class GameManager {
         }
 
         this.updateUI();
-        this.addTimeout(() => this.checkDealerBlackjack(), 500);
+        this.addTimeout(() => this.checkDealerBlackjack(), CONFIG.DELAYS.TURN);
     }
 
     hit() {
@@ -285,10 +286,10 @@ export class GameManager {
         if (this.soundManager) this.soundManager.play('card');
         this.updateUI();
 
-        if (this.calculateHandValue(hand.cards) > 21) {
+        if (HandUtils.calculateHandValue(hand.cards) > 21) {
             hand.status = 'busted';
             if (this.ui) this.ui.showMessage('Estourou!', 'lose');
-            this.addTimeout(() => this.nextHand(), 250);
+            this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
         }
     }
 
@@ -311,15 +312,15 @@ export class GameManager {
         hand.cards.push(this.deck.draw());
         if (this.soundManager) this.soundManager.play('card');
 
-        const value = this.calculateHandValue(hand.cards);
+        const value = HandUtils.calculateHandValue(hand.cards);
 
         if (value > 21) {
             hand.status = 'busted';
             if (this.ui) this.ui.showMessage('Estourou!', 'lose');
-            this.addTimeout(() => this.nextHand(), 250);
+            this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
         } else {
             hand.status = 'stand';
-            this.addTimeout(() => this.nextHand(), 250);
+            this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
         }
 
         this.updateUI();
@@ -388,26 +389,39 @@ export class GameManager {
         this.updateUI();
 
         const dealerTurn = () => {
-             const value = this.calculateHandValue(this.dealerHand);
-             const isSoft = this.isSoftHand(this.dealerHand);
+             const value = HandUtils.calculateHandValue(this.dealerHand);
+             const isSoft = HandUtils.isSoftHand(this.dealerHand);
 
              if (value < 17 || (value === 17 && isSoft)) {
                  this.dealerHand.push(this.deck.draw());
                  if (this.soundManager) this.soundManager.play('card');
                  this.updateUI();
-                 this.addTimeout(dealerTurn, 500);
+                 this.addTimeout(dealerTurn, CONFIG.DELAYS.DEALER_TURN);
              } else {
-                 this.addTimeout(() => this.endGame(), 250);
+                 this.addTimeout(() => this.endGame(), CONFIG.DELAYS.NEXT_HAND);
              }
         };
 
-        this.addTimeout(dealerTurn, 500);
+        this.addTimeout(dealerTurn, CONFIG.DELAYS.DEALER_TURN);
+    }
+
+    evaluateHand(hand, dealerValue) {
+        const playerValue = HandUtils.calculateHandValue(hand.cards);
+
+        if (hand.status === 'surrender') return { result: 'surrender', winMultiplier: 0 };
+        if (hand.status === 'busted') return { result: 'lose', winMultiplier: 0 };
+
+        if (dealerValue > 21) return { result: 'win', winMultiplier: 2 };
+        if (playerValue > dealerValue) return { result: 'win', winMultiplier: 2 };
+        if (dealerValue > playerValue) return { result: 'lose', winMultiplier: 0 };
+
+        return { result: 'tie', winMultiplier: 1 };
     }
 
     endGame() {
         this.gameOver = true;
         this.dealerRevealed = true;
-        const dealerValue = this.calculateHandValue(this.dealerHand);
+        const dealerValue = HandUtils.calculateHandValue(this.dealerHand);
         const dealerBJ = (dealerValue === 21 && this.dealerHand.length === 2);
 
         if (this.insuranceTaken && dealerBJ) {
@@ -422,52 +436,37 @@ export class GameManager {
         let allLost = true;
 
         this.playerHands.forEach(hand => {
-            const playerValue = this.calculateHandValue(hand.cards);
-            let handWin = 0;
-            let result = '';
+            const { result, winMultiplier } = this.evaluateHand(hand, dealerValue);
+            let handWin = hand.bet * winMultiplier;
+            const playerValue = HandUtils.calculateHandValue(hand.cards);
 
-            if (hand.status === 'surrender') {
-                result = 'surrender';
-                this.losses++;
-            } else if (hand.status === 'busted') {
-                result = 'lose';
-                this.losses++;
-            } else if (dealerValue > 21) {
-                result = 'win';
-                handWin = hand.bet * 2;
-                this.wins++;
-            } else if (playerValue > dealerValue) {
-                result = 'win';
-                handWin = hand.bet * 2;
-                this.wins++;
-            } else if (dealerValue > playerValue) {
-                result = 'lose';
-                this.losses++;
-            } else {
-                result = 'tie';
-                handWin = hand.bet;
-            }
-
+            // Blackjack Payout
             if (this.playerHands.length === 1 && playerValue === 21 && hand.cards.length === 2 && result === 'win') {
-                 // Blackjack Payout
+                 // 3:2 payout is 2.5x the bet returned (1 bet + 1.5 win)
                  handWin = Math.floor(hand.bet * CONFIG.PAYOUT.BLACKJACK);
                  this.blackjacks++;
             }
 
+            if (result === 'win') {
+                this.wins++;
+                anyWin = true;
+            } else if (result === 'lose' || result === 'surrender') {
+                this.losses++;
+            }
+
             totalWin += handWin;
-            if (result === 'win') anyWin = true;
             if (result !== 'lose') allLost = false;
         });
 
         this.balance += totalWin;
-        this.totalWinnings += totalWin; // Tracking gross winnings per session? Original logic was confusing, simplifying to add win.
+        this.totalWinnings += totalWin;
 
         // Determine message
         let message = '';
         let messageClass = '';
         if (this.playerHands.length === 1) {
              const hand = this.playerHands[0];
-             const pVal = this.calculateHandValue(hand.cards);
+             const pVal = HandUtils.calculateHandValue(hand.cards);
              if (hand.status === 'surrender') { message = 'Você desistiu.'; messageClass = 'tie'; }
              else if (hand.status === 'busted') { message = 'Você estourou! Dealer vence!'; messageClass = 'lose'; }
              else if (dealerValue > 21) { message = 'Dealer estourou! Você venceu!'; messageClass = 'win'; }
@@ -506,7 +505,7 @@ export class GameManager {
         if (this.balance < 10) {
             setTimeout(() => {
                 this.resetGame();
-            }, 2000);
+            }, CONFIG.DELAYS.RESET);
         }
 
         if (this.settings.autoSave) this.saveGame();
@@ -539,44 +538,11 @@ export class GameManager {
         this.updateUI();
     }
 
-    // Helpers
-
-    getCardNumericValue(card) {
-        if (card.value === 'A') {
-            return 11;
-        } else if (['J', 'Q', 'K'].includes(card.value)) {
-            return 10;
-        } else {
-            return parseInt(card.value);
-        }
-    }
-
-    getHandStats(hand) {
-        let value = 0;
-        let aces = 0;
-
-        for (let card of hand) {
-            if (!card) continue;
-            const cardValue = this.getCardNumericValue(card);
-            value += cardValue;
-            if (cardValue === 11) aces++;
-        }
-
-        while (value > 21 && aces > 0) {
-            value -= 10;
-            aces--;
-        }
-
-        return { value, isSoft: aces > 0, aces };
-    }
-
-    calculateHandValue(hand) {
-        return this.getHandStats(hand).value;
-    }
-
-    isSoftHand(hand) {
-        return this.getHandStats(hand).isSoft;
-    }
+    // Helpers (Proxy to HandUtils for tests/compatibility)
+    getCardNumericValue(card) { return HandUtils.getCardNumericValue(card); }
+    getHandStats(hand) { return HandUtils.getHandStats(hand); }
+    calculateHandValue(hand) { return HandUtils.calculateHandValue(hand); }
+    isSoftHand(hand) { return HandUtils.isSoftHand(hand); }
 
     // Settings Update
     updateSetting(key, value) {
