@@ -20,6 +20,15 @@ export class SoundManager {
             'button': ['assets/sounds/click.mp3']
         };
 
+        // Fallback synthetic sound configuration
+        this.synthSounds = {
+            card: { frequency: 800, duration: 0.1 },
+            win: { frequency: 523.25, duration: 0.3 },
+            lose: { frequency: 220, duration: 0.5 },
+            chip: { frequency: 1000, duration: 0.05 },
+            button: { frequency: 600, duration: 0.08 }
+        };
+
         // Initialize asynchronously
         this.init();
     }
@@ -59,7 +68,6 @@ export class SoundManager {
                     })
                     .catch(error => {
                         // Log warning but continue loading other sounds
-                        // Silence 404s during development if expected
                         console.warn(`Failed to load sound ${url}: ${error.message}`);
                     });
 
@@ -79,29 +87,35 @@ export class SoundManager {
 
     /**
      * Plays a sound of the given type.
-     * If multiple variations exist, picks one randomly.
+     * Tries to play a sample first; falls back to synthesis if no samples are loaded.
      * @param {string} type - The category of sound to play (e.g., 'card', 'chip')
      */
     play(type) {
         if (!this.enabled || !this.context) return;
 
-        // Auto-resume context if suspended (browser autoplay policy)
+        // Auto-resume context if suspended
         if (this.context.state === 'suspended') {
             this.context.resume().catch(() => {});
         }
 
         const buffers = this.buffers[type];
-        if (!buffers || buffers.length === 0) return;
 
+        // If we have loaded buffers for this type, play one randomly
+        if (buffers && buffers.length > 0) {
+            this.playSample(buffers);
+        } else {
+            // Fallback to synthetic sound
+            this.playSynthetic(type);
+        }
+    }
+
+    playSample(buffers) {
         try {
-            // Pick a random variation to avoid repetition
             const buffer = buffers[Math.floor(Math.random() * buffers.length)];
-
             const source = this.context.createBufferSource();
             source.buffer = buffer;
 
             const gainNode = this.context.createGain();
-            // Set volume (could be configurable)
             gainNode.gain.value = 0.5;
 
             source.connect(gainNode);
@@ -109,14 +123,35 @@ export class SoundManager {
 
             source.start(0);
         } catch (error) {
-            console.warn(`Error playing sound '${type}':`, error);
+            console.warn('Error playing sample:', error);
         }
     }
 
-    /**
-     * Helper to play a random sound from a category (explicit method)
-     * @param {string} category
-     */
+    playSynthetic(type) {
+        try {
+            const sound = this.synthSounds[type] || this.synthSounds.button;
+            if (!sound) return;
+
+            const oscillator = this.context.createOscillator();
+            const gainNode = this.context.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(this.context.destination);
+
+            oscillator.frequency.value = sound.frequency;
+
+            // Use setValueAtTime for more robust timing
+            const currentTime = this.context.currentTime;
+            gainNode.gain.setValueAtTime(0.1, currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, currentTime + sound.duration);
+
+            oscillator.start(currentTime);
+            oscillator.stop(currentTime + sound.duration);
+        } catch (error) {
+            console.warn('Error playing synthetic sound:', error);
+        }
+    }
+
     playRandom(category) {
         this.play(category);
     }
