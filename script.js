@@ -285,44 +285,14 @@ class UIManager {
         if (!this.animationsEnabled) return;
 
         try {
-            // Remove existing overlay if any
-            const existing = document.querySelector('.win-overlay');
-            if (existing) existing.remove();
-
-            const overlay = document.createElement('div');
-            overlay.className = 'win-overlay';
-
-            const modal = document.createElement('div');
-            modal.className = 'win-modal';
-
-            modal.innerHTML = `
-                <div class="win-icon">🏆</div>
-                <div class="win-title">VITÓRIA!</div>
-                ${amount > 0 ? `<div class="win-amount">+$${amount}</div>` : ''}
-            `;
-
-            overlay.appendChild(modal);
-            document.body.appendChild(overlay);
-
-            // Trigger confetti
+            // Trigger confetti bursts
             this.createConfetti();
 
             // Second burst
             setTimeout(() => this.createConfetti(), 500);
 
-            // Auto close after 3 seconds
-            setTimeout(() => {
-                if (overlay.parentNode) {
-                    overlay.style.opacity = '0';
-                    setTimeout(() => overlay.remove(), 500);
-                }
-            }, 3000);
-
-            // Click to dismiss
-            overlay.addEventListener('click', () => {
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.remove(), 500);
-            });
+            // Third burst for good measure
+            setTimeout(() => this.createConfetti(), 1000);
 
         } catch (e) {
             console.warn('Win animation error:', e);
