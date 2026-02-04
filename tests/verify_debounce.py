@@ -22,8 +22,14 @@ def run():
         context = browser.new_context()
         page = context.new_page()
         page.goto(f'http://localhost:{port}/index.html')
-        page.wait_for_selector('.start-btn')
-        page.click('.start-btn')
+
+        # Login
+        page.wait_for_selector('#login-screen')
+        page.fill('#login-username', 'DebounceUser')
+        page.click('#login-btn')
+
+        page.wait_for_selector('#start-game-btn')
+        page.click('#start-game-btn')
         page.wait_for_timeout(1000)
 
         # Clear storage first
@@ -34,7 +40,7 @@ def run():
         page.evaluate("window.game.saveGame()")
 
         # Check immediately
-        saved = page.evaluate("localStorage.getItem('blackjack-premium-save')")
+        saved = page.evaluate("localStorage.getItem('blackjack-premium-save-DebounceUser')")
         if saved:
             print("FAILURE: Saved immediately! Debounce not working.")
         else:
@@ -45,7 +51,7 @@ def run():
         page.wait_for_timeout(1500)
 
         # Check again
-        saved = page.evaluate("localStorage.getItem('blackjack-premium-save')")
+        saved = page.evaluate("localStorage.getItem('blackjack-premium-save-DebounceUser')")
         if saved:
             print("SUCCESS: Saved after delay.")
         else:

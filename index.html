@@ -11,12 +11,25 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Login Screen -->
+    <div class="login-screen" id="login-screen">
+        <div class="login-content">
+            <h1>♠️ Login ♥️</h1>
+            <p>Digite seu nome de usuário para começar.</p>
+            <div class="login-form">
+                <input type="text" id="login-username" placeholder="Nome de Usuário" autocomplete="off" maxlength="15">
+                <div class="error-msg" id="login-error"></div>
+                <button id="login-btn" class="start-btn">Entrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Welcome Screen -->
-    <div class="welcome-screen" id="welcome-screen">
+    <div class="welcome-screen hidden" id="welcome-screen" style="display: none;">
         <div class="welcome-content">
             <h1>♠️ BLACKJACK PREMIUM ♥️</h1>
             <p>Bem-vindo ao melhor jogo de Blackjack online! Desafie o dealer, faça suas apostas e tente chegar aos 21 pontos sem estourar.</p>
-            <button class="start-btn">🎮 Começar a Jogar</button>
+            <button class="start-btn" id="start-game-btn">🎮 Começar a Jogar</button>
         </div>
     </div>
 

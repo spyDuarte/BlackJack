@@ -20,6 +20,7 @@ export class GameManager {
         this.ui = ui;
         this.soundManager = soundManager;
         this.deck = new Deck();
+        this.username = null;
 
         this.initializeGameState();
         this.initializeSettings();
@@ -28,7 +29,18 @@ export class GameManager {
         this.timeouts = [];
 
         this.saveGame = debounce(this._saveGameImmediate.bind(this), 1000);
+    }
+
+    login(username) {
+        this.username = username;
         this.loadGame();
+        this.loadSettings();
+        this.updateUI();
+    }
+
+    getStorageKey(key) {
+        if (!this.username) return null;
+        return `${key}-${this.username}`;
     }
 
     addTimeout(fn, delay) {
@@ -98,6 +110,8 @@ export class GameManager {
     }
 
     _saveGameImmediate() {
+        if (!this.username) return;
+
         const gameState = {
             balance: this.balance,
             wins: this.wins,
@@ -106,11 +120,13 @@ export class GameManager {
             totalWinnings: this.totalWinnings,
             gameStarted: this.gameStarted
         };
-        StorageManager.set('blackjack-premium-save', JSON.stringify(gameState));
+        StorageManager.set(this.getStorageKey('blackjack-premium-save'), JSON.stringify(gameState));
     }
 
     loadGame() {
-        const savedGame = StorageManager.get('blackjack-premium-save');
+        if (!this.username) return;
+
+        const savedGame = StorageManager.get(this.getStorageKey('blackjack-premium-save'));
         if (savedGame) {
             try {
                 const gameState = JSON.parse(savedGame);
@@ -128,11 +144,14 @@ export class GameManager {
     }
 
     saveSettings() {
-        StorageManager.set('blackjack-premium-settings', JSON.stringify(this.settings));
+        if (!this.username) return;
+        StorageManager.set(this.getStorageKey('blackjack-premium-settings'), JSON.stringify(this.settings));
     }
 
     loadSettings() {
-        const savedSettings = StorageManager.get('blackjack-premium-settings');
+        if (!this.username) return;
+
+        const savedSettings = StorageManager.get(this.getStorageKey('blackjack-premium-settings'));
         if (savedSettings) {
             try {
                 this.settings = { ...this.settings, ...JSON.parse(savedSettings) };

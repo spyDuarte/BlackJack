@@ -45,12 +45,17 @@ def run():
         try:
             page.goto(url)
 
+            # Login
+            page.wait_for_selector('#login-screen')
+            page.fill('#login-username', 'TestUser')
+            page.click('#login-btn')
+
             # Wait for welcome screen
             page.wait_for_selector('#welcome-screen')
             print("Welcome screen visible")
 
             # Click start button
-            page.click('.start-btn')
+            page.click('#start-game-btn')
             print("Clicked start button")
 
             # Wait for loading to finish and game to start

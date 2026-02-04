@@ -54,15 +54,26 @@ export class UIManager {
             winRate: document.getElementById('win-rate'),
             totalWinnings: document.getElementById('total-winnings'),
             blackjacks: document.getElementById('blackjacks'),
-            startBtn: document.querySelector('.start-btn'),
+            startBtn: document.getElementById('start-game-btn'),
             btnReset: document.getElementById('btn-reset-game'),
-            closeSettings: document.querySelector('.close')
+            closeSettings: document.querySelector('.close'),
+            loginScreen: document.getElementById('login-screen'),
+            loginUsername: document.getElementById('login-username'),
+            loginBtn: document.getElementById('login-btn'),
+            loginError: document.getElementById('login-error')
         };
     }
 
     bindEvents() {
         const el = this.elements;
         const game = this.game;
+
+        if (el.loginBtn) el.loginBtn.addEventListener('click', () => this.handleLogin());
+        if (el.loginUsername) {
+            el.loginUsername.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.handleLogin();
+            });
+        }
 
         if (el.startBtn) el.startBtn.addEventListener('click', () => game.startApp());
         if (el.btnReset) el.btnReset.addEventListener('click', () => game.resetGame());
@@ -115,6 +126,39 @@ export class UIManager {
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
 
         if (el.closeError) el.closeError.addEventListener('click', () => this.hideError());
+    }
+
+    handleLogin() {
+        const username = this.elements.loginUsername.value.trim();
+        if (!username) {
+            this.showLoginError('Por favor, digite um nome de usuário.');
+            return;
+        }
+        if (username.length < 3) {
+            this.showLoginError('Nome de usuário deve ter pelo menos 3 caracteres.');
+            return;
+        }
+
+        this.game.login(username);
+
+        if (this.elements.loginScreen) {
+            this.elements.loginScreen.classList.add('hidden');
+            setTimeout(() => {
+                this.elements.loginScreen.style.display = 'none';
+                if (this.elements.welcomeScreen) {
+                    this.elements.welcomeScreen.style.display = 'flex';
+                    this.elements.welcomeScreen.classList.remove('hidden');
+                }
+            }, 500);
+        }
+    }
+
+    showLoginError(msg) {
+        if (this.elements.loginError) {
+            this.elements.loginError.textContent = msg;
+            this.elements.loginUsername.classList.add('error');
+            setTimeout(() => this.elements.loginUsername.classList.remove('error'), 500);
+        }
     }
 
     bindCheckbox(id, callback) {
