@@ -228,55 +228,92 @@ class UIManager {
         return cardEl;
     }
 
-    createParticles(x, y, count = 10) {
+    createConfetti() {
         if (!this.animationsEnabled) return;
 
-        try {
-            for (let i = 0; i < count; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle star';
-                particle.style.left = (x + (Math.random() - 0.5) * 100) + 'px';
-                particle.style.top = y + 'px';
-                document.body.appendChild(particle);
+        const colors = ['#FFD700', '#FFA500', '#2ecc71', '#3498db', '#e74c3c', '#ffffff'];
+        const confettiCount = 50;
 
+        try {
+            for (let i = 0; i < confettiCount; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+
+                // Random properties
+                const bg = colors[Math.floor(Math.random() * colors.length)];
+                const left = Math.random() * 100 + 'vw';
+                const animDuration = (Math.random() * 1.5 + 1.5) + 's'; // 1.5-3s
+                const animDelay = (Math.random() * 0.5) + 's';
+                const fallX = (Math.random() * 200 - 100) + 'px';
+
+                confetti.style.backgroundColor = bg;
+                confetti.style.left = left;
+                confetti.style.animationDuration = animDuration;
+                confetti.style.animationDelay = animDelay;
+                confetti.style.setProperty('--fall-x', fallX);
+
+                // Random size
+                const size = (Math.random() * 8 + 5) + 'px';
+                confetti.style.width = size;
+                confetti.style.height = size;
+
+                document.body.appendChild(confetti);
+
+                // Cleanup
                 setTimeout(() => {
-                    if (particle.parentNode) {
-                        particle.remove();
-                    }
-                }, 3000);
+                    if (confetti.parentNode) confetti.remove();
+                }, 4000);
             }
         } catch (e) {
-            // Ignore
+            console.warn('Confetti error:', e);
         }
     }
 
-    showWinAnimation() {
+    showWinAnimation(amount = 0) {
         if (!this.animationsEnabled) return;
 
         try {
-            const winText = document.createElement('div');
-            winText.className = 'win-animation';
-            winText.textContent = 'VITÓRIA!';
-            document.body.appendChild(winText);
+            // Remove existing overlay if any
+            const existing = document.querySelector('.win-overlay');
+            if (existing) existing.remove();
 
+            const overlay = document.createElement('div');
+            overlay.className = 'win-overlay';
+
+            const modal = document.createElement('div');
+            modal.className = 'win-modal';
+
+            modal.innerHTML = `
+                <div class="win-icon">🏆</div>
+                <div class="win-title">VITÓRIA!</div>
+                ${amount > 0 ? `<div class="win-amount">+$${amount}</div>` : ''}
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Trigger confetti
+            this.createConfetti();
+
+            // Second burst
+            setTimeout(() => this.createConfetti(), 500);
+
+            // Auto close after 3 seconds
             setTimeout(() => {
-                if (winText.parentNode) {
-                    winText.remove();
+                if (overlay.parentNode) {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.remove(), 500);
                 }
-            }, 2000);
+            }, 3000);
 
-            // Create particles
-            for (let i = 0; i < 5; i++) {
-                setTimeout(() => {
-                    this.createParticles(
-                        Math.random() * window.innerWidth,
-                        Math.random() * window.innerHeight,
-                        15
-                    );
-                }, i * 200);
-            }
+            // Click to dismiss
+            overlay.addEventListener('click', () => {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 500);
+            });
+
         } catch (e) {
-            // Ignore
+            console.warn('Win animation error:', e);
         }
     }
 
@@ -939,7 +976,7 @@ class BlackjackGame {
 
         if (anyWin) {
             this.soundManager.play('win');
-            this.ui.showWinAnimation();
+            this.ui.showWinAnimation(totalWin);
         } else if (allLost) {
             this.soundManager.play('lose');
         }
