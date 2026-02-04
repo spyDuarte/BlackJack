@@ -1,3 +1,5 @@
+import * as HandUtils from '../utils/HandUtils.js';
+
 export class UIManager {
     constructor() {
         this.elements = {};
@@ -150,11 +152,11 @@ export class UIManager {
 
         // Scores
         const dealerValue = (state.dealerHand && state.dealerHand.length > 0) ?
-            this.calculateHandValue(state.dealerRevealed ? state.dealerHand : [state.dealerHand[0]]) : 0;
+            HandUtils.calculateHandValue(state.dealerRevealed ? state.dealerHand : [state.dealerHand[0]]) : 0;
 
         let playerValue = 0;
         if (state.playerHands && state.playerHands.length > 0 && state.playerHands[state.currentHandIndex]) {
-             playerValue = this.calculateHandValue(state.playerHands[state.currentHandIndex].cards);
+             playerValue = HandUtils.calculateHandValue(state.playerHands[state.currentHandIndex].cards);
         }
 
         if (this.elements.dealerScore) this.elements.dealerScore.textContent = state.dealerRevealed ? dealerValue : '?';
@@ -429,32 +431,5 @@ export class UIManager {
         };
 
         element.dataset.animId = requestAnimationFrame(step);
-    }
-
-    // Helpers copied from Logic to support score rendering
-    getCardNumericValue(card) {
-        if (card.value === 'A') {
-            return 11;
-        } else if (['J', 'Q', 'K'].includes(card.value)) {
-            return 10;
-        } else {
-            return parseInt(card.value);
-        }
-    }
-
-    calculateHandValue(hand) {
-        let value = 0;
-        let aces = 0;
-        for (let card of hand) {
-            if (!card) continue;
-            const cardValue = this.getCardNumericValue(card);
-            value += cardValue;
-            if (cardValue === 11) aces++;
-        }
-        while (value > 21 && aces > 0) {
-            value -= 10;
-            aces--;
-        }
-        return value;
     }
 }
