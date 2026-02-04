@@ -169,7 +169,6 @@ class UIManager {
             betIncrease: this.safeGetElement('bet-increase'),
             betDoubleValue: this.safeGetElement('bet-double-value'),
             splitBtn: this.safeGetElement('split-btn'),
-            surrenderBtn: this.safeGetElement('surrender-btn'),
             settingsBtn: this.safeGetElement('settings-btn'),
             settingsModal: this.safeGetElement('settings-modal'),
             insuranceModal: this.safeGetElement('insurance-modal'),
@@ -537,7 +536,6 @@ class BlackjackGame {
         if (el.standBtn) el.standBtn.addEventListener('click', () => this.stand());
         if (el.doubleBtn) el.doubleBtn.addEventListener('click', () => this.double());
                 if (el.splitBtn) el.splitBtn.addEventListener('click', () => this.split());
-        if (el.surrenderBtn) el.surrenderBtn.addEventListener('click', () => this.surrender());
         if (el.insuranceYesBtn) el.insuranceYesBtn.addEventListener('click', () => this.respondToInsurance(true));
         if (el.insuranceNoBtn) el.insuranceNoBtn.addEventListener('click', () => this.respondToInsurance(false));
         if (el.newGameBtn) el.newGameBtn.addEventListener('click', () => this.newGame());
@@ -1176,9 +1174,6 @@ class BlackjackGame {
                 break;
                         case 'p':
                 if (this.ui.elements.splitBtn && !this.ui.elements.splitBtn.disabled && this.ui.elements.splitBtn.style.display !== 'none') this.split();
-                break;
-            case 'l':
-                if (this.ui.elements.surrenderBtn && !this.ui.elements.surrenderBtn.disabled && this.ui.elements.surrenderBtn.style.display !== 'none') this.surrender();
                 break;
             case 'escape':
                 this.ui.toggleSettingsModal(false);

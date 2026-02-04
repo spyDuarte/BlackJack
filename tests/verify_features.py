@@ -40,7 +40,7 @@ def run():
             page.wait_for_selector('#bet-btn')
 
             # --- Test 1: Insurance ---
-            # ... skipping insurance test for brevity if needed, but keeping it ...
+            print("--- Test 1: Insurance ---")
             js_mock_deck_insurance = """
             const padding = new Array(100).fill({suit: '♦', value: '2'});
             const targetCards = [
@@ -57,46 +57,6 @@ def run():
             time.sleep(2)
             page.evaluate("window.game.resetGame()")
             page.wait_for_selector('#bet-btn')
-
-            # --- Test 2: Surrender ---
-            print("\n--- Test 2: Surrender ---")
-
-            js_mock_deck_surrender = """
-            const padding = new Array(100).fill({suit: '♦', value: '2'});
-            const targetCards = [
-                {suit: '♠', value: '10'},
-                {suit: '♠', value: '5'},
-                {suit: '♥', value: '6'},
-                {suit: '♥', value: '10'}
-            ];
-            window.game.deck.cards = [...padding, ...targetCards];
-            window.game.balance = 1000;
-            window.game.updateDisplay();
-            """
-
-            page.evaluate(js_mock_deck_surrender)
-            page.click('#bet-btn')
-
-            page.wait_for_selector('#surrender-btn', state='visible')
-            print("Verified: Surrender button visible.")
-
-            # Try manual JS trigger first to verify logic
-            print("Triggering surrender via JS...")
-            page.evaluate("window.game.surrender()")
-
-            time.sleep(1)
-            msg = page.text_content('#message')
-            print(f"Message: {msg}")
-
-            if "desistiu" not in msg:
-                raise Exception("Expected surrender message")
-
-            balance = page.evaluate("window.game.balance")
-            print(f"Balance: {balance}")
-            if balance != 975:
-                raise Exception(f"Expected balance 975, got {balance}")
-
-            print("Verified: Surrender logic works manually.")
 
             print("\nAll feature tests passed!")
 
