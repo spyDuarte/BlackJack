@@ -253,6 +253,7 @@ class UIManager {
         const confettiCount = 50;
 
         try {
+            const fragment = document.createDocumentFragment();
             for (let i = 0; i < confettiCount; i++) {
                 const confetti = document.createElement('div');
                 confetti.className = 'confetti';
@@ -275,13 +276,14 @@ class UIManager {
                 confetti.style.width = size;
                 confetti.style.height = size;
 
-                document.body.appendChild(confetti);
+                fragment.appendChild(confetti);
 
                 // Cleanup
                 setTimeout(() => {
                     if (confetti.parentNode) confetti.remove();
                 }, 4000);
             }
+                    document.body.appendChild(fragment);
         } catch (e) {
             console.warn('Confetti error:', e);
         }
