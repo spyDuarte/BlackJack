@@ -1,3 +1,15 @@
+const CONFIG = {
+    DECKS: 6,
+    PENETRATION_THRESHOLD: 0.2, // 20% remaining
+    INITIAL_BALANCE: 1000,
+    MIN_BET: 10,
+    ANIMATION_SPEED: 1000,
+    PAYOUT: {
+        BLACKJACK: 2.5, // 3:2 payout on original bet (1.5 + 1) -> 2.5x total return logic
+        REGULAR: 2.0
+    }
+};
+
 // Storage Manager
 class StorageManager {
     static set(key, value) {
@@ -87,7 +99,7 @@ class SoundManager {
 
 // Deck Class
 class Deck {
-    constructor(numberOfDecks = 6) {
+    constructor(numberOfDecks = CONFIG.DECKS) {
         this.numberOfDecks = numberOfDecks;
         this.cards = [];
         this.reset();
@@ -493,7 +505,7 @@ class BlackjackGame {
         this.playerHands = [];
         this.currentHandIndex = 0;
         this.dealerHand = [];
-        this.balance = 1000;
+        this.balance = CONFIG.INITIAL_BALANCE;
         this.currentBet = 0;
         this.wins = 0;
         this.losses = 0;
@@ -629,7 +641,12 @@ class BlackjackGame {
         }
     }
 
-    calculateHandValue(hand) {
+    /**
+     * Calculates hand statistics including total value and soft status.
+     * @param {Array} hand - Array of card objects
+     * @returns {Object} { value, isSoft, aces }
+     */
+    getHandStats(hand) {
         let value = 0;
         let aces = 0;
 
@@ -649,30 +666,19 @@ class BlackjackGame {
             aces--;
         }
 
-        return value;
+        return {
+            value,
+            isSoft: aces > 0,
+            aces
+        };
+    }
+
+    calculateHandValue(hand) {
+        return this.getHandStats(hand).value;
     }
 
     isSoftHand(hand) {
-        let value = 0;
-        let aces = 0;
-
-        for (let card of hand) {
-            if (!card) continue;
-
-            const cardValue = this.getCardNumericValue(card);
-            value += cardValue;
-
-            if (cardValue === 11) {
-                aces++;
-            }
-        }
-
-        while (value > 21 && aces > 0) {
-            value -= 10;
-            aces--;
-        }
-
-        return aces > 0;
+        return this.getHandStats(hand).isSoft;
     }
 
     updateDisplay() {
@@ -815,9 +821,9 @@ class BlackjackGame {
         this.dealerRevealed = false;
         this.gameStarted = true;
 
-        // Shuffle logic if penetration > 80% (remaining < 20%)
+        // Shuffle logic if penetration threshold reached
         const totalCards = this.deck.numberOfDecks * 52;
-        if (this.deck.remainingCards < totalCards * 0.2) {
+        if (this.deck.remainingCards < totalCards * CONFIG.PENETRATION_THRESHOLD) {
              this.ui.showMessage('Embaralhando...', '');
              this.deck.reset();
              this.deck.shuffle();
