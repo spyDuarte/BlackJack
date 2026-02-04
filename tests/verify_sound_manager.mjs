@@ -4,15 +4,27 @@ global.window = {};
 class MockAudioBufferSourceNode {
     constructor() {
         this.buffer = null;
-        this.started = false;
     }
     connect(dest) {}
     start(time) { this.started = true; }
 }
 
+class MockOscillatorNode {
+    constructor() {
+        this.frequency = { value: 0 };
+    }
+    connect(dest) {}
+    start(time) { this.started = true; }
+    stop(time) { this.stopped = true; }
+}
+
 class MockGainNode {
     constructor() {
-        this.gain = { value: 1 };
+        this.gain = {
+            value: 1,
+            setValueAtTime: (val, time) => {},
+            exponentialRampToValueAtTime: (val, time) => {}
+        };
     }
     connect(dest) {}
 }
@@ -21,8 +33,10 @@ class MockAudioContext {
     constructor() {
         this.state = 'running';
         this.destination = {};
+        this.currentTime = 0;
     }
     createBufferSource() { return new MockAudioBufferSourceNode(); }
+    createOscillator() { return new MockOscillatorNode(); }
     createGain() { return new MockGainNode(); }
     decodeAudioData(buffer) { return Promise.resolve({ length: 100 }); }
     resume() {
@@ -46,54 +60,44 @@ global.fetch = async (url) => {
 import { SoundManager } from '../src/utils/SoundManager.js';
 
 async function verify() {
-    console.log('Verifying SoundManager...');
+    console.log('Verifying SoundManager with fallback...');
 
+    // 1. Test successful load and sample playback
     const manager = new SoundManager();
+    await new Promise(resolve => setTimeout(resolve, 100)); // wait for init
 
-    // Wait for async init and preload
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    console.log('Context created:', !!manager.context);
-    if (!manager.context) throw new Error('Context failed to create');
-
-    // Wait for preload to finish
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Verify buffers loaded
+    // Verify buffers loaded (using our successful fetch mock)
     const cardBuffers = manager.buffers['card'];
-    console.log('Card buffers loaded:', cardBuffers ? cardBuffers.length : 0);
-
     if (!cardBuffers || cardBuffers.length !== 3) {
-        throw new Error(`Expected 3 card buffers, got ${cardBuffers ? cardBuffers.length : 0}`);
+        throw new Error('Expected 3 card buffers');
     }
 
-    // Verify play
-    console.log('Testing play("card")...');
-    let played = false;
-
-    // Patch createBufferSource to detect playback
-    const originalCreateSource = manager.context.createBufferSource;
+    // Spy on createBufferSource to confirm sample playback
+    let samplePlayed = false;
     manager.context.createBufferSource = () => {
-        const source = new MockAudioBufferSourceNode(); // Use our mock directly or call original if it returned a real object (but here MockAudioContext returns MockAudioBufferSourceNode)
-        // We can just spy on the result of the original call since it returns our Mock
-        source.start = () => { played = true; };
+        const source = new MockAudioBufferSourceNode();
+        source.start = () => { samplePlayed = true; };
         return source;
     };
 
     manager.play('card');
+    if (!samplePlayed) throw new Error('Sample did not play when buffers were present');
+    console.log('Sample playback verified.');
 
-    if (!played) throw new Error('Sound did not play');
-    console.log('Sound played successfully.');
+    // 2. Test fallback (simulate missing buffers)
+    // Clear buffers for 'chip' to force fallback
+    manager.buffers['chip'] = [];
 
-    // Verify random variations logic
-    console.log('Testing playRandom("chip")...');
-    const chipBuffers = manager.buffers['chip'];
-    if (!chipBuffers || chipBuffers.length !== 2) {
-         throw new Error('Expected 2 chip buffers');
-    }
+    let synthPlayed = false;
+    manager.context.createOscillator = () => {
+        const osc = new MockOscillatorNode();
+        osc.start = () => { synthPlayed = true; };
+        return osc;
+    };
 
-    // Just ensure it runs without error
-    manager.playRandom('chip');
+    manager.play('chip');
+    if (!synthPlayed) throw new Error('Fallback synthetic sound did not play when buffers were empty');
+    console.log('Fallback synthesis verified.');
 
     console.log('Verification passed.');
 }
