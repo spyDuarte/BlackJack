@@ -3,7 +3,7 @@ const CONFIG = {
     PENETRATION_THRESHOLD: 0.2, // 20% remaining
     INITIAL_BALANCE: 1000,
     MIN_BET: 10,
-    ANIMATION_SPEED: 1000,
+    ANIMATION_SPEED: 500,
     PAYOUT: {
         BLACKJACK: 2.5, // 3:2 payout on original bet (1.5 + 1) -> 2.5x total return logic
         REGULAR: 2.0,
@@ -260,8 +260,8 @@ class UIManager {
                 // Random properties
                 const bg = colors[Math.floor(Math.random() * colors.length)];
                 const left = Math.random() * 100 + 'vw';
-                const animDuration = (Math.random() * 1.5 + 1.5) + 's'; // 1.5-3s
-                const animDelay = (Math.random() * 0.5) + 's';
+                const animDuration = (Math.random() * 0.75 + 0.75) + 's'; // 1.5-3s
+                const animDelay = (Math.random() * 0.25) + 's';
                 const fallX = (Math.random() * 200 - 100) + 'px';
 
                 confetti.style.backgroundColor = bg;
@@ -295,10 +295,10 @@ class UIManager {
             this.createConfetti();
 
             // Second burst
-            setTimeout(() => this.createConfetti(), 500);
+            setTimeout(() => this.createConfetti(), 250);
 
             // Third burst for good measure
-            setTimeout(() => this.createConfetti(), 1000);
+            setTimeout(() => this.createConfetti(), 500);
 
         } catch (e) {
             console.warn('Win animation error:', e);
@@ -330,7 +330,7 @@ class UIManager {
         // Keeping original logic
         try {
             const current = parseInt(element.textContent.replace(/\D/g, '')) || 0;
-            const steps = 20;
+            const steps = 10;
             const increment = (value - current) / steps;
             let step = 0;
 
@@ -343,7 +343,7 @@ class UIManager {
                     clearInterval(interval);
                     element.textContent = isCurrency ? `$${value}` : value;
                 }
-            }, 30);
+            }, 20);
         } catch (e) {
             element.textContent = isCurrency ? `$${value}` : value;
         }
@@ -368,7 +368,7 @@ class UIManager {
             const isHidden = isDealer && index === 1 && !revealDealer;
             const cardEl = this.createCardElement(card, isHidden);
             if (this.animationsEnabled) {
-                cardEl.style.animationDelay = `${index * 0.1}s`;
+                cardEl.style.animationDelay = `${index * 0.05}s`;
             }
             container.appendChild(cardEl);
         });
@@ -626,7 +626,7 @@ class BlackjackGame {
                 console.error('Error starting app:', e);
                 this.ui.showError('Erro ao iniciar o jogo.');
             }
-        }, 800);
+        }, 400);
     }
 
     resetGame() {
@@ -808,13 +808,13 @@ class BlackjackGame {
                  this.dealerHand.push(this.deck.draw());
                  this.soundManager.play('card');
                  this.updateDisplay();
-                 this.addTimeout(dealerTurn, 1000);
+                 this.addTimeout(dealerTurn, 500);
              } else {
-                 this.addTimeout(() => this.endGame(), 500);
+                 this.addTimeout(() => this.endGame(), 250);
              }
         };
 
-        this.addTimeout(dealerTurn, 1000);
+        this.addTimeout(dealerTurn, 500);
     }
 
 
@@ -824,12 +824,12 @@ class BlackjackGame {
              this.dealerRevealed = true;
              this.updateDisplay();
              this.ui.showMessage('Dealer tem Blackjack!', 'lose');
-             this.addTimeout(() => this.endGame(), 1500);
+             this.addTimeout(() => this.endGame(), 750);
         } else {
              if (this.dealerHand[0].value === 'A' || this.getCardNumericValue(this.dealerHand[0]) === 10) {
                  this.ui.showMessage('Dealer não tem Blackjack.', '');
              }
-             this.addTimeout(() => this.startPlayerTurn(), 1000);
+             this.addTimeout(() => this.startPlayerTurn(), 500);
         }
     }
 
@@ -851,7 +851,7 @@ class BlackjackGame {
         }
 
         this.updateDisplay();
-        this.addTimeout(() => this.checkDealerBlackjack(), 1000);
+        this.addTimeout(() => this.checkDealerBlackjack(), 500);
     }
 
     surrender() {
@@ -881,7 +881,7 @@ class BlackjackGame {
 
         const pVal = this.calculateHandValue(this.playerHands[0].cards);
         if (pVal === 21) {
-             this.addTimeout(() => this.endGame(), 1000);
+             this.addTimeout(() => this.endGame(), 500);
         }
     }
 
@@ -933,9 +933,9 @@ class BlackjackGame {
                  this.ui.toggleInsuranceModal(true);
              }, 1000);
         } else if (dealerUpVal === 10) {
-             this.addTimeout(() => this.checkDealerBlackjack(), 1000);
+             this.addTimeout(() => this.checkDealerBlackjack(), 500);
         } else {
-             this.addTimeout(() => this.startPlayerTurn(), 1000);
+             this.addTimeout(() => this.startPlayerTurn(), 500);
         }
     }
 
@@ -950,7 +950,7 @@ class BlackjackGame {
         if (this.calculateHandValue(hand.cards) > 21) {
             hand.status = 'busted';
             this.ui.showMessage('Estourou!', 'lose');
-            this.addTimeout(() => this.nextHand(), 500);
+            this.addTimeout(() => this.nextHand(), 250);
         }
     }
 
@@ -978,10 +978,10 @@ class BlackjackGame {
         if (value > 21) {
             hand.status = 'busted';
             this.ui.showMessage('Estourou!', 'lose');
-            this.addTimeout(() => this.nextHand(), 500);
+            this.addTimeout(() => this.nextHand(), 250);
         } else {
             hand.status = 'stand';
-            this.addTimeout(() => this.nextHand(), 500);
+            this.addTimeout(() => this.nextHand(), 250);
         }
 
         this.updateDisplay();
