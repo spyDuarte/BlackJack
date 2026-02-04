@@ -34,9 +34,14 @@ def run():
                 print(f"Navigating to {url}")
                 page.goto(url)
 
+                # Login
+                page.wait_for_selector('#login-screen')
+                page.fill('#login-username', 'TestUser')
+                page.click('#login-btn')
+
                 # Start game
-                page.wait_for_selector('.start-btn')
-                page.click('.start-btn')
+                page.wait_for_selector('#start-game-btn')
+                page.click('#start-game-btn')
 
                 # Check if button exists
                 print("Checking for Max button...")
