@@ -510,6 +510,17 @@ export class GameManager {
         if (this.settings.autoSave) this.saveGame();
     }
 
+    resetGame() {
+        this.balance = CONFIG.INITIAL_BALANCE;
+        this.wins = 0;
+        this.losses = 0;
+        this.blackjacks = 0;
+        this.totalWinnings = 0;
+        this.newGame();
+        if (this.ui) this.ui.showMessage('Jogo reiniciado!', 'win');
+        this.saveGame();
+    }
+
     newGame() {
         this.playerHands = [];
         this.currentHandIndex = 0;
