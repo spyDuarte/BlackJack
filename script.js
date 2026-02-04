@@ -167,6 +167,7 @@ class UIManager {
             newGameBtn: this.safeGetElement('new-game-btn'),
             betDecrease: this.safeGetElement('bet-decrease'),
             betIncrease: this.safeGetElement('bet-increase'),
+            betDoubleValue: this.safeGetElement('bet-double-value'),
             splitBtn: this.safeGetElement('split-btn'),
             surrenderBtn: this.safeGetElement('surrender-btn'),
             settingsBtn: this.safeGetElement('settings-btn'),
@@ -543,6 +544,7 @@ class BlackjackGame {
 
         if (el.betDecrease) el.betDecrease.addEventListener('click', () => this.adjustBet(-10));
         if (el.betIncrease) el.betIncrease.addEventListener('click', () => this.adjustBet(10));
+        if (el.betDoubleValue) el.betDoubleValue.addEventListener('click', () => this.multiplyBet(2));
 
         if (el.betInput) {
             el.betInput.addEventListener('keypress', (e) => {
@@ -1132,6 +1134,14 @@ class BlackjackGame {
 
         const currentBet = parseInt(this.ui.elements.betInput.value) || 50;
         const newBet = Math.max(10, Math.min(this.balance, currentBet + amount));
+        this.ui.elements.betInput.value = newBet;
+        this.soundManager.play('chip');
+    }
+    multiplyBet(factor) {
+        if (!this.ui.elements.betInput) return;
+
+        const currentBet = parseInt(this.ui.elements.betInput.value) || 50;
+        const newBet = Math.max(10, Math.min(this.balance, Math.floor(currentBet * factor)));
         this.ui.elements.betInput.value = newBet;
         this.soundManager.play('chip');
     }
