@@ -70,7 +70,6 @@ export class UIManager {
         if (el.standBtn) el.standBtn.addEventListener('click', () => game.stand());
         if (el.doubleBtn) el.doubleBtn.addEventListener('click', () => game.double());
         if (el.splitBtn) el.splitBtn.addEventListener('click', () => game.split());
-        // Surrender button might not exist in HTML yet based on previous logs, but we add listener if it does
         if (el.surrenderBtn) el.surrenderBtn.addEventListener('click', () => game.surrender());
 
         if (el.insuranceYesBtn) el.insuranceYesBtn.addEventListener('click', () => game.respondToInsurance(true));
@@ -140,10 +139,10 @@ export class UIManager {
     render(state) {
         if (!state) return;
 
-        if (this.elements.balance) this.elements.balance.textContent = `$${state.balance}`;
-        if (this.elements.currentBet) this.elements.currentBet.textContent = `$${state.currentBet}`;
-        if (this.elements.wins) this.elements.wins.textContent = state.wins;
-        if (this.elements.losses) this.elements.losses.textContent = state.losses;
+        if (this.elements.balance) this.animateValue(this.elements.balance, state.balance, '$');
+        if (this.elements.currentBet) this.animateValue(this.elements.currentBet, state.currentBet, '$');
+        if (this.elements.wins) this.animateValue(this.elements.wins, state.wins);
+        if (this.elements.losses) this.animateValue(this.elements.losses, state.losses);
         if (this.elements.betInput) this.elements.betInput.value = state.currentBet;
 
         this.renderHand(this.elements.dealerCards, state.dealerHand, true, state.dealerRevealed);
@@ -337,10 +336,58 @@ export class UIManager {
     updateStats(wins, losses, totalWinnings, blackjacks) {
          const totalGames = wins + losses;
          const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
-         if(this.elements.totalGames) this.elements.totalGames.textContent = totalGames;
-         if(this.elements.winRate) this.elements.winRate.textContent = `${winRate}%`;
-         if(this.elements.totalWinnings) this.elements.totalWinnings.textContent = `$${totalWinnings}`;
-         if(this.elements.blackjacks) this.elements.blackjacks.textContent = blackjacks;
+         if(this.elements.totalGames) this.animateValue(this.elements.totalGames, totalGames);
+         if(this.elements.winRate) this.animateValue(this.elements.winRate, winRate, '', '%');
+         if(this.elements.totalWinnings) this.animateValue(this.elements.totalWinnings, totalWinnings, '$');
+         if(this.elements.blackjacks) this.animateValue(this.elements.blackjacks, blackjacks);
+    }
+
+    animateValue(element, target, prefix = '', suffix = '') {
+        if (!element) return;
+
+        // Cancel existing animation if any
+        if (element.dataset.animId) {
+            cancelAnimationFrame(parseInt(element.dataset.animId));
+            delete element.dataset.animId;
+        }
+
+        // If animations disabled, update instantly
+        if (!this.animationsEnabled) {
+            element.textContent = `${prefix}${target}${suffix}`;
+            return;
+        }
+
+        const currentText = element.textContent.replace(/[^0-9.-]/g, '');
+        let start = parseInt(currentText);
+        if (isNaN(start)) start = 0;
+
+        if (start === target) {
+             element.textContent = `${prefix}${target}${suffix}`;
+             return;
+        }
+
+        const duration = 500;
+        const startTime = performance.now();
+
+        const step = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Ease out cubic
+            const ease = 1 - Math.pow(1 - progress, 3);
+
+            const value = Math.round(start + ((target - start) * ease));
+            element.textContent = `${prefix}${value}${suffix}`;
+
+            if (progress < 1) {
+                element.dataset.animId = requestAnimationFrame(step);
+            } else {
+                element.textContent = `${prefix}${target}${suffix}`;
+                delete element.dataset.animId;
+            }
+        };
+
+        element.dataset.animId = requestAnimationFrame(step);
     }
 
     // Helpers copied from Logic to support score rendering
