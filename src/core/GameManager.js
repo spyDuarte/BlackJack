@@ -1,6 +1,7 @@
 import { Deck } from './Deck.js';
 import { CONFIG } from './Constants.js';
 import { StorageManager } from '../utils/StorageManager.js';
+import { debounce } from '../utils/debounce.js';
 
 export class GameManager {
     static instance = null;
@@ -25,6 +26,7 @@ export class GameManager {
         // Timeouts management
         this.timeouts = [];
 
+        this.saveGame = debounce(this._saveGameImmediate.bind(this), 1000);
         this.loadGame();
     }
 
@@ -94,7 +96,7 @@ export class GameManager {
         }
     }
 
-    saveGame() {
+    _saveGameImmediate() {
         const gameState = {
             balance: this.balance,
             wins: this.wins,
