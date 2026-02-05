@@ -60,7 +60,9 @@ export class UIManager {
             loginScreen: document.getElementById('login-screen'),
             loginUsername: document.getElementById('login-username'),
             loginBtn: document.getElementById('login-btn'),
-            loginError: document.getElementById('login-error')
+            loginError: document.getElementById('login-error'),
+            volumeSlider: document.getElementById('volume-slider'),
+            volumeValue: document.getElementById('volume-value')
         };
     }
 
@@ -122,6 +124,14 @@ export class UIManager {
         this.bindCheckbox('animations-enabled', (checked) => game.updateSetting('animationsEnabled', checked));
         this.bindCheckbox('auto-save', (checked) => game.updateSetting('autoSave', checked));
         this.bindCheckbox('show-stats', (checked) => game.updateSetting('showStats', checked));
+
+        if (el.volumeSlider) {
+            el.volumeSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                if (el.volumeValue) el.volumeValue.textContent = `${value}%`;
+                game.updateSetting('volume', value / 100);
+            });
+        }
 
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
 
@@ -393,6 +403,11 @@ export class UIManager {
     setAnimationsEnabled(enabled) { this.animationsEnabled = enabled; }
     setStatsVisibility(visible) {
         if (this.elements.statsContainer) this.elements.statsContainer.style.display = visible ? 'block' : 'none';
+    }
+    setVolume(value) {
+        const percent = Math.round(value * 100);
+        if (this.elements.volumeSlider) this.elements.volumeSlider.value = percent;
+        if (this.elements.volumeValue) this.elements.volumeValue.textContent = `${percent}%`;
     }
 
     showWinAnimation(amount) {
