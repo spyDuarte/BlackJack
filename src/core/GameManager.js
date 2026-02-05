@@ -478,7 +478,8 @@ export class GameManager {
         });
 
         this.balance += totalWin;
-        this.totalWinnings += totalWin;
+        const totalBetOnHands = this.playerHands.reduce((sum, h) => sum + h.bet, 0);
+        this.totalWinnings += (totalWin - totalBetOnHands);
 
         // Determine message
         let message = '';
