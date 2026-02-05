@@ -394,6 +394,7 @@ export class UIManager {
 
     createConfetti() {
         const colors = ['#FFD700', '#FFA500', '#2ecc71', '#3498db', '#e74c3c', '#ffffff'];
+        const fragment = document.createDocumentFragment();
         for (let i = 0; i < 50; i++) {
             const confetti = document.createElement('div');
             confetti.className = 'confetti';
@@ -405,9 +406,10 @@ export class UIManager {
             confetti.style.left = left;
             confetti.style.animationDuration = animDuration;
             confetti.style.setProperty('--fall-x', fallX);
-            document.body.appendChild(confetti);
+            fragment.appendChild(confetti);
             setTimeout(() => { if (confetti.parentNode) confetti.remove(); }, 4000);
         }
+        document.body.appendChild(fragment);
     }
 
     showError(msg) {
