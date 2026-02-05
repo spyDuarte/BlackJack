@@ -292,11 +292,21 @@ export class UIManager {
         const front = document.createElement('div');
         const isRed = card.suit === '♥' || card.suit === '♦';
         front.className = `card-face card-front ${isRed ? 'red' : 'black'}`;
-        front.innerHTML = `
-            <div class="suit">${card.suit}</div>
-            <div class="suit-bottom">${card.suit}</div>
-            <div class="value">${card.value}</div>
-        `;
+        const suitTop = document.createElement('div');
+        suitTop.className = 'suit';
+        suitTop.textContent = card.suit;
+
+        const suitBottom = document.createElement('div');
+        suitBottom.className = 'suit-bottom';
+        suitBottom.textContent = card.suit;
+
+        const valueEl = document.createElement('div');
+        valueEl.className = 'value';
+        valueEl.textContent = card.value;
+
+        front.appendChild(suitTop);
+        front.appendChild(suitBottom);
+        front.appendChild(valueEl);
 
         const back = document.createElement('div');
         back.className = 'card-face card-back';

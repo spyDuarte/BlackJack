@@ -35,6 +35,10 @@ export class Deck {
     }
 
     draw() {
+        if (this.cards.length === 0) {
+            this.reset();
+            this.shuffle();
+        }
         return this.cards.pop();
     }
 }
