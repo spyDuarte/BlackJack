@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
@@ -27,6 +27,15 @@ jobs:
       run: |
         python -m playwright install --with-deps chromium
 
-    - name: Run verification script
+    - name: Run all tests
       run: |
         python tests/verify_game.py
+        python tests/verify_logic.py
+        python tests/verify_login.py
+        python tests/verify_features.py
+        python tests/verify_balance_reset.py
+        python tests/verify_debounce.py
+        python tests/verify_double_bet.py
+        python tests/verify_max_bet.py
+        python tests/verify_win_animation.py
+        python tests/test_split.py
