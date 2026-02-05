@@ -546,8 +546,9 @@ export class GameManager {
         this.playerHands = [];
         this.currentHandIndex = 0;
         this.dealerHand = [];
-        // this.currentBet resets? Original said this.currentBet = 0.
-        this.currentBet = 50;
+        if (this.currentBet > this.balance) {
+            this.currentBet = Math.max(10, this.balance);
+        }
         this.gameOver = false;
         this.dealerRevealed = false;
 
