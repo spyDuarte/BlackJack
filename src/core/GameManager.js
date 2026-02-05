@@ -531,6 +531,7 @@ export class GameManager {
     }
 
     resetGame() {
+        if (this.ui) this.ui.hideError();
         this.balance = CONFIG.INITIAL_BALANCE;
         this.wins = 0;
         this.losses = 0;
