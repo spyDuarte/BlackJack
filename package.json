@@ -1,0 +1,20 @@
+{
+  "name": "blackjack-premium",
+  "version": "1.0.0",
+  "description": "Blackjack Premium - O melhor jogo de 21 online",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve .",
+    "test:e2e": "pytest tests/",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write src/ style.css",
+    "format:check": "prettier --check src/ style.css"
+  },
+  "keywords": ["blackjack", "card-game", "javascript", "casino"],
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0"
+  }
+}

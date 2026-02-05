@@ -1,6 +1,7 @@
 export class SoundManager {
     constructor(enabled = true) {
         this.enabled = enabled;
+        this.volume = 0.5;
         this.context = null;
         this.buffers = {};
 
@@ -85,6 +86,10 @@ export class SoundManager {
         }
     }
 
+    setVolume(value) {
+        this.volume = Math.max(0, Math.min(1, value));
+    }
+
     /**
      * Plays a sound of the given type.
      * Tries to play a sample first; falls back to synthesis if no samples are loaded.
@@ -116,7 +121,7 @@ export class SoundManager {
             source.buffer = buffer;
 
             const gainNode = this.context.createGain();
-            gainNode.gain.value = 0.5;
+            gainNode.gain.value = this.volume;
 
             source.connect(gainNode);
             gainNode.connect(this.context.destination);
@@ -142,7 +147,8 @@ export class SoundManager {
 
             // Use setValueAtTime for more robust timing
             const currentTime = this.context.currentTime;
-            gainNode.gain.setValueAtTime(0.1, currentTime);
+            const synthVolume = this.volume * 0.2;
+            gainNode.gain.setValueAtTime(synthVolume, currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.01, currentTime + sound.duration);
 
             oscillator.start(currentTime);

@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initialize UI with Game instance (to bind events)
         ui.initialize(gameInstance);
 
+        // Exposed for E2E testing only (not as window.game to discourage console manipulation)
+        window.__game = gameInstance;
+
         console.log('Blackjack Premium loaded successfully (ES Modules)!');
     } catch (e) {
         console.error('Critical initialization error:', e);

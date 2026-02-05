@@ -76,7 +76,8 @@ export class GameManager {
             soundEnabled: true,
             animationsEnabled: true,
             autoSave: true,
-            showStats: false
+            showStats: false,
+            volume: 0.5
         };
     }
 
@@ -155,10 +156,14 @@ export class GameManager {
         if (savedSettings) {
             try {
                 this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
-                if (this.soundManager) this.soundManager.setEnabled(this.settings.soundEnabled);
+                if (this.soundManager) {
+                    this.soundManager.setEnabled(this.settings.soundEnabled);
+                    this.soundManager.setVolume(this.settings.volume);
+                }
                 if (this.ui) {
                     this.ui.setAnimationsEnabled(this.settings.animationsEnabled);
                     this.ui.setStatsVisibility(this.settings.showStats);
+                    this.ui.setVolume(this.settings.volume);
                 }
             } catch (e) {
                 console.warn('Could not parse settings');
@@ -571,6 +576,9 @@ export class GameManager {
             this.settings[key] = value;
             if (key === 'soundEnabled' && this.soundManager) {
                 this.soundManager.setEnabled(value);
+            }
+            if (key === 'volume' && this.soundManager) {
+                this.soundManager.setVolume(value);
             }
             if (this.ui) {
                 if (key === 'animationsEnabled') this.ui.setAnimationsEnabled(value);

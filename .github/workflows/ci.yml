@@ -29,13 +29,4 @@ jobs:
 
     - name: Run all tests
       run: |
-        python tests/verify_game.py
-        python tests/verify_logic.py
-        python tests/verify_login.py
-        python tests/verify_features.py
-        python tests/verify_balance_reset.py
-        python tests/verify_debounce.py
-        python tests/verify_double_bet.py
-        python tests/verify_max_bet.py
-        python tests/verify_win_animation.py
-        python tests/test_split.py
+        pytest tests/ -v
