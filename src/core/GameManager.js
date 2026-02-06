@@ -2,6 +2,7 @@ import { Deck } from './Deck.js';
 import { CONFIG } from './Constants.js';
 import { StorageManager } from '../utils/StorageManager.js';
 import { debounce } from '../utils/debounce.js';
+import { EventEmitter } from '../utils/EventEmitter.js';
 import * as HandUtils from '../utils/HandUtils.js';
 
 export class GameManager {
@@ -17,6 +18,7 @@ export class GameManager {
     constructor(ui, soundManager) {
         if (GameManager.instance) return GameManager.instance;
 
+        this.events = new EventEmitter();
         this.ui = ui;
         this.soundManager = soundManager;
         this.deck = new Deck();
@@ -101,6 +103,7 @@ export class GameManager {
     }
 
     startApp() {
+        this.events.emit('app:start');
         if (this.ui) {
             this.ui.hideWelcomeScreen();
             this.ui.toggleLoading(true);
@@ -234,6 +237,7 @@ export class GameManager {
 
         // Cut card mechanic: reshuffle at start of round if cut card was reached
         if (this.deck.needsReshuffle) {
+             this.events.emit('deck:shuffle');
              if (this.ui) {
                  this.ui.showMessage('Embaralhando...', '');
                  this.ui.showToast('Sapato reembaralhado', 'info', 2000);
@@ -252,6 +256,7 @@ export class GameManager {
 
         this.updateUI();
         if (this.soundManager) this.soundManager.play('card');
+        this.events.emit('game:started', this.getState());
 
         if (this.ui) {
             this.ui.toggleGameControls(false); // Controls hidden until turn starts
@@ -325,10 +330,12 @@ export class GameManager {
         const hand = this.playerHands[this.currentHandIndex];
         hand.cards.push(this.deck.draw());
         if (this.soundManager) this.soundManager.play('card');
+        this.events.emit('player:hit', { handIndex: this.currentHandIndex, hand });
         this.updateUI();
 
         if (HandUtils.calculateHandValue(hand.cards) > 21) {
             hand.status = 'busted';
+            this.events.emit('hand:bust', { handIndex: this.currentHandIndex });
             if (this.ui) this.ui.showMessage('Estourou!', 'lose');
             this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
         }
@@ -338,6 +345,7 @@ export class GameManager {
         if (this.gameOver) return;
         const hand = this.playerHands[this.currentHandIndex];
         hand.status = 'stand';
+        this.events.emit('player:stand', { handIndex: this.currentHandIndex });
         this.nextHand();
     }
 
@@ -397,6 +405,7 @@ export class GameManager {
         this.playerHands.splice(this.currentHandIndex + 1, 0, newHand);
 
         if (this.soundManager) this.soundManager.play('card');
+        this.events.emit('player:split', { handIndex: this.currentHandIndex, isSplittingAces });
 
         // When splitting aces, each hand gets only one card and must stand
         if (isSplittingAces) {
@@ -441,6 +450,7 @@ export class GameManager {
         }
 
         this.dealerRevealed = true;
+        this.events.emit('dealer:turn');
         this.updateUI();
 
         const dealerTurn = () => {
@@ -480,6 +490,7 @@ export class GameManager {
     endGame() {
         this.gameOver = true;
         this.dealerRevealed = true;
+        this.events.emit('game:ending');
         const dealerValue = HandUtils.calculateHandValue(this.dealerHand);
         const dealerBJ = (dealerValue === 21 && this.dealerHand.length === 2);
 
@@ -566,6 +577,7 @@ export class GameManager {
             }, CONFIG.DELAYS.RESET);
         }
 
+        this.events.emit('game:over', { message, messageClass, totalWin, anyWin, allLost });
         if (this.settings.autoSave) this.saveGame();
     }
 
