@@ -4,12 +4,17 @@ export class Deck {
     constructor(numberOfDecks = CONFIG.DECKS) {
         this.numberOfDecks = numberOfDecks;
         this.cards = [];
+        this.cutCardReached = false;
         this.reset();
         this.shuffle();
     }
 
+    get totalCards() {
+        return this.numberOfDecks * 52;
+    }
+
     reset() {
-        const suits = ['♠', '♥', '♦', '♣'];
+        const suits = ['\u2660', '\u2665', '\u2666', '\u2663'];
         const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
         this.cards = [];
 
@@ -20,10 +25,20 @@ export class Deck {
                 }
             }
         }
+
+        this.cutCardReached = false;
+        // Place cut card randomly between 60-80% penetration
+        const minCut = Math.floor(this.totalCards * 0.2);
+        const maxCut = Math.floor(this.totalCards * 0.4);
+        this.cutCardPosition = minCut + Math.floor(Math.random() * (maxCut - minCut));
     }
 
     get remainingCards() {
         return this.cards.length;
+    }
+
+    get needsReshuffle() {
+        return this.cutCardReached;
     }
 
     shuffle() {
@@ -50,6 +65,12 @@ export class Deck {
             this.reset();
             this.shuffle();
         }
+
+        // Check if cut card was reached during play
+        if (this.cards.length <= this.cutCardPosition) {
+            this.cutCardReached = true;
+        }
+
         return this.cards.pop();
     }
 }

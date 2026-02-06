@@ -35,16 +35,19 @@ def test_is_soft_hand(logged_in_page):
         assert result == case["expected"], f"Failed {case['desc']}: Expected {case['expected']}, got {result}"
 
 
-def test_reshuffle_when_deck_low(logged_in_page):
+def test_reshuffle_when_cut_card_reached(logged_in_page):
     page = logged_in_page
     page.wait_for_function("window.__game !== undefined")
 
-    # Mock deck to be low
-    page.evaluate('window.__game.deck.cards = new Array(50).fill({suit: "\u2660", value: "A"})')
+    # Simulate cut card being reached (triggers reshuffle at next round start)
+    page.evaluate("""
+        window.__game.deck.cards = new Array(50).fill({suit: "\u2660", value: "A"});
+        window.__game.deck.cutCardReached = true;
+    """)
     remaining_before = page.evaluate("window.__game.deck.remainingCards")
     assert remaining_before == 50
 
-    # Start game (should trigger shuffle)
+    # Start game (should trigger shuffle because cutCardReached is true)
     page.evaluate("""
         document.getElementById('bet-input').value = 100;
         window.__game.startGame();
@@ -55,18 +58,21 @@ def test_reshuffle_when_deck_low(logged_in_page):
     assert remaining_after == 308, f"Expected 308 cards after reshuffle and deal, got {remaining_after}"
 
 
-def test_no_reshuffle_when_deck_full(logged_in_page):
+def test_no_reshuffle_when_cut_card_not_reached(logged_in_page):
     page = logged_in_page
     page.wait_for_function("window.__game !== undefined")
 
-    # First force a reshuffle by making deck low
-    page.evaluate('window.__game.deck.cards = new Array(50).fill({suit: "\u2660", value: "A"})')
+    # Force a reshuffle first
+    page.evaluate("""
+        window.__game.deck.cutCardReached = true;
+    """)
     page.evaluate("""
         document.getElementById('bet-input').value = 100;
         window.__game.startGame();
     """)
 
-    # Deck should now be ~308 cards. Start another game without reshuffle.
+    # Deck should now be ~308 cards. cutCardReached should be false after reset.
+    # Start another game — no reshuffle expected.
     page.evaluate("""
         window.__game.gameOver = true;
         window.__game.startGame();

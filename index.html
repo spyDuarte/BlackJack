@@ -8,6 +8,8 @@
     <meta name="author" content="Blackjack Premium">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';">
     <title>Blackjack Premium - 21 | Jogue Agora</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠️</text></svg>">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#FFD700">
@@ -17,26 +19,26 @@
 </head>
 <body>
     <!-- Login Screen -->
-    <div class="login-screen" id="login-screen">
+    <section class="login-screen" id="login-screen" aria-label="Tela de login">
         <div class="login-content">
             <h1>♠️ Login ♥️</h1>
             <p>Digite seu nome de usuário para começar.</p>
-            <div class="login-form">
-                <input type="text" id="login-username" placeholder="Nome de Usuário" autocomplete="off" maxlength="15">
-                <div class="error-msg" id="login-error"></div>
-                <button id="login-btn" class="start-btn">Entrar</button>
-            </div>
+            <form class="login-form" id="login-form" onsubmit="return false;">
+                <input type="text" id="login-username" placeholder="Nome de Usuário" autocomplete="off" maxlength="20">
+                <div class="error-msg" id="login-error" role="alert"></div>
+                <button id="login-btn" class="start-btn" type="button">Entrar</button>
+            </form>
         </div>
-    </div>
+    </section>
 
     <!-- Welcome Screen -->
-    <div class="welcome-screen hidden" id="welcome-screen" style="display: none;">
+    <section class="welcome-screen hidden" id="welcome-screen" style="display: none;" aria-label="Tela de boas-vindas">
         <div class="welcome-content">
             <h1>♠️ BLACKJACK PREMIUM ♥️</h1>
             <p>Bem-vindo ao melhor jogo de Blackjack online! Desafie o dealer, faça suas apostas e tente chegar aos 21 pontos sem estourar.</p>
             <button class="start-btn" id="start-game-btn">🎮 Começar a Jogar</button>
         </div>
-    </div>
+    </section>
 
     <!-- Error Notification -->
     <div class="error-notification" id="error-notification" role="alert" aria-live="assertive">
@@ -44,18 +46,21 @@
         <div id="error-message"></div>
     </div>
 
-    <div class="loading">
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container" aria-live="polite" aria-relevant="additions"></div>
+
+    <div class="loading" aria-hidden="true">
         <div class="spinner"></div>
     </div>
 
-    <div class="container">
-        <div class="header">
+    <main class="container">
+        <header class="header">
             <button class="settings-btn" id="settings-btn" title="Configurações">⚙️</button>
             <h1>♠️ BLACKJACK ♥️</h1>
             <div class="subtitle">PREMIUM EDITION</div>
-        </div>
+        </header>
 
-        <div class="game-info" role="region" aria-label="Informações do jogo">
+        <section class="game-info" role="region" aria-label="Informações do jogo">
             <div class="info-box">
                 <h3>💰 Saldo</h3>
                 <div class="value" id="balance" role="status" aria-label="Saldo atual">$1000</div>
@@ -72,9 +77,15 @@
                 <h3>📊 Derrotas</h3>
                 <div class="value" id="losses" role="status" aria-label="Total de derrotas">0</div>
             </div>
-        </div>
+        </section>
 
-        <div class="game-area" role="region" aria-label="Mesa de jogo">
+        <section class="game-area" role="region" aria-label="Mesa de jogo">
+            <!-- Deck Shoe Indicator -->
+            <div class="shoe-indicator" id="shoe-indicator" title="Cartas restantes no sapato" aria-label="Indicador do sapato">
+                <div class="shoe-bar" id="shoe-bar"></div>
+                <span class="shoe-label" id="shoe-label">100%</span>
+            </div>
+
             <div class="dealer-area">
                 <div class="area-title">
                     <span><span class="icon" aria-hidden="true">🎩</span>Dealer</span>
@@ -90,11 +101,11 @@
                 </div>
                 <div class="cards" id="player-cards" aria-label="Cartas do jogador"></div>
             </div>
-        </div>
+        </section>
 
         <div class="message" id="message" role="status" aria-live="polite">Escolha sua aposta!</div>
 
-        <div class="bet-controls" id="bet-controls" role="region" aria-label="Controles de aposta">
+        <nav class="bet-controls" id="bet-controls" role="region" aria-label="Controles de aposta">
             <div class="chips-container">
                 <div class="chip chip-10" data-value="10" role="button" tabindex="0" aria-label="Apostar $10">$10</div>
                 <div class="chip chip-25" data-value="25" role="button" tabindex="0" aria-label="Apostar $25">$25</div>
@@ -110,18 +121,18 @@
                 <button class="bet-btn-adjust" id="bet-max-value" title="Apostar tudo">Max</button>
             </div>
             <button id="bet-btn">Apostar</button>
-        </div>
+        </nav>
 
-        <div class="controls" id="game-controls" style="display: none;" role="toolbar" aria-label="Ações do jogo">
+        <nav class="controls" id="game-controls" style="display: none;" role="toolbar" aria-label="Ações do jogo">
             <button id="hit-btn" title="Pedir carta (H)" aria-label="Pedir Carta (H)"><span class="btn-text">Pedir Carta</span><kbd class="kbd-hint">H</kbd></button>
             <button id="stand-btn" title="Parar (S)" aria-label="Parar (S)"><span class="btn-text">Parar</span><kbd class="kbd-hint">S</kbd></button>
             <button id="double-btn" title="Dobrar aposta (D)" aria-label="Dobrar aposta (D)"><span class="btn-text">Dobrar</span><kbd class="kbd-hint">D</kbd></button>
             <button id="split-btn" style="display: none;" title="Dividir (P)" aria-label="Dividir mão (P)"><span class="btn-text">Dividir</span><kbd class="kbd-hint">P</kbd></button>
             <button id="surrender-btn" style="display: none;" title="Desistir (R)" aria-label="Desistir (R)"><span class="btn-text">Desistir</span><kbd class="kbd-hint">R</kbd></button>
             <button id="new-game-btn" style="display: none;" aria-label="Iniciar nova rodada">Nova Rodada</button>
-        </div>
+        </nav>
 
-        <div class="stats-container" id="stats-container" style="display: none;">
+        <aside class="stats-container" id="stats-container" style="display: none;" aria-label="Estatísticas da sessão">
             <div class="stats-title">📈 Estatísticas da Sessão</div>
             <div class="stats-grid">
                 <div class="stat-item">
@@ -141,15 +152,15 @@
                     <div class="stat-label">Blackjacks</div>
                 </div>
             </div>
-        </div>
-    </div>
+        </aside>
+    </main>
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal" role="dialog" aria-labelledby="settings-title" aria-modal="true">
         <div class="modal-content">
             <span class="close" role="button" aria-label="Fechar configurações">&times;</span>
             <h2 id="settings-title" style="color: var(--primary-gold); margin-bottom: 20px;">⚙️ Configurações</h2>
-            
+
             <div class="setting-item">
                 <label for="sound-enabled">🔊 Sons</label>
                 <input type="checkbox" id="sound-enabled" checked>
@@ -162,17 +173,17 @@
                     <span class="volume-value" id="volume-value">50%</span>
                 </div>
             </div>
-            
+
             <div class="setting-item">
                 <label for="animations-enabled">✨ Animações</label>
                 <input type="checkbox" id="animations-enabled" checked>
             </div>
-            
+
             <div class="setting-item">
                 <label for="auto-save">💾 Salvamento Automático</label>
                 <input type="checkbox" id="auto-save" checked>
             </div>
-            
+
             <div class="setting-item">
                 <label for="show-stats">📊 Mostrar Estatísticas</label>
                 <input type="checkbox" id="show-stats">

@@ -87,15 +87,18 @@ def run():
                     raise Exception(f"Failed {case['desc']}: Expected {case['expected']}, got {result}")
                 print(f"Passed: {case['desc']}")
 
-            # 3. Verify Reshuffle Logic
-            print("Verifying Reshuffle Logic...")
+            # 3. Verify Reshuffle Logic (cut card mechanic)
+            print("Verifying Reshuffle Logic (cut card)...")
 
-            # Mock deck to be low
-            page.evaluate('window.__game.deck.cards = new Array(50).fill({suit: "♠", value: "A"})')
+            # Mock deck low and set cut card reached
+            page.evaluate("""
+                window.__game.deck.cards = new Array(50).fill({suit: "\u2660", value: "A"});
+                window.__game.deck.cutCardReached = true;
+            """)
             remaining_before = page.evaluate('window.__game.deck.remainingCards')
             print(f"Mocked remaining cards: {remaining_before}")
 
-            # Start game (should trigger shuffle)
+            # Start game (should trigger shuffle because cutCardReached is true)
             page.evaluate("""
                 document.getElementById('bet-input').value = 100;
                 window.__game.startGame();
@@ -105,17 +108,15 @@ def run():
             print(f"Remaining cards after startGame: {remaining_after}")
 
             # Should have reshuffled (312 - dealt cards)
-            # 2 player cards + 2 dealer cards = 4 cards dealt
             if remaining_after != 308:
                  raise Exception(f"Expected 308 cards after reshuffle and deal, got {remaining_after}")
-            print("Verified: Deck reshuffled when low")
+            print("Verified: Deck reshuffled when cut card reached")
 
-            # 4. Verify NO Reshuffle when full
-            print("Verifying NO Reshuffle when deck is full...")
-            # deck is now full (minus 4 cards)
+            # 4. Verify NO Reshuffle when cut card not reached
+            print("Verifying NO Reshuffle when cut card not reached...")
 
             page.evaluate("""
-                window.__game.gameOver = true; // Force game over to allow new game
+                window.__game.gameOver = true;
                 window.__game.startGame();
             """)
 
@@ -125,7 +126,7 @@ def run():
             # Should contain 308 - 4 = 304 cards
             if remaining_after_2 != 304:
                 raise Exception(f"Expected 304 cards (no reshuffle), got {remaining_after_2}")
-            print("Verified: Deck NOT reshuffled when full")
+            print("Verified: Deck NOT reshuffled when cut card not reached")
 
             print("All logic verification passed!")
 
