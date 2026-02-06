@@ -16,7 +16,7 @@ Jogo de BlackJack (21) para navegador com interface rica, efeitos visuais/sonoro
 ```bash
 npm install
 python -m pip install -r requirements.txt
-python -m playwright install --with-deps chromium
+python -m playwright install chromium
 ```
 
 ## Executar localmente
@@ -49,7 +49,7 @@ tests/    # suíte E2E com Playwright/Pytest
 ### Falha ao rodar testes com erro de browser Playwright
 Se aparecer erro como `Executable doesn't exist ... chrome-headless-shell`:
 ```bash
-python -m playwright install --with-deps chromium
+python -m playwright install chromium
 ```
 
 ### Lint falhando no CI
