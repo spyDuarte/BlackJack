@@ -40,3 +40,9 @@ export function calculateHandValue(hand) {
 export function isSoftHand(hand) {
     return getHandStats(hand).isSoft;
 }
+
+export function isNaturalBlackjack(hand, handsCount) {
+    if (!hand || !Array.isArray(hand) || hand.length !== 2) return false;
+    if (handsCount > 1) return false; // 21 after split is not natural BJ
+    return calculateHandValue(hand) === 21;
+}
