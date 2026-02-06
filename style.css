@@ -1359,6 +1359,93 @@ body.theme-transition *::after {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
 }
 
+/* Toast Notifications */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.toast {
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.9em;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    pointer-events: auto;
+    animation: toast-in 0.3s ease-out, toast-out 0.3s ease-in forwards;
+    max-width: 320px;
+    word-wrap: break-word;
+}
+
+.toast.info { background: linear-gradient(135deg, #3498db, #2980b9); }
+.toast.success { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+.toast.warning { background: linear-gradient(135deg, #f39c12, #e67e22); }
+.toast.error { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+
+@keyframes toast-in {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes toast-out {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+/* Shoe Indicator */
+.shoe-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 4px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 20px;
+    font-size: 0.75em;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.shoe-indicator:hover {
+    opacity: 1;
+}
+
+.shoe-bar {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    overflow: hidden;
+    min-width: 80px;
+    position: relative;
+}
+
+.shoe-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: var(--shoe-pct, 100%);
+    background: linear-gradient(90deg, #e74c3c, #f39c12, #2ecc71);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.shoe-label {
+    color: var(--primary-gold);
+    font-weight: 600;
+    min-width: 36px;
+    text-align: right;
+}
+
 /* Accessibility: Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

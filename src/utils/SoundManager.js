@@ -4,6 +4,9 @@ export class SoundManager {
         this.volume = 0.5;
         this.context = null;
         this.buffers = {};
+        this.initialized = false;
+        this.maxConcurrent = 5;
+        this.activeSources = [];
 
         // Configuration for sound files with variations
         this.soundConfig = {
@@ -30,11 +33,13 @@ export class SoundManager {
             button: { frequency: 600, duration: 0.08 }
         };
 
-        // Initialize asynchronously
-        this.init();
+        // Lazy initialization: defer AudioContext creation until first user interaction
     }
 
-    async init() {
+    async ensureInitialized() {
+        if (this.initialized) return;
+        this.initialized = true;
+
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) {
@@ -43,7 +48,8 @@ export class SoundManager {
             }
 
             this.context = new AudioContext();
-            await this.preloadSounds();
+            // Preload sounds in background (non-blocking)
+            this.preloadSounds();
         } catch (error) {
             console.warn('Failed to initialize SoundManager:', error);
         }
@@ -92,15 +98,28 @@ export class SoundManager {
 
     /**
      * Plays a sound of the given type.
-     * Tries to play a sample first; falls back to synthesis if no samples are loaded.
+     * Lazily initializes AudioContext on first call (requires user gesture).
+     * Enforces a pool limit of maxConcurrent simultaneous sounds.
      * @param {string} type - The category of sound to play (e.g., 'card', 'chip')
      */
     play(type) {
-        if (!this.enabled || !this.context) return;
+        if (!this.enabled) return;
+
+        // Lazy init on first play (triggered by user interaction)
+        this.ensureInitialized();
+        if (!this.context) return;
 
         // Auto-resume context if suspended
         if (this.context.state === 'suspended') {
             this.context.resume().catch(() => {});
+        }
+
+        // Enforce audio pool limit
+        this.cleanupSources();
+        if (this.activeSources.length >= this.maxConcurrent) {
+            // Stop the oldest source
+            const oldest = this.activeSources.shift();
+            try { oldest.stop(); } catch {}
         }
 
         const buffers = this.buffers[type];
@@ -112,6 +131,16 @@ export class SoundManager {
             // Fallback to synthetic sound
             this.playSynthetic(type);
         }
+    }
+
+    cleanupSources() {
+        this.activeSources = this.activeSources.filter(s => {
+            try {
+                return s.playbackState !== 'finished';
+            } catch {
+                return false;
+            }
+        });
     }
 
     playSample(buffers) {
@@ -126,7 +155,13 @@ export class SoundManager {
             source.connect(gainNode);
             gainNode.connect(this.context.destination);
 
+            source.onended = () => {
+                const idx = this.activeSources.indexOf(source);
+                if (idx > -1) this.activeSources.splice(idx, 1);
+            };
+
             source.start(0);
+            this.activeSources.push(source);
         } catch (error) {
             console.warn('Error playing sample:', error);
         }

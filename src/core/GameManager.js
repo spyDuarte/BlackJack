@@ -184,7 +184,10 @@ export class GameManager {
     }
 
     updateUI() {
-        if (this.ui) this.ui.render(this.getState());
+        if (this.ui) {
+            this.ui.render(this.getState());
+            this.ui.updateShoeIndicator(this.deck.remainingCards, this.deck.totalCards);
+        }
     }
 
     // Game Actions
@@ -229,10 +232,12 @@ export class GameManager {
         this.dealerRevealed = false;
         this.gameStarted = true;
 
-        // Shuffle if needed
-        const totalCards = this.deck.numberOfDecks * 52;
-        if (this.deck.remainingCards < totalCards * CONFIG.PENETRATION_THRESHOLD) {
-             if (this.ui) this.ui.showMessage('Embaralhando...', '');
+        // Cut card mechanic: reshuffle at start of round if cut card was reached
+        if (this.deck.needsReshuffle) {
+             if (this.ui) {
+                 this.ui.showMessage('Embaralhando...', '');
+                 this.ui.showToast('Sapato reembaralhado', 'info', 2000);
+             }
              this.deck.reset();
              this.deck.shuffle();
         }
@@ -571,7 +576,10 @@ export class GameManager {
         this.blackjacks = 0;
         this.totalWinnings = 0;
         this.newGame();
-        if (this.ui) this.ui.showMessage('Jogo reiniciado!', 'win');
+        if (this.ui) {
+            this.ui.showMessage('Jogo reiniciado!', 'win');
+            this.ui.showToast('Jogo reiniciado com sucesso', 'success');
+        }
         this.saveGame();
     }
 

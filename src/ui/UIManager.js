@@ -67,7 +67,10 @@ export class UIManager {
             themeDark: document.getElementById('theme-dark'),
             themeLight: document.getElementById('theme-light'),
             exportBtn: document.getElementById('btn-export-data'),
-            importInput: document.getElementById('btn-import-data')
+            importInput: document.getElementById('btn-import-data'),
+            toastContainer: document.getElementById('toast-container'),
+            shoeBar: document.getElementById('shoe-bar'),
+            shoeLabel: document.getElementById('shoe-label')
         };
     }
 
@@ -552,6 +555,35 @@ export class UIManager {
 
     hideError() {
         if (this.elements.errorNotification) this.elements.errorNotification.classList.remove('show');
+    }
+
+    showToast(message, type = 'info', duration = 3000) {
+        const container = this.elements.toastContainer;
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        toast.style.animationDuration = `0.3s, 0.3s`;
+        toast.style.animationDelay = `0s, ${(duration - 300) / 1000}s`;
+
+        container.appendChild(toast);
+
+        // Limit to 5 visible toasts
+        while (container.children.length > 5) {
+            container.removeChild(container.firstChild);
+        }
+
+        setTimeout(() => {
+            if (toast.parentNode) toast.remove();
+        }, duration);
+    }
+
+    updateShoeIndicator(remainingCards, totalCards) {
+        if (!this.elements.shoeBar || !this.elements.shoeLabel) return;
+        const pct = totalCards > 0 ? Math.round((remainingCards / totalCards) * 100) : 100;
+        this.elements.shoeBar.style.setProperty('--shoe-pct', `${pct}%`);
+        this.elements.shoeLabel.textContent = `${pct}%`;
     }
 
     updateStats(wins, losses, totalWinnings, blackjacks) {
