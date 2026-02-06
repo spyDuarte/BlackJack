@@ -1,88 +1,62 @@
-# Blackjack Premium
+# BlackJack Premium
 
-Jogo de Blackjack (21) completo, desenvolvido em JavaScript puro com interface responsiva, sons sinteticos, tema claro/escuro e suporte offline via PWA.
-
-## Como Jogar
-
-1. **Login** - Digite um nome de usuario (3+ caracteres)
-2. **Apostar** - Escolha o valor da aposta usando as fichas ou botoes de ajuste
-3. **Jogar** - Use os botoes ou atalhos de teclado para tomar decisoes:
-   - **Pedir Carta (H)** - Receber mais uma carta
-   - **Parar (S)** - Manter a mao atual
-   - **Dobrar (D)** - Dobrar a aposta e receber uma carta
-   - **Dividir (P)** - Separar um par em duas maos
-   - **Desistir (R)** - Desistir e recuperar metade da aposta
-
-## Regras Implementadas
-
-- Sapato de 6 baralhos com cut card (reshuffle entre 60-80% de penetracao)
-- Dealer para em hard 17, pede carta em soft 17
-- Blackjack paga 3:2 (apenas mao natural, nao apos split)
-- Split de Ases: apenas uma carta adicional por mao
-- Maximo de 3 splits por rodada
-- Seguro disponivel quando dealer mostra As (paga 2:1)
-- Push quando ambos tem Blackjack natural
-
-## Como Rodar Localmente
-
-```bash
-# Servir os arquivos (qualquer servidor HTTP estatico)
-npx serve .
-
-# Ou usar Python
-python3 -m http.server 8080
-```
-
-Acesse `http://localhost:8080` no navegador.
-
-## Como Rodar Testes
-
-```bash
-# Instalar dependencias
-pip install pytest playwright
-python -m playwright install --with-deps chromium
-
-# Rodar todos os testes E2E
-pytest tests/ -v
-```
-
-## Estrutura do Projeto
-
-```
-src/
-  core/
-    GameManager.js    # Orquestrador do jogo (estado, regras, fluxo)
-    Deck.js           # Gerenciamento do sapato (6 baralhos, cut card)
-    Constants.js      # Configuracoes (payouts, delays, limites)
-  ui/
-    UIManager.js      # Interface, eventos, renderizacao DOM
-  utils/
-    HandUtils.js      # Calculos de mao (valor, soft hand, BJ natural)
-    SoundManager.js   # Audio via Web Audio API (samples + sintetico)
-    StorageManager.js # Persistencia (localStorage, ofuscacao, checksum)
-    debounce.js       # Utilitario de debounce
-index.html            # HTML semantico (main, header, section, nav, aside)
-style.css             # Estilos com CSS custom properties e temas
-sw.js                 # Service Worker para cache offline
-manifest.json         # Manifesto PWA
-tests/                # Testes E2E com Playwright + pytest
-```
+Jogo de BlackJack (21) para navegador com interface rica, efeitos visuais/sonoros, persistência local e testes E2E.
 
 ## Tecnologias
+- Front-end: HTML, CSS, JavaScript (ES Modules)
+- Qualidade: ESLint + Prettier
+- Testes E2E: Pytest + Playwright
 
-- **JavaScript ES6+** (ES Modules nativos, sem bundler)
-- **CSS3** (Custom Properties, Flexbox, animacoes 3D, temas)
-- **Web Audio API** (sons sinteticos com ADSR, pool de audio)
-- **localStorage** (dados ofuscados com base64 + checksum)
-- **PWA** (Service Worker, manifest.json, instalavel)
-- **Playwright + pytest** (testes E2E automatizados)
-- **GitHub Actions** (CI com testes + deploy para GitHub Pages)
+## Pré-requisitos
+- Node.js 18+
+- Python 3.10+
+- pip
 
-## Scripts NPM
-
+## Instalação
 ```bash
-npm run dev        # Iniciar servidor de desenvolvimento
-npm run lint       # Verificar codigo com ESLint
-npm run format     # Formatar codigo com Prettier
-npm run test:e2e   # Rodar testes E2E
+npm install
+python -m pip install -r requirements.txt
+python -m playwright install --with-deps chromium
 ```
+
+## Executar localmente
+```bash
+npm run dev
+```
+Depois, abra a URL exibida pelo `serve` (por padrão `http://localhost:3000`).
+
+## Scripts principais
+```bash
+npm run dev         # sobe servidor local estático
+npm run lint        # valida JS com ESLint
+npm run lint:fix    # corrige problemas automáticos do ESLint
+npm run format      # aplica Prettier
+npm run format:check
+npm run test:e2e    # roda suíte E2E (pytest)
+```
+
+## Estrutura do projeto
+```text
+src/
+  core/   # regras/orquestração de jogo
+  ui/     # interação com DOM/renderização
+  utils/  # utilitários (som, storage, debounce, mão)
+tests/    # suíte E2E com Playwright/Pytest
+```
+
+## Troubleshooting
+
+### Falha ao rodar testes com erro de browser Playwright
+Se aparecer erro como `Executable doesn't exist ... chrome-headless-shell`:
+```bash
+python -m playwright install --with-deps chromium
+```
+
+### Lint falhando no CI
+Rode localmente antes do push:
+```bash
+npm run lint
+```
+
+## Contribuição
+Consulte [`CONTRIBUTING.md`](./CONTRIBUTING.md) para fluxo de branch/PR e checklist de qualidade.
