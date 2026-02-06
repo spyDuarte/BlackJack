@@ -1,6 +1,7 @@
 import { UIManager } from './ui/UIManager.js';
 import { GameManager } from './core/GameManager.js';
 import { SoundManager } from './utils/SoundManager.js';
+import * as HandUtils from './utils/HandUtils.js';
 
 let gameInstance = null;
 
@@ -15,8 +16,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initialize UI with Game instance (to bind events)
         ui.initialize(gameInstance);
 
-        // Exposed for E2E testing only (not as window.game to discourage console manipulation)
-        window.__game = gameInstance;
+        // Wire EventEmitter events to UI
+        gameInstance.events.on('deck:shuffle', () => ui.showShuffleAnimation());
+
+        // Expose for E2E testing only in development (location.hostname check)
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            window.__game = gameInstance;
+            window.__HandUtils = HandUtils;
+        }
 
         console.log('Blackjack Premium loaded successfully (ES Modules)!');
     } catch (e) {

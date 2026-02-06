@@ -1,4 +1,6 @@
 import * as HandUtils from '../utils/HandUtils.js';
+import { CONFIG } from '../core/Constants.js';
+import { debounce } from '../utils/debounce.js';
 
 export class UIManager {
     constructor() {
@@ -66,7 +68,10 @@ export class UIManager {
             themeDark: document.getElementById('theme-dark'),
             themeLight: document.getElementById('theme-light'),
             exportBtn: document.getElementById('btn-export-data'),
-            importInput: document.getElementById('btn-import-data')
+            importInput: document.getElementById('btn-import-data'),
+            toastContainer: document.getElementById('toast-container'),
+            shoeBar: document.getElementById('shoe-bar'),
+            shoeLabel: document.getElementById('shoe-label')
         };
     }
 
@@ -160,17 +165,29 @@ export class UIManager {
 
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
 
+        // Debounced resize handler for layout recalculations
+        window.addEventListener('resize', debounce(() => {
+            if (this.game) this.game.updateUI();
+        }, 250));
+
         if (el.closeError) el.closeError.addEventListener('click', () => this.hideError());
     }
 
+    sanitizeUsername(raw) {
+        // Allow only alphanumeric characters, underscores and hyphens
+        return raw.replace(/[^a-zA-Z0-9_\-\u00C0-\u024F]/g, '').slice(0, 20);
+    }
+
     handleLogin() {
-        const username = this.elements.loginUsername.value.trim();
-        if (!username) {
+        const rawUsername = this.elements.loginUsername.value.trim();
+        if (!rawUsername) {
             this.showLoginError('Por favor, digite um nome de usuário.');
             return;
         }
+
+        const username = this.sanitizeUsername(rawUsername);
         if (username.length < 3) {
-            this.showLoginError('Nome de usuário deve ter pelo menos 3 caracteres.');
+            this.showLoginError('Nome de usuário deve ter pelo menos 3 caracteres (apenas letras, números e _).');
             return;
         }
 
@@ -262,7 +279,8 @@ export class UIManager {
             const currentHand = state.playerHands[state.currentHandIndex];
             const canSplit = currentHand.cards.length === 2 &&
                              currentHand.cards[0].value === currentHand.cards[1].value &&
-                             state.balance >= currentHand.bet;
+                             state.balance >= currentHand.bet &&
+                             state.playerHands.length <= CONFIG.MAX_SPLITS;
             if (this.elements.splitBtn) {
                  this.elements.splitBtn.style.display = canSplit ? 'inline-block' : 'none';
                  this.elements.splitBtn.disabled = !canSplit;
@@ -375,37 +393,67 @@ export class UIManager {
     renderPlayerHands(hands, currentHandIndex) {
         const container = this.elements.playerCards;
         if (!container) return;
-        container.innerHTML = '';
 
-        if (!hands || hands.length === 0) return;
-
-        if (hands.length === 1) {
-             this.renderHand(container, hands[0].cards, false, false);
-             return;
+        if (!hands || hands.length === 0) {
+            container.innerHTML = '';
+            return;
         }
 
+        // Single hand: render directly into container (no wrappers)
+        if (hands.length === 1) {
+            // Remove any hand-container wrappers from previous split state
+            if (container.firstChild && container.firstChild.classList &&
+                container.firstChild.classList.contains('hand-container')) {
+                container.innerHTML = '';
+            }
+            this.renderHand(container, hands[0].cards, false, false);
+            return;
+        }
+
+        // Multiple hands: use incremental DOM updates
         hands.forEach((hand, index) => {
-            const handWrapper = document.createElement('div');
-            handWrapper.className = 'hand-container';
-            if (index === currentHandIndex) {
-                handWrapper.classList.add('active-hand');
+            let handWrapper = container.children[index];
+
+            if (!handWrapper || !handWrapper.classList.contains('hand-container')) {
+                // Create new wrapper if missing or wrong type
+                handWrapper = document.createElement('div');
+                handWrapper.className = 'hand-container';
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'hand-info';
+                handWrapper.appendChild(infoDiv);
+
+                const cardsContainer = document.createElement('div');
+                cardsContainer.className = 'hand-cards-inner';
+                cardsContainer.style.display = 'flex';
+                cardsContainer.style.gap = '10px';
+                cardsContainer.style.justifyContent = 'center';
+                cardsContainer.style.flexWrap = 'wrap';
+                handWrapper.appendChild(cardsContainer);
+
+                if (container.children[index]) {
+                    container.replaceChild(handWrapper, container.children[index]);
+                } else {
+                    container.appendChild(handWrapper);
+                }
             }
 
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'hand-info';
-            infoDiv.textContent = `$${hand.bet}`;
-            handWrapper.appendChild(infoDiv);
+            // Update active state
+            handWrapper.classList.toggle('active-hand', index === currentHandIndex);
 
-            const cardsContainer = document.createElement('div');
-            cardsContainer.style.display = 'flex';
-            cardsContainer.style.gap = '10px';
-            cardsContainer.style.justifyContent = 'center';
-            cardsContainer.style.flexWrap = 'wrap';
+            // Update bet info
+            const infoDiv = handWrapper.querySelector('.hand-info');
+            if (infoDiv) infoDiv.textContent = `$${hand.bet}`;
 
+            // Update cards incrementally
+            const cardsContainer = handWrapper.querySelector('.hand-cards-inner') || handWrapper.lastElementChild;
             this.renderHand(cardsContainer, hand.cards, false, false);
-            handWrapper.appendChild(cardsContainer);
-            container.appendChild(handWrapper);
         });
+
+        // Remove excess wrappers
+        while (container.children.length > hands.length) {
+            container.removeChild(container.lastChild);
+        }
     }
 
     toggleGameControls(show) {
@@ -468,12 +516,21 @@ export class UIManager {
 
     showWinAnimation(_amount) {
         if (!this.animationsEnabled) return;
+        this.clearConfetti();
         this.createConfetti();
         setTimeout(() => this.createConfetti(), 250);
         setTimeout(() => this.createConfetti(), 500);
     }
 
+    clearConfetti() {
+        if (this._activeConfetti) {
+            this._activeConfetti.forEach(el => { if (el.parentNode) el.remove(); });
+        }
+        this._activeConfetti = [];
+    }
+
     createConfetti() {
+        if (!this._activeConfetti) this._activeConfetti = [];
         const colors = ['#FFD700', '#FFA500', '#2ecc71', '#3498db', '#e74c3c', '#ffffff'];
         for (let i = 0; i < 50; i++) {
             const confetti = document.createElement('div');
@@ -487,7 +544,12 @@ export class UIManager {
             confetti.style.animationDuration = animDuration;
             confetti.style.setProperty('--fall-x', fallX);
             document.body.appendChild(confetti);
-            setTimeout(() => { if (confetti.parentNode) confetti.remove(); }, 4000);
+            this._activeConfetti.push(confetti);
+            setTimeout(() => {
+                if (confetti.parentNode) confetti.remove();
+                const idx = this._activeConfetti.indexOf(confetti);
+                if (idx > -1) this._activeConfetti.splice(idx, 1);
+            }, 4000);
         }
     }
 
@@ -499,6 +561,56 @@ export class UIManager {
 
     hideError() {
         if (this.elements.errorNotification) this.elements.errorNotification.classList.remove('show');
+    }
+
+    showToast(message, type = 'info', duration = 3000) {
+        const container = this.elements.toastContainer;
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        toast.style.animationDuration = `0.3s, 0.3s`;
+        toast.style.animationDelay = `0s, ${(duration - 300) / 1000}s`;
+
+        container.appendChild(toast);
+
+        // Limit to 5 visible toasts
+        while (container.children.length > 5) {
+            container.removeChild(container.firstChild);
+        }
+
+        setTimeout(() => {
+            if (toast.parentNode) toast.remove();
+        }, duration);
+    }
+
+    showShuffleAnimation() {
+        if (!this.animationsEnabled) return;
+        const gameArea = document.querySelector('.game-area');
+        if (!gameArea) return;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'shuffle-overlay';
+        const cardsWrap = document.createElement('div');
+        cardsWrap.className = 'shuffle-cards';
+        for (let i = 0; i < 3; i++) {
+            const card = document.createElement('div');
+            card.className = 'shuffle-card';
+            cardsWrap.appendChild(card);
+        }
+        overlay.appendChild(cardsWrap);
+        gameArea.style.position = 'relative';
+        gameArea.appendChild(overlay);
+
+        setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 1300);
+    }
+
+    updateShoeIndicator(remainingCards, totalCards) {
+        if (!this.elements.shoeBar || !this.elements.shoeLabel) return;
+        const pct = totalCards > 0 ? Math.round((remainingCards / totalCards) * 100) : 100;
+        this.elements.shoeBar.style.setProperty('--shoe-pct', `${pct}%`);
+        this.elements.shoeLabel.textContent = `${pct}%`;
     }
 
     updateStats(wins, losses, totalWinnings, blackjacks) {
