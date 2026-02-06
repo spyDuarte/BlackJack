@@ -26,15 +26,31 @@ def server_port():
 
 
 def _find_chromium_executable():
-    """Find the Chromium executable from Playwright's cache."""
+    """Find a Chromium executable from Playwright's cache (multiple layouts)."""
     cache_dir = os.path.expanduser("~/.cache/ms-playwright")
     if not os.path.isdir(cache_dir):
         return None
+
+    candidates = []
     for entry in sorted(os.listdir(cache_dir), reverse=True):
+        entry_dir = os.path.join(cache_dir, entry)
+        if not os.path.isdir(entry_dir):
+            continue
+
+        # Chromium for Testing layout
         if entry.startswith("chromium-"):
-            candidate = os.path.join(cache_dir, entry, "chrome-linux", "chrome")
-            if os.path.isfile(candidate):
-                return candidate
+            candidates.append(os.path.join(entry_dir, "chrome-linux", "chrome"))
+            candidates.append(os.path.join(entry_dir, "chrome-linux64", "chrome"))
+
+        # Headless shell layout
+        if entry.startswith("chromium_headless_shell-"):
+            candidates.append(
+                os.path.join(entry_dir, "chrome-headless-shell-linux64", "chrome-headless-shell")
+            )
+
+    for candidate in candidates:
+        if os.path.isfile(candidate):
+            return candidate
     return None
 
 

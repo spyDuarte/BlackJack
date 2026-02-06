@@ -18,7 +18,10 @@ export default [
                 performance: "readonly",
                 fetch: "readonly",
                 AudioContext: "readonly",
-                Storage: "readonly"
+                Storage: "readonly",
+                Blob: "readonly",
+                URL: "readonly",
+                FileReader: "readonly"
             }
         },
         rules: {
