@@ -108,12 +108,19 @@ export class UIManager {
         }
 
         const chips = document.querySelectorAll('.chip');
+        const handleChip = (e) => {
+            const value = parseInt(e.target.dataset.value);
+            game.setBet(value);
+            e.target.style.transform = 'scale(1.3)';
+            setTimeout(() => { e.target.style.transform = ''; }, 200);
+        };
         chips.forEach(chip => {
-            chip.addEventListener('click', (e) => {
-                const value = parseInt(e.target.dataset.value);
-                game.setBet(value);
-                e.target.style.transform = 'scale(1.3)';
-                setTimeout(() => { e.target.style.transform = ''; }, 200);
+            chip.addEventListener('click', handleChip);
+            chip.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleChip(e);
+                }
             });
         });
 
@@ -199,14 +206,28 @@ export class UIManager {
     }
 
     handleKeyboard(e) {
+        if (e.key === 'Escape') {
+            this.toggleSettingsModal(false);
+            return;
+        }
+
         if (!this.elements.gameControls || this.elements.gameControls.style.display === 'none') return;
 
-        switch(e.key.toLowerCase()) {
-            case 'h': this.game.hit(); break;
-            case 's': this.game.stand(); break;
-            case 'd': this.game.double(); break;
-            case 'p': this.game.split(); break;
-            case 'escape': this.toggleSettingsModal(false); break;
+        const keyMap = {
+            'h': { action: () => this.game.hit(), btn: this.elements.hitBtn },
+            's': { action: () => this.game.stand(), btn: this.elements.standBtn },
+            'd': { action: () => this.game.double(), btn: this.elements.doubleBtn },
+            'p': { action: () => this.game.split(), btn: this.elements.splitBtn },
+            'r': { action: () => this.game.surrender(), btn: this.elements.surrenderBtn }
+        };
+
+        const entry = keyMap[e.key.toLowerCase()];
+        if (entry) {
+            entry.action();
+            if (entry.btn && !entry.btn.disabled && entry.btn.style.display !== 'none') {
+                entry.btn.classList.add('kbd-active');
+                setTimeout(() => entry.btn.classList.remove('kbd-active'), 150);
+            }
         }
     }
 
@@ -283,7 +304,7 @@ export class UIManager {
                 if (currentVal !== card.value || currentSuit !== card.suit) {
                     // Mismatch: Replace element to trigger deal animation
                     const newCardEl = this.createCardElement(card, isHidden);
-                    if (this.animationsEnabled) newCardEl.style.animationDelay = `${index * 0.05}s`;
+                    if (this.animationsEnabled) newCardEl.style.animationDelay = `${index * 0.12}s`;
                     container.replaceChild(newCardEl, cardEl);
                 } else {
                     // Match: Just handle flip
@@ -297,7 +318,7 @@ export class UIManager {
                 // New card
                 cardEl = this.createCardElement(card, isHidden);
                 if (this.animationsEnabled) {
-                    cardEl.style.animationDelay = `${index * 0.05}s`;
+                    cardEl.style.animationDelay = `${index * 0.12}s`;
                 }
                 container.appendChild(cardEl);
             }
@@ -313,6 +334,10 @@ export class UIManager {
         const cardEl = document.createElement('div');
         cardEl.className = 'card';
         if (hidden) cardEl.classList.add('flipped');
+
+        const suitNames = { '♠': 'Espadas', '♥': 'Copas', '♦': 'Ouros', '♣': 'Paus' };
+        const suitName = suitNames[card.suit] || card.suit;
+        cardEl.setAttribute('aria-label', hidden ? 'Carta virada' : `${card.value} de ${suitName}`);
 
         const inner = document.createElement('div');
         inner.className = 'card-inner';
@@ -338,6 +363,7 @@ export class UIManager {
 
         const back = document.createElement('div');
         back.className = 'card-face card-back';
+        back.setAttribute('aria-hidden', 'true');
 
         inner.appendChild(front);
         inner.appendChild(back);
@@ -428,6 +454,7 @@ export class UIManager {
         if (this.elements.volumeValue) this.elements.volumeValue.textContent = `${percent}%`;
     }
     setTheme(theme) {
+        document.body.classList.add('theme-transition');
         if (theme === 'light') {
             document.body.classList.add('theme-light');
         } else {
@@ -436,6 +463,7 @@ export class UIManager {
         if (this.elements.themeDark) this.elements.themeDark.classList.toggle('active', theme !== 'light');
         if (this.elements.themeLight) this.elements.themeLight.classList.toggle('active', theme === 'light');
         if (this.game) this.game.updateSetting('theme', theme);
+        setTimeout(() => document.body.classList.remove('theme-transition'), 350);
     }
 
     showWinAnimation(amount) {

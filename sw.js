@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blackjack-premium-v1';
+const CACHE_NAME = 'blackjack-premium-v2';
 const ASSETS = [
     '/',
     '/index.html',
