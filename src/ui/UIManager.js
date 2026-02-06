@@ -1,5 +1,6 @@
 import * as HandUtils from '../utils/HandUtils.js';
 import { CONFIG } from '../core/Constants.js';
+import { debounce } from '../utils/debounce.js';
 
 export class UIManager {
     constructor() {
@@ -163,6 +164,11 @@ export class UIManager {
         }
 
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+
+        // Debounced resize handler for layout recalculations
+        window.addEventListener('resize', debounce(() => {
+            if (this.game) this.game.updateUI();
+        }, 250));
 
         if (el.closeError) el.closeError.addEventListener('click', () => this.hideError());
     }
@@ -577,6 +583,27 @@ export class UIManager {
         setTimeout(() => {
             if (toast.parentNode) toast.remove();
         }, duration);
+    }
+
+    showShuffleAnimation() {
+        if (!this.animationsEnabled) return;
+        const gameArea = document.querySelector('.game-area');
+        if (!gameArea) return;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'shuffle-overlay';
+        const cardsWrap = document.createElement('div');
+        cardsWrap.className = 'shuffle-cards';
+        for (let i = 0; i < 3; i++) {
+            const card = document.createElement('div');
+            card.className = 'shuffle-card';
+            cardsWrap.appendChild(card);
+        }
+        overlay.appendChild(cardsWrap);
+        gameArea.style.position = 'relative';
+        gameArea.appendChild(overlay);
+
+        setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 1300);
     }
 
     updateShoeIndicator(remainingCards, totalCards) {
