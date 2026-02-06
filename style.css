@@ -211,7 +211,7 @@ h1 {
 .info-box .value {
     font-size: 1.8em;
     font-weight: 700;
-    background: linear-gradient(45deg, #fff, #f0f0f0);
+    background: linear-gradient(45deg, var(--text-primary), var(--text-secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -282,7 +282,7 @@ h1 {
     display: flex; /* For alignment in container if needed, or inline-block */
     /* Remove shadow/border from container, put on inner */
     /* transition: var(--transition-smooth); - removed, inner handles transition */
-    animation: cardDeal 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    animation: cardDeal 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .card-inner {
@@ -368,16 +368,21 @@ h1 {
 }
 
 @keyframes cardDeal {
-    from {
+    0% {
         opacity: 0;
-        transform: translateY(-100px) rotateZ(180deg) scale(0.8);
+        transform: translateX(-60px) translateY(-40px) rotateZ(-15deg) scale(0.6);
     }
     50% {
-        transform: translateY(20px) rotateZ(90deg) scale(1.1);
+        opacity: 0.8;
+        transform: translateX(5px) translateY(5px) rotateZ(3deg) scale(1.03);
     }
-    to {
+    75% {
         opacity: 1;
-        transform: translateY(0) rotateZ(0) scale(1);
+        transform: translateX(-2px) translateY(-2px) rotateZ(-1deg) scale(1.01);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) translateY(0) rotateZ(0) scale(1);
     }
 }
 
@@ -760,6 +765,118 @@ button:disabled {
         width: 60px;
         height: 84px;
         font-size: 1.5em;
+    }
+
+    .kbd-hint {
+        display: none;
+    }
+
+    .area-title {
+        font-size: 1.2em;
+        padding: 8px 14px;
+    }
+
+    .message {
+        font-size: 1.1em;
+    }
+}
+
+@media (max-width: 360px) {
+    .container {
+        padding: 12px;
+        margin: 5px;
+        border-radius: 20px;
+    }
+
+    .game-info {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
+    .info-box {
+        padding: 10px;
+        border-radius: 14px;
+    }
+
+    .info-box .value {
+        font-size: 1.4em;
+    }
+
+    .info-box h3 {
+        font-size: 0.85em;
+    }
+
+    .game-area {
+        padding: 15px;
+        border-radius: 18px;
+    }
+
+    .cards {
+        gap: 8px;
+        min-height: 100px;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding: 5px;
+    }
+
+    .card {
+        width: 52px;
+        height: 73px;
+        flex-shrink: 0;
+    }
+
+    .card-front .suit {
+        font-size: 1.1em;
+        top: 4px;
+        left: 4px;
+    }
+
+    .card-front .suit-bottom {
+        font-size: 1.1em;
+        bottom: 4px;
+        right: 4px;
+    }
+
+    .card-front .value {
+        font-size: 1.8em;
+    }
+
+    button {
+        padding: 8px 14px;
+        font-size: 0.8em;
+        min-width: 65px;
+    }
+
+    .chip {
+        width: 38px;
+        height: 38px;
+        font-size: 0.7em;
+    }
+
+    .bet-amount-container {
+        gap: 5px;
+    }
+
+    .bet-btn-adjust {
+        width: 34px;
+        height: 34px;
+        font-size: 1.1em;
+    }
+
+    .bet-controls input {
+        width: 80px;
+        font-size: 1em;
+    }
+
+    .score {
+        padding: 5px 12px;
+        font-size: 1em;
+        min-width: 55px;
+    }
+
+    .hand-container {
+        min-width: 120px;
+        padding: 10px;
     }
 }
 
@@ -1175,6 +1292,71 @@ body.theme-light .login-content p {
 
 body.theme-light .stat-label {
     color: var(--text-secondary);
+}
+
+body.theme-light .stat-item {
+    background: rgba(0, 80, 40, 0.06);
+}
+
+body.theme-light .stats-container {
+    background: rgba(0, 80, 40, 0.04);
+    border-color: var(--border-gold);
+}
+
+body.theme-light .hand-container {
+    border-color: rgba(0, 80, 40, 0.15);
+    background: rgba(0, 80, 40, 0.05);
+}
+
+body.theme-light .chip {
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+}
+
+body.theme-light .error-notification {
+    box-shadow: 0 8px 24px rgba(231, 76, 60, 0.2);
+}
+
+/* Keyboard shortcut hints on buttons */
+.kbd-hint {
+    display: inline-block;
+    font-family: inherit;
+    font-size: 0.65em;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.2);
+    color: inherit;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Keyboard press visual feedback */
+button.kbd-active {
+    transform: scale(0.95) !important;
+    filter: brightness(1.2);
+}
+
+/* Focus visible styles for accessibility */
+button:focus-visible,
+.chip:focus-visible,
+.settings-btn:focus-visible {
+    outline: 2px solid var(--primary-gold);
+    outline-offset: 3px;
+}
+
+.chip:focus-visible {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Theme transition */
+body.theme-transition,
+body.theme-transition *,
+body.theme-transition *::before,
+body.theme-transition *::after {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
 }
 
 /* Accessibility: Reduced Motion */
