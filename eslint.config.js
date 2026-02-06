@@ -21,7 +21,11 @@ export default [
                 Storage: "readonly",
                 Blob: "readonly",
                 URL: "readonly",
-                FileReader: "readonly"
+                FileReader: "readonly",
+                crypto: "readonly",
+                location: "readonly",
+                btoa: "readonly",
+                atob: "readonly"
             }
         },
         rules: {

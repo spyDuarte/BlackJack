@@ -9,19 +9,14 @@ export class SoundManager {
         this.activeSources = [];
 
         // Configuration for sound files with variations
+        // NOTE: Assets are currently missing, so we use empty arrays to trigger fallback to synthetic sounds
+        // and avoid 404 errors in console during preload.
         this.soundConfig = {
-            'card': [
-                'assets/sounds/card-flip-1.mp3',
-                'assets/sounds/card-flip-2.mp3',
-                'assets/sounds/card-flip-3.mp3'
-            ],
-            'chip': [
-                'assets/sounds/chip-clash-1.mp3',
-                'assets/sounds/chip-clash-2.mp3'
-            ],
-            'win': ['assets/sounds/win-sound.mp3'],
-            'lose': ['assets/sounds/lose.mp3'],
-            'button': ['assets/sounds/click.mp3']
+            'card': [],
+            'chip': [],
+            'win': [],
+            'lose': [],
+            'button': []
         };
 
         // Fallback synthetic sound configuration
