@@ -514,7 +514,7 @@ export class UIManager {
         setTimeout(() => document.body.classList.remove('theme-transition'), 350);
     }
 
-    showWinAnimation(amount) {
+    showWinAnimation(_amount) {
         if (!this.animationsEnabled) return;
         this.clearConfetti();
         this.createConfetti();

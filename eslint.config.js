@@ -18,20 +18,10 @@ export default [
                 performance: "readonly",
                 fetch: "readonly",
                 AudioContext: "readonly",
-                webkitAudioContext: "readonly",
                 Storage: "readonly",
-                crypto: "readonly",
-                Uint32Array: "readonly",
-                location: "readonly",
-                navigator: "readonly",
                 Blob: "readonly",
                 URL: "readonly",
-                FileReader: "readonly",
-                btoa: "readonly",
-                atob: "readonly",
-                unescape: "readonly",
-                encodeURIComponent: "readonly",
-                decodeURIComponent: "readonly"
+                FileReader: "readonly"
             }
         },
         rules: {

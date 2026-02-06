@@ -18,7 +18,7 @@ export function getHandStats(hand) {
         return { value: 0, isSoft: false, aces: 0 };
     }
 
-    for (let card of hand) {
+    for (const card of hand) {
         if (!card) continue;
         const cardValue = getCardNumericValue(card);
         value += cardValue;

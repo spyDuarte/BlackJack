@@ -19,8 +19,8 @@ export class Deck {
         this.cards = [];
 
         for (let i = 0; i < this.numberOfDecks; i++) {
-            for (let suit of suits) {
-                for (let value of values) {
+            for (const suit of suits) {
+                for (const value of values) {
                     this.cards.push({ suit, value });
                 }
             }
