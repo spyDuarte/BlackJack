@@ -138,7 +138,7 @@ export class GameManager {
                 this.blackjacks = gameState.blackjacks || 0;
                 this.totalWinnings = gameState.totalWinnings || 0;
                 this.gameStarted = gameState.gameStarted || false;
-            } catch (e) {
+            } catch {
                 console.warn('Could not parse game state');
             }
         }
@@ -167,7 +167,7 @@ export class GameManager {
                     this.ui.setVolume(this.settings.volume);
                     if (this.settings.theme) this.ui.setTheme(this.settings.theme);
                 }
-            } catch (e) {
+            } catch {
                 console.warn('Could not parse settings');
             }
         }
@@ -612,7 +612,7 @@ export class GameManager {
                 this.newGame();
                 this.saveGame();
                 if (this.ui) this.ui.showMessage('Dados importados!', 'win');
-            } catch (err) {
+            } catch {
                 if (this.ui) this.ui.showError('Erro ao importar dados.');
             }
         };
