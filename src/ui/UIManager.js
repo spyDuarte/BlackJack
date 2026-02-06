@@ -62,7 +62,11 @@ export class UIManager {
             loginBtn: document.getElementById('login-btn'),
             loginError: document.getElementById('login-error'),
             volumeSlider: document.getElementById('volume-slider'),
-            volumeValue: document.getElementById('volume-value')
+            volumeValue: document.getElementById('volume-value'),
+            themeDark: document.getElementById('theme-dark'),
+            themeLight: document.getElementById('theme-light'),
+            exportBtn: document.getElementById('btn-export-data'),
+            importInput: document.getElementById('btn-import-data')
         };
     }
 
@@ -130,6 +134,20 @@ export class UIManager {
                 const value = parseInt(e.target.value);
                 if (el.volumeValue) el.volumeValue.textContent = `${value}%`;
                 game.updateSetting('volume', value / 100);
+            });
+        }
+
+        // Theme toggle
+        if (el.themeDark) el.themeDark.addEventListener('click', () => this.setTheme('dark'));
+        if (el.themeLight) el.themeLight.addEventListener('click', () => this.setTheme('light'));
+
+        // Export/Import
+        if (el.exportBtn) el.exportBtn.addEventListener('click', () => game.exportData());
+        if (el.importInput) {
+            el.importInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) game.importData(file);
+                e.target.value = '';
             });
         }
 
@@ -408,6 +426,16 @@ export class UIManager {
         const percent = Math.round(value * 100);
         if (this.elements.volumeSlider) this.elements.volumeSlider.value = percent;
         if (this.elements.volumeValue) this.elements.volumeValue.textContent = `${percent}%`;
+    }
+    setTheme(theme) {
+        if (theme === 'light') {
+            document.body.classList.add('theme-light');
+        } else {
+            document.body.classList.remove('theme-light');
+        }
+        if (this.elements.themeDark) this.elements.themeDark.classList.toggle('active', theme !== 'light');
+        if (this.elements.themeLight) this.elements.themeLight.classList.toggle('active', theme === 'light');
+        if (this.game) this.game.updateSetting('theme', theme);
     }
 
     showWinAnimation(amount) {
