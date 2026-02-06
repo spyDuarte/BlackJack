@@ -35,18 +35,18 @@ def run():
             page.wait_for_selector('.start-btn')
 
             # Wait for game initialization
-            page.wait_for_function('window.game !== undefined')
+            page.wait_for_function('window.__game !== undefined && window.__HandUtils !== undefined')
 
             # 1. Verify Deck Size (6 decks)
-            deck_size = page.evaluate('window.game.deck.cards.length')
+            deck_size = page.evaluate('window.__game.deck.cards.length')
             print(f"Deck size: {deck_size}")
             if deck_size != 312:
                 raise Exception(f"Expected 312 cards, got {deck_size}")
             print("Verified: Deck initialized with 6 decks (312 cards)")
 
             # 1.1 Verify Deck is Shuffled
-            first_card = page.evaluate('window.game.deck.cards[window.game.deck.cards.length - 1]')
-            second_card = page.evaluate('window.game.deck.cards[window.game.deck.cards.length - 2]')
+            first_card = page.evaluate('window.__game.deck.cards[window.__game.deck.cards.length - 1]')
+            second_card = page.evaluate('window.__game.deck.cards[window.__game.deck.cards.length - 2]')
             print(f"First card: {first_card}, Second card: {second_card}")
 
             # Unshuffled deck would pop from end.
@@ -79,7 +79,7 @@ def run():
                 () => {{
                     const cards = {str(case['cards'])};
                     const hand = cards.map(val => ({{ value: val, suit: '♠' }}));
-                    return window.game.isSoftHand(hand);
+                    return window.__HandUtils.isSoftHand(hand);
                 }}
                 """
                 result = page.evaluate(js_code)
@@ -91,17 +91,17 @@ def run():
             print("Verifying Reshuffle Logic...")
 
             # Mock deck to be low
-            page.evaluate('window.game.deck.cards = new Array(50).fill({suit: "♠", value: "A"})')
-            remaining_before = page.evaluate('window.game.deck.remainingCards')
+            page.evaluate('window.__game.deck.cards = new Array(50).fill({suit: "♠", value: "A"})')
+            remaining_before = page.evaluate('window.__game.deck.remainingCards')
             print(f"Mocked remaining cards: {remaining_before}")
 
             # Start game (should trigger shuffle)
             page.evaluate("""
                 document.getElementById('bet-input').value = 100;
-                window.game.startGame();
+                window.__game.startGame();
             """)
 
-            remaining_after = page.evaluate('window.game.deck.remainingCards')
+            remaining_after = page.evaluate('window.__game.deck.remainingCards')
             print(f"Remaining cards after startGame: {remaining_after}")
 
             # Should have reshuffled (312 - dealt cards)
@@ -115,11 +115,11 @@ def run():
             # deck is now full (minus 4 cards)
 
             page.evaluate("""
-                window.game.gameOver = true; // Force game over to allow new game
-                window.game.startGame();
+                window.__game.gameOver = true; // Force game over to allow new game
+                window.__game.startGame();
             """)
 
-            remaining_after_2 = page.evaluate('window.game.deck.remainingCards')
+            remaining_after_2 = page.evaluate('window.__game.deck.remainingCards')
             print(f"Remaining cards after second game: {remaining_after_2}")
 
             # Should contain 308 - 4 = 304 cards

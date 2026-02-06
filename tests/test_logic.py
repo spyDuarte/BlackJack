@@ -11,7 +11,7 @@ def test_deck_size(logged_in_page):
 
 def test_is_soft_hand(logged_in_page):
     page = logged_in_page
-    page.wait_for_function("window.__game !== undefined")
+    page.wait_for_function("window.__HandUtils !== undefined")
 
     test_cases = [
         {"cards": ["A", "6"], "expected": True, "desc": "Soft 17 (A, 6)"},
@@ -28,7 +28,7 @@ def test_is_soft_hand(logged_in_page):
         () => {{
             const cards = {str(case['cards'])};
             const hand = cards.map(val => ({{ value: val, suit: '\u2660' }}));
-            return window.__game.isSoftHand(hand);
+            return window.__HandUtils.isSoftHand(hand);
         }}
         """
         result = page.evaluate(js_code)

@@ -134,25 +134,90 @@ export class SoundManager {
 
     playSynthetic(type) {
         try {
-            const sound = this.synthSounds[type] || this.synthSounds.button;
-            if (!sound) return;
+            const ct = this.context.currentTime;
+            const vol = this.volume * 0.2;
 
-            const oscillator = this.context.createOscillator();
-            const gainNode = this.context.createGain();
+            if (type === 'card') {
+                // Card sound: filtered noise burst simulating a card flip
+                const bufferSize = this.context.sampleRate * 0.08;
+                const noiseBuffer = this.context.createBuffer(1, bufferSize, this.context.sampleRate);
+                const data = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
 
-            oscillator.connect(gainNode);
-            gainNode.connect(this.context.destination);
+                const noise = this.context.createBufferSource();
+                noise.buffer = noiseBuffer;
 
-            oscillator.frequency.value = sound.frequency;
+                const filter = this.context.createBiquadFilter();
+                filter.type = 'highpass';
+                filter.frequency.value = 3000;
 
-            // Use setValueAtTime for more robust timing
-            const currentTime = this.context.currentTime;
-            const synthVolume = this.volume * 0.2;
-            gainNode.gain.setValueAtTime(synthVolume, currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, currentTime + sound.duration);
+                const gain = this.context.createGain();
+                gain.gain.setValueAtTime(vol, ct);
+                gain.gain.exponentialRampToValueAtTime(0.01, ct + 0.08);
 
-            oscillator.start(currentTime);
-            oscillator.stop(currentTime + sound.duration);
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.context.destination);
+                noise.start(ct);
+            } else if (type === 'win') {
+                // Win sound: ascending arpeggio of 3 tones
+                const freqs = [523.25, 659.25, 783.99];
+                freqs.forEach((freq, i) => {
+                    const osc = this.context.createOscillator();
+                    const gain = this.context.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    osc.connect(gain);
+                    gain.connect(this.context.destination);
+                    const start = ct + i * 0.12;
+                    gain.gain.setValueAtTime(0, start);
+                    gain.gain.linearRampToValueAtTime(vol, start + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.01, start + 0.25);
+                    osc.start(start);
+                    osc.stop(start + 0.25);
+                });
+            } else if (type === 'lose') {
+                // Lose sound: descending two-tone
+                const osc = this.context.createOscillator();
+                const gain = this.context.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, ct);
+                osc.frequency.linearRampToValueAtTime(200, ct + 0.4);
+                osc.connect(gain);
+                gain.connect(this.context.destination);
+                gain.gain.setValueAtTime(vol, ct);
+                gain.gain.exponentialRampToValueAtTime(0.01, ct + 0.5);
+                osc.start(ct);
+                osc.stop(ct + 0.5);
+            } else if (type === 'chip') {
+                // Chip sound: quick metallic click with two short tones
+                [1200, 1800].forEach((freq, i) => {
+                    const osc = this.context.createOscillator();
+                    const gain = this.context.createGain();
+                    osc.type = 'square';
+                    osc.frequency.value = freq;
+                    osc.connect(gain);
+                    gain.connect(this.context.destination);
+                    const start = ct + i * 0.03;
+                    gain.gain.setValueAtTime(vol * 0.6, start);
+                    gain.gain.exponentialRampToValueAtTime(0.01, start + 0.04);
+                    osc.start(start);
+                    osc.stop(start + 0.04);
+                });
+            } else {
+                // Default button sound: short clean blip
+                const sound = this.synthSounds[type] || this.synthSounds.button;
+                if (!sound) return;
+                const osc = this.context.createOscillator();
+                const gain = this.context.createGain();
+                osc.frequency.value = sound.frequency;
+                osc.connect(gain);
+                gain.connect(this.context.destination);
+                gain.gain.setValueAtTime(vol, ct);
+                gain.gain.exponentialRampToValueAtTime(0.01, ct + sound.duration);
+                osc.start(ct);
+                osc.stop(ct + sound.duration);
+            }
         } catch (error) {
             console.warn('Error playing synthetic sound:', error);
         }

@@ -115,6 +115,7 @@ export class GameManager {
         if (!this.username) return;
 
         const gameState = {
+            version: CONFIG.STORAGE_VERSION,
             balance: this.balance,
             wins: this.wins,
             losses: this.losses,
@@ -125,13 +126,22 @@ export class GameManager {
         StorageManager.set(this.getStorageKey('blackjack-premium-save'), JSON.stringify(gameState));
     }
 
+    migrateData(gameState) {
+        // Version 1 or unversioned: no migration needed, just mark with current version
+        if (!gameState.version || gameState.version < CONFIG.STORAGE_VERSION) {
+            gameState.version = CONFIG.STORAGE_VERSION;
+        }
+        return gameState;
+    }
+
     loadGame() {
         if (!this.username) return;
 
         const savedGame = StorageManager.get(this.getStorageKey('blackjack-premium-save'));
         if (savedGame) {
             try {
-                const gameState = JSON.parse(savedGame);
+                let gameState = JSON.parse(savedGame);
+                gameState = this.migrateData(gameState);
                 this.balance = gameState.balance || 1000;
                 this.wins = gameState.wins || 0;
                 this.losses = gameState.losses || 0;
@@ -356,28 +366,42 @@ export class GameManager {
         if (this.playerHands.length === 0) return;
         const currentHand = this.playerHands[this.currentHandIndex];
 
-        // Validation logic handled in UI update usually, but safety check here
+        // Validation: cards must be a pair, player needs balance, and max splits not reached
         if (currentHand.cards.length !== 2 ||
             currentHand.cards[0].value !== currentHand.cards[1].value ||
-            this.balance < currentHand.bet) {
+            this.balance < currentHand.bet ||
+            this.playerHands.length > CONFIG.MAX_SPLITS) {
             return;
         }
+
+        const isSplittingAces = currentHand.cards[0].value === 'A';
 
         this.balance -= currentHand.bet;
 
         const newHand = {
             cards: [currentHand.cards.pop()],
             bet: currentHand.bet,
-            status: 'playing'
+            status: 'playing',
+            splitFromAces: isSplittingAces
         };
 
+        currentHand.splitFromAces = isSplittingAces;
         currentHand.cards.push(this.deck.draw());
         newHand.cards.push(this.deck.draw());
 
         this.playerHands.splice(this.currentHandIndex + 1, 0, newHand);
 
         if (this.soundManager) this.soundManager.play('card');
-        this.updateUI();
+
+        // When splitting aces, each hand gets only one card and must stand
+        if (isSplittingAces) {
+            currentHand.status = 'stand';
+            newHand.status = 'stand';
+            this.updateUI();
+            this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
+        } else {
+            this.updateUI();
+        }
     }
 
     surrender() {
@@ -431,11 +455,15 @@ export class GameManager {
         this.addTimeout(dealerTurn, CONFIG.DELAYS.DEALER_TURN);
     }
 
-    evaluateHand(hand, dealerValue) {
+    evaluateHand(hand, dealerValue, dealerBJ) {
         const playerValue = HandUtils.calculateHandValue(hand.cards);
+        const playerBJ = HandUtils.isNaturalBlackjack(hand.cards, this.playerHands.length);
 
         if (hand.status === 'surrender') return { result: 'surrender', winMultiplier: 0 };
         if (hand.status === 'busted') return { result: 'lose', winMultiplier: 0 };
+
+        // Explicit BJ push: both player and dealer have natural Blackjack
+        if (playerBJ && dealerBJ) return { result: 'tie', winMultiplier: 1 };
 
         if (dealerValue > 21) return { result: 'win', winMultiplier: 2 };
         if (playerValue > dealerValue) return { result: 'win', winMultiplier: 2 };
@@ -462,13 +490,11 @@ export class GameManager {
         let allLost = true;
 
         this.playerHands.forEach(hand => {
-            const { result, winMultiplier } = this.evaluateHand(hand, dealerValue);
+            const { result, winMultiplier } = this.evaluateHand(hand, dealerValue, dealerBJ);
             let handWin = hand.bet * winMultiplier;
-            const playerValue = HandUtils.calculateHandValue(hand.cards);
 
-            // Blackjack Payout
-            if (this.playerHands.length === 1 && playerValue === 21 && hand.cards.length === 2 && result === 'win') {
-                 // 3:2 payout is 2.5x the bet returned (1 bet + 1.5 win)
+            // Natural Blackjack payout (3:2) - only for single hand, not after split
+            if (HandUtils.isNaturalBlackjack(hand.cards, this.playerHands.length) && result === 'win') {
                  handWin = Math.floor(hand.bet * CONFIG.PAYOUT.BLACKJACK);
                  this.blackjacks++;
             }
@@ -618,12 +644,6 @@ export class GameManager {
         };
         reader.readAsText(file);
     }
-
-    // Helpers (Proxy to HandUtils for tests/compatibility)
-    getCardNumericValue(card) { return HandUtils.getCardNumericValue(card); }
-    getHandStats(hand) { return HandUtils.getHandStats(hand); }
-    calculateHandValue(hand) { return HandUtils.calculateHandValue(hand); }
-    isSoftHand(hand) { return HandUtils.isSoftHand(hand); }
 
     // Settings Update
     updateSetting(key, value) {

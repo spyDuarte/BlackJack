@@ -27,10 +27,21 @@ export class Deck {
     }
 
     shuffle() {
-        // Fisher-Yates shuffle algorithm
-        for (let i = this.cards.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
+        // Fisher-Yates shuffle with cryptographically secure random values
+        const len = this.cards.length;
+        if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+            const randomValues = new Uint32Array(len);
+            crypto.getRandomValues(randomValues);
+            for (let i = len - 1; i > 0; i--) {
+                const j = randomValues[i] % (i + 1);
+                [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
+            }
+        } else {
+            // Fallback to Math.random for environments without crypto
+            for (let i = len - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
+            }
         }
     }
 

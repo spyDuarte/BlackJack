@@ -1,6 +1,7 @@
 import { UIManager } from './ui/UIManager.js';
 import { GameManager } from './core/GameManager.js';
 import { SoundManager } from './utils/SoundManager.js';
+import * as HandUtils from './utils/HandUtils.js';
 
 let gameInstance = null;
 
@@ -17,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Exposed for E2E testing only (not as window.game to discourage console manipulation)
         window.__game = gameInstance;
+        window.__HandUtils = HandUtils;
 
         console.log('Blackjack Premium loaded successfully (ES Modules)!');
     } catch (e) {
