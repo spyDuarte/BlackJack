@@ -77,7 +77,8 @@ export class GameManager {
             animationsEnabled: true,
             autoSave: true,
             showStats: false,
-            volume: 0.5
+            volume: 0.5,
+            theme: 'dark'
         };
     }
 
@@ -164,6 +165,7 @@ export class GameManager {
                     this.ui.setAnimationsEnabled(this.settings.animationsEnabled);
                     this.ui.setStatsVisibility(this.settings.showStats);
                     this.ui.setVolume(this.settings.volume);
+                    if (this.settings.theme) this.ui.setTheme(this.settings.theme);
                 }
             } catch (e) {
                 console.warn('Could not parse settings');
@@ -564,6 +566,59 @@ export class GameManager {
         this.updateUI();
     }
 
+    exportData() {
+        if (!this.username) return;
+        const data = {
+            username: this.username,
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            gameState: {
+                balance: this.balance,
+                wins: this.wins,
+                losses: this.losses,
+                blackjacks: this.blackjacks,
+                totalWinnings: this.totalWinnings
+            },
+            settings: this.settings
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `blackjack-${this.username}-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    importData(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (!data.gameState || !data.version) {
+                    if (this.ui) this.ui.showError('Arquivo inválido.');
+                    return;
+                }
+                const gs = data.gameState;
+                this.balance = gs.balance || CONFIG.INITIAL_BALANCE;
+                this.wins = gs.wins || 0;
+                this.losses = gs.losses || 0;
+                this.blackjacks = gs.blackjacks || 0;
+                this.totalWinnings = gs.totalWinnings || 0;
+                if (data.settings) {
+                    this.settings = { ...this.settings, ...data.settings };
+                    this.loadSettings();
+                }
+                this.newGame();
+                this.saveGame();
+                if (this.ui) this.ui.showMessage('Dados importados!', 'win');
+            } catch (err) {
+                if (this.ui) this.ui.showError('Erro ao importar dados.');
+            }
+        };
+        reader.readAsText(file);
+    }
+
     // Helpers (Proxy to HandUtils for tests/compatibility)
     getCardNumericValue(card) { return HandUtils.getCardNumericValue(card); }
     getHandStats(hand) { return HandUtils.getHandStats(hand); }
@@ -583,6 +638,7 @@ export class GameManager {
             if (this.ui) {
                 if (key === 'animationsEnabled') this.ui.setAnimationsEnabled(value);
                 if (key === 'showStats') this.ui.setStatsVisibility(value);
+                if (key === 'theme') this.ui.setTheme(value);
             }
             this.saveSettings();
         }
