@@ -2,14 +2,24 @@ import { Deck } from './Deck.js';
 import { CONFIG } from './Constants.js';
 import * as HandUtils from '../utils/HandUtils.js';
 
+/**
+ * Core engine for Blackjack game logic.
+ * Handles state, deck, hand manipulation, and rule evaluation.
+ */
 export class BlackjackEngine {
     constructor() {
+        /** @type {Deck} */
         this.deck = new Deck();
         this.resetState();
     }
 
+    /**
+     * Resets the game state for a new round.
+     */
     resetState() {
+        /** @type {Array<Object>} Player's hands */
         this.playerHands = [];
+        /** @type {Array<Object>} Dealer's hand */
         this.dealerHand = [];
         this.currentHandIndex = 0;
         this.dealerRevealed = false;
@@ -18,11 +28,19 @@ export class BlackjackEngine {
         this.insuranceTaken = false;
     }
 
+    /**
+     * Shuffles the deck.
+     */
     shuffleDeck() {
         this.deck.reset();
         this.deck.shuffle();
     }
 
+    /**
+     * Starts a new game round.
+     * @param {number} bet - The bet amount.
+     * @returns {Object} Initial deal state (hands).
+     */
     startGame(bet) {
         if (this.deck.needsReshuffle) {
             this.shuffleDeck();
@@ -52,10 +70,19 @@ export class BlackjackEngine {
         };
     }
 
+    /**
+     * Gets the dealer's visible card.
+     * @returns {Object} The first card of the dealer.
+     */
     get dealerUpCard() {
         return this.dealerHand[0];
     }
 
+    /**
+     * Adds a card to the specified player hand.
+     * @param {number} handIndex - Index of the hand to hit.
+     * @returns {Object|null} Result object with updated hand and drawn card, or null if invalid.
+     */
     hit(handIndex) {
         const hand = this.playerHands[handIndex];
         if (!hand || hand.status !== 'playing') return null;
@@ -70,6 +97,11 @@ export class BlackjackEngine {
         return { hand, card };
     }
 
+    /**
+     * Stands on the current hand.
+     * @param {number} handIndex - Index of the hand.
+     * @returns {Object|null} Updated hand object.
+     */
     stand(handIndex) {
         const hand = this.playerHands[handIndex];
         if (!hand) return null;
@@ -77,6 +109,11 @@ export class BlackjackEngine {
         return { hand };
     }
 
+    /**
+     * Doubles down on the current hand (double bet, one card only).
+     * @param {number} handIndex - Index of the hand.
+     * @returns {Object|null} Result object or null if invalid.
+     */
     double(handIndex) {
         const hand = this.playerHands[handIndex];
         if (!hand || hand.status !== 'playing') return null;
@@ -94,17 +131,17 @@ export class BlackjackEngine {
         return { hand, card };
     }
 
+    /**
+     * Splits the current hand into two.
+     * @param {number} handIndex - Index of the hand.
+     * @returns {Object|null} Result object containing split details or null if invalid.
+     */
     split(handIndex) {
         const hand = this.playerHands[handIndex];
         if (!hand) return null;
 
         if (hand.cards.length !== 2) return null;
-        // In some variants, 10 and J can be split (value 10). In others only same rank.
-        // GameManager checked value equality: currentHand.cards[0].value !== currentHand.cards[1].value
-        // But wait, GameManager logic:
-        // if (currentHand.cards[0].value !== currentHand.cards[1].value) return;
-        // So J and Q cannot be split?
-        // Let's keep GameManager logic for now.
+        // Strict equality check for split (e.g. 10 and J cannot be split in this rule set, only 10-10 or J-J)
         if (hand.cards[0].value !== hand.cards[1].value) return null;
 
         const isSplittingAces = hand.cards[0].value === 'A';
@@ -137,6 +174,11 @@ export class BlackjackEngine {
         };
     }
 
+    /**
+     * Surrenders the current hand (gives up half bet).
+     * @param {number} handIndex - Index of the hand.
+     * @returns {Object|null} Updated hand object.
+     */
     surrender(handIndex) {
         const hand = this.playerHands[handIndex];
         if (!hand) return null;
@@ -146,13 +188,20 @@ export class BlackjackEngine {
         return { hand };
     }
 
-    // Dealer logic: hits soft 17
+    /**
+     * Determines if the dealer should hit based on Soft 17 rule.
+     * @returns {boolean} True if dealer should hit.
+     */
     dealerShouldHit() {
          const value = HandUtils.calculateHandValue(this.dealerHand);
          const isSoft = HandUtils.isSoftHand(this.dealerHand);
          return (value < 17 || (value === 17 && isSoft));
     }
 
+    /**
+     * Performs a single hit for the dealer if rules allow.
+     * @returns {Object|null} The drawn card or null.
+     */
     dealerHit() {
         if (this.dealerShouldHit()) {
              const card = this.deck.draw();
@@ -162,6 +211,10 @@ export class BlackjackEngine {
         return null;
     }
 
+    /**
+     * Simulates the entire dealer turn at once (for instant results).
+     * @returns {Object} Final dealer hand and list of drawn cards.
+     */
     dealerTurn() {
          this.dealerRevealed = true;
          const cardsDrawn = [];
@@ -177,6 +230,10 @@ export class BlackjackEngine {
          };
     }
 
+    /**
+     * Evaluates the game results for all hands against the dealer.
+     * @returns {Object} Result summary including payouts.
+     */
     evaluateResults() {
         const dealerValue = HandUtils.calculateHandValue(this.dealerHand);
         const dealerBJ = HandUtils.isNaturalBlackjack(this.dealerHand, 1);
@@ -235,6 +292,10 @@ export class BlackjackEngine {
         };
     }
 
+    /**
+     * Gets the current public state of the engine.
+     * @returns {Object} Game state.
+     */
     getState() {
         return {
             playerHands: this.playerHands,

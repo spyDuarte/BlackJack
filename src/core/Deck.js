@@ -1,6 +1,14 @@
 import { CONFIG } from './Constants.js';
 
+/**
+ * Represents a shoe of playing cards.
+ * Handles shuffling, dealing, and cut card logic.
+ */
 export class Deck {
+    /**
+     * Creates a new Deck.
+     * @param {number} numberOfDecks - Number of standard 52-card decks to include.
+     */
     constructor(numberOfDecks = CONFIG.DECKS) {
         this.numberOfDecks = numberOfDecks;
         this.cards = [];
@@ -9,10 +17,17 @@ export class Deck {
         this.shuffle();
     }
 
+    /**
+     * Total number of cards in the full shoe.
+     * @returns {number}
+     */
     get totalCards() {
         return this.numberOfDecks * 52;
     }
 
+    /**
+     * Resets the deck to a full, ordered state and places the cut card.
+     */
     reset() {
         const suits = ['\u2660', '\u2665', '\u2666', '\u2663'];
         const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -33,14 +48,26 @@ export class Deck {
         this.cutCardPosition = minCut + Math.floor(Math.random() * (maxCut - minCut));
     }
 
+    /**
+     * Number of cards currently remaining in the shoe.
+     * @returns {number}
+     */
     get remainingCards() {
         return this.cards.length;
     }
 
+    /**
+     * Whether the cut card has been reached/passed.
+     * @returns {boolean}
+     */
     get needsReshuffle() {
         return this.cutCardReached;
     }
 
+    /**
+     * Shuffles the cards using Fisher-Yates algorithm.
+     * Uses `crypto.getRandomValues` if available for better randomness.
+     */
     shuffle() {
         // Fisher-Yates shuffle with cryptographically secure random values
         const len = this.cards.length;
@@ -60,14 +87,22 @@ export class Deck {
         }
     }
 
+    /**
+     * Draws a card from the top of the deck.
+     * Reshuffles if empty. Updates cut card status.
+     * @returns {Object} The drawn card {suit, value}.
+     */
     draw() {
         if (this.cards.length === 0) {
             this.reset();
             this.shuffle();
         }
 
-        // Check if cut card was reached during play
-        if (this.cards.length <= this.cutCardPosition) {
+        // Check if cut card was reached during play (including the card being drawn now)
+        // If cutCardPosition is 10, it means 10 cards are reserved.
+        // If we have 11 cards, we are about to draw the 11th, leaving 10.
+        // This effectively implies we hit the cut card marker.
+        if (this.cards.length <= this.cutCardPosition + 1) {
             this.cutCardReached = true;
         }
 
