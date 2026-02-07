@@ -78,3 +78,19 @@ export function isNaturalBlackjack(hand, handsCount) {
     if (handsCount > 1) return false; // 21 after split is not natural BJ
     return calculateHandValue(hand) === 21;
 }
+
+/**
+ * Returns the Hi-Lo counting value for a card.
+ * 2-6: +1
+ * 7-9: 0
+ * 10-A: -1
+ * @param {Object} card - The card object.
+ * @returns {number} The Hi-Lo value.
+ */
+export function getHiLoValue(card) {
+    if (!card) return 0;
+    const val = getCardNumericValue(card);
+    if (val >= 2 && val <= 6) return 1;
+    if (val >= 10 || val === 11 || card.value === 'A') return -1; // 10, J, Q, K, A
+    return 0; // 7, 8, 9
+}
