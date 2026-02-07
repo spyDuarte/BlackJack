@@ -2,20 +2,22 @@
 
 [![CI](https://github.com/blackjack-premium/blackjack-premium/actions/workflows/ci.yml/badge.svg)](https://github.com/blackjack-premium/blackjack-premium/actions/workflows/ci.yml)
 
-A feature-rich, browser-based Blackjack (21) game built with modern JavaScript (ES Modules), CSS, and HTML5.
+A feature-rich, browser-based Blackjack (21) game built with modern JavaScript (ES Modules), Vite, and HTML5.
 
 ## Features
 
 - **Standard Blackjack Rules**: Dealer hits on soft 17, 3:2 Blackjack payout, 2:1 Insurance.
-- **Advanced Moves**: Split, Double Down, Surrender.
+- **Advanced Moves**: Split (up to 3 times), Double Down, Surrender.
 - **Persistent State**: Game progress and settings are saved automatically via `localStorage`.
 - **Rich UI**: Smooth animations, sound effects, and responsive design.
 - **Statistics**: Track your wins, losses, win rate, and total winnings.
 - **Configurable**: Toggle sounds, animations, auto-save, and switch between Light/Dark themes.
+- **Modern Stack**: Built with Vite for fast development and optimized production builds.
 
 ## Tech Stack
 
 - **Frontend**: Vanilla JavaScript (ES Modules), CSS3 (Variables, Flexbox/Grid), HTML5.
+- **Build Tool**: Vite.
 - **Testing**:
     - **Unit**: Vitest (for core game logic).
     - **E2E**: Playwright + Pytest (for browser automation and integration).
@@ -49,13 +51,27 @@ A feature-rich, browser-based Blackjack (21) game built with modern JavaScript (
 
 ### Running Locally
 
-Start the local development server:
+Start the local development server with Vite:
 
 ```bash
 npm run dev
 ```
 
-Open your browser at `http://localhost:3000` (or the port shown in the terminal).
+Open your browser at the URL shown in the terminal (usually `http://localhost:5173` or `http://localhost:3000`).
+
+### Building for Production
+
+To build the project for production:
+
+```bash
+npm run build
+```
+
+The output will be in the `dist/` directory. You can preview the production build with:
+
+```bash
+npm run preview
+```
 
 ## Development
 
@@ -83,7 +99,8 @@ tests/
 
 ### Scripts
 
-- `npm run dev`: Start local server.
+- `npm run dev`: Start local server (Vite).
+- `npm run build`: Build for production.
 - `npm test`: Run unit tests (Vitest).
 - `npm run test:e2e`: Run E2E tests (Playwright).
 - `npm run lint`: Check for linting errors.
@@ -99,7 +116,7 @@ Contributions are welcome! Please follow these steps:
 4.  Push to the branch (`git push origin feature/amazing-feature`).
 5.  Open a Pull Request.
 
-Please ensure all tests pass before submitting your PR.
+Please ensure all tests pass (`npm test` and `npm run lint`) before submitting your PR.
 
 ## License
 
