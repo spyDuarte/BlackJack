@@ -45,7 +45,7 @@ export class Deck {
         // Place cut card randomly between 60-80% penetration
         const minCut = Math.floor(this.totalCards * 0.2);
         const maxCut = Math.floor(this.totalCards * 0.4);
-        this.cutCardPosition = minCut + Math.floor(Math.random() * (maxCut - minCut));
+        this.cutCardPosition = minCut + this._getRandomInt(maxCut - minCut);
     }
 
     /**
@@ -71,19 +71,37 @@ export class Deck {
     shuffle() {
         // Fisher-Yates shuffle with cryptographically secure random values
         const len = this.cards.length;
+        for (let i = len - 1; i > 0; i--) {
+            const j = this._getRandomInt(i + 1);
+            [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
+        }
+    }
+
+    /**
+     * Generates a random integer between 0 and max-1 using crypto if available.
+     * Uses rejection sampling to avoid modulo bias.
+     * @param {number} max - The exclusive upper bound.
+     * @returns {number} Random integer in [0, max-1].
+     */
+    _getRandomInt(max) {
         if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-            const randomValues = new Uint32Array(len);
-            crypto.getRandomValues(randomValues);
-            for (let i = len - 1; i > 0; i--) {
-                const j = randomValues[i] % (i + 1);
-                [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
-            }
+            // Rejection sampling to avoid modulo bias
+            // We want a number in [0, max-1]
+            // We generate a random 32-bit integer.
+            // If the integer is >= limit, we reject and retry.
+            // limit is the largest multiple of max <= 2^32.
+
+            const maxUint32 = 4294967296;
+            const limit = maxUint32 - (maxUint32 % max);
+            const buffer = new Uint32Array(1);
+
+            do {
+                crypto.getRandomValues(buffer);
+            } while (buffer[0] >= limit);
+
+            return buffer[0] % max;
         } else {
-            // Fallback to Math.random for environments without crypto
-            for (let i = len - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
-            }
+            return Math.floor(Math.random() * max);
         }
     }
 
