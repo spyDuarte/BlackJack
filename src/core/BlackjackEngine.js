@@ -90,8 +90,11 @@ export class BlackjackEngine {
         const card = this.deck.draw();
         hand.cards.push(card);
 
-        if (HandUtils.calculateHandValue(hand.cards) > 21) {
+        const newValue = HandUtils.calculateHandValue(hand.cards);
+        if (newValue > 21) {
             hand.status = 'busted';
+        } else if (newValue === 21) {
+            hand.status = 'stand';
         }
 
         return { hand, card };
@@ -144,6 +147,9 @@ export class BlackjackEngine {
         // Strict equality check for split (e.g. 10 and J cannot be split in this rule set, only 10-10 or J-J)
         if (hand.cards[0].value !== hand.cards[1].value) return null;
 
+        // No re-splitting Aces
+        if (hand.splitFromAces) return null;
+
         const isSplittingAces = hand.cards[0].value === 'A';
 
         const splitCard = hand.cards.pop();
@@ -182,6 +188,9 @@ export class BlackjackEngine {
     surrender(handIndex) {
         const hand = this.playerHands[handIndex];
         if (!hand) return null;
+
+        // Late Surrender only allowed on initial hand (no splits)
+        if (this.playerHands.length > 1) return null;
         if (hand.cards.length !== 2) return null;
 
         hand.status = 'surrender';
