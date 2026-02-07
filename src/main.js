@@ -24,8 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
             window.__game = gameInstance;
             window.__HandUtils = HandUtils;
         }
-
-        console.log('Blackjack Premium loaded successfully (ES Modules)!');
     } catch (e) {
         console.error('Critical initialization error:', e);
     }

@@ -351,6 +351,7 @@ export class UIManager {
     createCardElement(card, hidden = false) {
         const cardEl = document.createElement('div');
         cardEl.className = 'card';
+        cardEl.setAttribute('role', 'img');
         if (hidden) cardEl.classList.add('flipped');
 
         const suitNames = { '♠': 'Espadas', '♥': 'Copas', '♦': 'Ouros', '♣': 'Paus' };
