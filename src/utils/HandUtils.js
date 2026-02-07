@@ -1,4 +1,13 @@
+/**
+ * Utility functions for Blackjack hand calculations.
+ */
 
+/**
+ * Returns the numeric blackjack value of a card.
+ * A=11, Face=10, others=number.
+ * @param {Object} card - The card object {value, suit}.
+ * @returns {number} Numeric value (1-11).
+ */
 export function getCardNumericValue(card) {
     if (!card) return 0;
     if (card.value === 'A') {
@@ -10,6 +19,12 @@ export function getCardNumericValue(card) {
     }
 }
 
+/**
+ * Calculates the total value and properties of a hand.
+ * Handles Ace conversion from 11 to 1.
+ * @param {Array<Object>} hand - Array of card objects.
+ * @returns {Object} { value: number, isSoft: boolean, aces: number }
+ */
 export function getHandStats(hand) {
     let value = 0;
     let aces = 0;
@@ -25,6 +40,7 @@ export function getHandStats(hand) {
         if (cardValue === 11) aces++;
     }
 
+    // Downgrade Aces if busted
     while (value > 21 && aces > 0) {
         value -= 10;
         aces--;
@@ -33,14 +49,30 @@ export function getHandStats(hand) {
     return { value, isSoft: aces > 0, aces };
 }
 
+/**
+ * Calculates the final numeric value of a hand.
+ * @param {Array<Object>} hand - Array of card objects.
+ * @returns {number} Hand value (best possible <= 21).
+ */
 export function calculateHandValue(hand) {
     return getHandStats(hand).value;
 }
 
+/**
+ * Checks if a hand is "soft" (contains an Ace counted as 11).
+ * @param {Array<Object>} hand - Array of card objects.
+ * @returns {boolean} True if soft.
+ */
 export function isSoftHand(hand) {
     return getHandStats(hand).isSoft;
 }
 
+/**
+ * Checks if a hand is a "Natural Blackjack" (Ace + 10/Face on first 2 cards).
+ * @param {Array<Object>} hand - Array of card objects.
+ * @param {number} handsCount - Total number of player hands (to invalidate split BJ).
+ * @returns {boolean} True if natural blackjack.
+ */
 export function isNaturalBlackjack(hand, handsCount) {
     if (!hand || !Array.isArray(hand) || hand.length !== 2) return false;
     if (handsCount > 1) return false; // 21 after split is not natural BJ
