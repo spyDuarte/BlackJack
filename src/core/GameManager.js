@@ -1,4 +1,4 @@
-import { Deck } from './Deck.js';
+import { BlackjackEngine } from './BlackjackEngine.js';
 import { CONFIG } from './Constants.js';
 import { StorageManager } from '../utils/StorageManager.js';
 import { debounce } from '../utils/debounce.js';
@@ -21,7 +21,8 @@ export class GameManager {
         this.events = new EventEmitter();
         this.ui = ui;
         this.soundManager = soundManager;
-        this.deck = new Deck();
+
+        this.engine = new BlackjackEngine();
         this.username = null;
 
         this.initializeGameState();
@@ -32,6 +33,31 @@ export class GameManager {
 
         this.saveGame = debounce(this._saveGameImmediate.bind(this), 1000);
     }
+
+    // Proxy properties to engine for backward compatibility and test support
+    get playerHands() { return this.engine.playerHands; }
+    set playerHands(v) { this.engine.playerHands = v; }
+
+    get dealerHand() { return this.engine.dealerHand; }
+    set dealerHand(v) { this.engine.dealerHand = v; }
+
+    get currentHandIndex() { return this.engine.currentHandIndex; }
+    set currentHandIndex(v) { this.engine.currentHandIndex = v; }
+
+    get dealerRevealed() { return this.engine.dealerRevealed; }
+    set dealerRevealed(v) { this.engine.dealerRevealed = v; }
+
+    get gameStarted() { return this.engine.gameStarted; }
+    set gameStarted(v) { this.engine.gameStarted = v; }
+
+    get gameOver() { return this.engine.gameOver; }
+    set gameOver(v) { this.engine.gameOver = v; }
+
+    get insuranceTaken() { return this.engine.insuranceTaken; }
+    set insuranceTaken(v) { this.engine.insuranceTaken = v; }
+
+    get deck() { return this.engine.deck; }
+    set deck(v) { this.engine.deck = v; }
 
     login(username) {
         this.username = username;
@@ -57,19 +83,14 @@ export class GameManager {
     }
 
     initializeGameState() {
-        this.playerHands = [];
-        this.currentHandIndex = 0;
-        this.dealerHand = [];
         this.balance = CONFIG.INITIAL_BALANCE;
-        this.currentBet = 50; // Default bet
+        this.currentBet = 50;
         this.wins = 0;
         this.losses = 0;
         this.blackjacks = 0;
         this.totalWinnings = 0;
-        this.gameOver = false;
-        this.dealerRevealed = false;
-        this.gameStarted = false;
-        this.insuranceTaken = false;
+
+        this.engine.resetState();
         this.timeouts = [];
     }
 
@@ -85,6 +106,7 @@ export class GameManager {
     }
 
     getState() {
+        const engineState = this.engine.getState();
         return {
             balance: this.balance,
             currentBet: this.currentBet,
@@ -92,12 +114,12 @@ export class GameManager {
             losses: this.losses,
             blackjacks: this.blackjacks,
             totalWinnings: this.totalWinnings,
-            playerHands: this.playerHands,
-            currentHandIndex: this.currentHandIndex,
-            dealerHand: this.dealerHand,
-            dealerRevealed: this.dealerRevealed,
-            gameOver: this.gameOver,
-            gameStarted: this.gameStarted,
+            playerHands: engineState.playerHands,
+            currentHandIndex: engineState.currentHandIndex,
+            dealerHand: engineState.dealerHand,
+            dealerRevealed: engineState.dealerRevealed,
+            gameOver: engineState.gameOver,
+            gameStarted: engineState.gameStarted,
             settings: this.settings
         };
     }
@@ -124,13 +146,12 @@ export class GameManager {
             losses: this.losses,
             blackjacks: this.blackjacks,
             totalWinnings: this.totalWinnings,
-            gameStarted: this.gameStarted
+            gameStarted: this.engine.gameStarted
         };
         StorageManager.set(this.getStorageKey('blackjack-premium-save'), JSON.stringify(gameState));
     }
 
     migrateData(gameState) {
-        // Version 1 or unversioned: no migration needed, just mark with current version
         if (!gameState.version || gameState.version < CONFIG.STORAGE_VERSION) {
             gameState.version = CONFIG.STORAGE_VERSION;
         }
@@ -150,7 +171,18 @@ export class GameManager {
                 this.losses = gameState.losses || 0;
                 this.blackjacks = gameState.blackjacks || 0;
                 this.totalWinnings = gameState.totalWinnings || 0;
-                this.gameStarted = gameState.gameStarted || false;
+                // Note: We don't restore round state fully yet, just stats/balance
+                if (gameState.gameStarted) {
+                     // If game was interrupted, ideally we should restore it.
+                     // But for now, we just reset the round state (as Engine resets on init)
+                     // Or we could try to restore Engine state if we saved it.
+                     // The previous implementation saved 'gameStarted' boolean but not the cards?
+                     // Actually previous implementation saved 'playerHands' etc in 'getState()'
+                     // but '_saveGameImmediate' ONLY saved: balance, wins, losses, blackjacks, totalWinnings, gameStarted.
+                     // It did NOT save the cards! So reloading a game in progress would lose the cards anyway?
+                     // Yes, looking at previous code, it seems persistence was only for stats/balance.
+                     // So behavior is preserved.
+                }
             } catch {
                 console.warn('Could not parse game state');
             }
@@ -189,7 +221,8 @@ export class GameManager {
     updateUI() {
         if (this.ui) {
             this.ui.render(this.getState());
-            this.ui.updateShoeIndicator(this.deck.remainingCards, this.deck.totalCards);
+            const state = this.engine.getState();
+            this.ui.updateShoeIndicator(state.remainingCards, state.totalCards);
         }
     }
 
@@ -231,39 +264,28 @@ export class GameManager {
         }
 
         this.balance -= this.currentBet;
-        this.gameOver = false;
-        this.dealerRevealed = false;
-        this.gameStarted = true;
 
-        // Cut card mechanic: reshuffle at start of round if cut card was reached
-        if (this.deck.needsReshuffle) {
+        if (this.engine.deck.needsReshuffle) {
              this.events.emit('deck:shuffle');
              if (this.ui) {
                  this.ui.showMessage('Embaralhando...', '');
                  this.ui.showToast('Sapato reembaralhado', 'info', 2000);
              }
-             this.deck.reset();
-             this.deck.shuffle();
+             // Engine handles shuffle in startGame
         }
 
-        this.playerHands = [{
-            cards: [this.deck.draw(), this.deck.draw()],
-            bet: this.currentBet,
-            status: 'playing'
-        }];
-        this.currentHandIndex = 0;
-        this.dealerHand = [this.deck.draw(), this.deck.draw()];
+        const { dealerHand } = this.engine.startGame(this.currentBet);
 
         this.updateUI();
         if (this.soundManager) this.soundManager.play('card');
         this.events.emit('game:started', this.getState());
 
         if (this.ui) {
-            this.ui.toggleGameControls(false); // Controls hidden until turn starts
+            this.ui.toggleGameControls(false);
             this.ui.showMessage('Boa sorte!');
         }
 
-        const dealerUpCard = this.dealerHand[0];
+        const dealerUpCard = dealerHand[0];
         const dealerUpVal = HandUtils.getCardNumericValue(dealerUpCard);
 
         if (dealerUpCard.value === 'A') {
@@ -284,16 +306,16 @@ export class GameManager {
         }
         this.updateUI();
 
-        const pVal = HandUtils.calculateHandValue(this.playerHands[0].cards);
+        const pVal = HandUtils.calculateHandValue(this.engine.playerHands[0].cards);
         if (pVal === 21) {
              this.addTimeout(() => this.endGame(), CONFIG.DELAYS.TURN);
         }
     }
 
     checkDealerBlackjack() {
-        const val = HandUtils.calculateHandValue(this.dealerHand);
-        if (val === 21 && this.dealerHand.length === 2) {
-             this.dealerRevealed = true;
+        const val = HandUtils.calculateHandValue(this.engine.dealerHand);
+        if (val === 21 && this.engine.dealerHand.length === 2) {
+             this.engine.dealerRevealed = true;
              this.updateUI();
              if (this.ui) this.ui.showMessage('Dealer tem Blackjack!', 'lose');
              this.addTimeout(() => this.endGame(), CONFIG.DELAYS.GAME_OVER);
@@ -310,7 +332,7 @@ export class GameManager {
             const insuranceCost = Math.floor(this.currentBet / 2);
             if (this.balance >= insuranceCost) {
                 this.balance -= insuranceCost;
-                this.insuranceTaken = true;
+                this.engine.insuranceTaken = true;
                 if (this.ui) this.ui.showMessage('Seguro apostado.', '');
                 if (this.soundManager) this.soundManager.play('chip');
             } else {
@@ -325,92 +347,74 @@ export class GameManager {
     }
 
     hit() {
-        if (this.gameOver) return;
+        if (this.engine.gameOver) return;
 
-        const hand = this.playerHands[this.currentHandIndex];
-        hand.cards.push(this.deck.draw());
+        const result = this.engine.hit(this.engine.currentHandIndex);
+        if (!result) return;
+        const { hand } = result;
+
         if (this.soundManager) this.soundManager.play('card');
-        this.events.emit('player:hit', { handIndex: this.currentHandIndex, hand });
+        this.events.emit('player:hit', { handIndex: this.engine.currentHandIndex, hand });
         this.updateUI();
 
-        if (HandUtils.calculateHandValue(hand.cards) > 21) {
-            hand.status = 'busted';
-            this.events.emit('hand:bust', { handIndex: this.currentHandIndex });
+        if (hand.status === 'busted') {
+            this.events.emit('hand:bust', { handIndex: this.engine.currentHandIndex });
             if (this.ui) this.ui.showMessage('Estourou!', 'lose');
             this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
         }
     }
 
     stand() {
-        if (this.gameOver) return;
-        const hand = this.playerHands[this.currentHandIndex];
-        hand.status = 'stand';
-        this.events.emit('player:stand', { handIndex: this.currentHandIndex });
+        if (this.engine.gameOver) return;
+        this.engine.stand(this.engine.currentHandIndex);
+        this.events.emit('player:stand', { handIndex: this.engine.currentHandIndex });
         this.nextHand();
     }
 
     double() {
-        if (this.gameOver) return;
+        if (this.engine.gameOver) return;
+        const hand = this.engine.playerHands[this.engine.currentHandIndex];
 
-        const hand = this.playerHands[this.currentHandIndex];
         if (this.balance < hand.bet) return;
-
         this.balance -= hand.bet;
-        hand.bet *= 2;
 
-        hand.cards.push(this.deck.draw());
-        if (this.soundManager) this.soundManager.play('card');
-
-        const value = HandUtils.calculateHandValue(hand.cards);
-
-        if (value > 21) {
-            hand.status = 'busted';
-            if (this.ui) this.ui.showMessage('Estourou!', 'lose');
-            this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
-        } else {
-            hand.status = 'stand';
-            this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
-        }
-
-        this.updateUI();
-    }
-
-    split() {
-        if (this.playerHands.length === 0) return;
-        const currentHand = this.playerHands[this.currentHandIndex];
-
-        // Validation: cards must be a pair, player needs balance, and max splits not reached
-        if (currentHand.cards.length !== 2 ||
-            currentHand.cards[0].value !== currentHand.cards[1].value ||
-            this.balance < currentHand.bet ||
-            this.playerHands.length > CONFIG.MAX_SPLITS) {
+        const result = this.engine.double(this.engine.currentHandIndex);
+        if (!result) {
+            this.balance += hand.bet;
             return;
         }
 
-        const isSplittingAces = currentHand.cards[0].value === 'A';
+        if (this.soundManager) this.soundManager.play('card');
 
-        this.balance -= currentHand.bet;
+        if (result.hand.status === 'busted') {
+            if (this.ui) this.ui.showMessage('Estourou!', 'lose');
+        }
 
-        const newHand = {
-            cards: [currentHand.cards.pop()],
-            bet: currentHand.bet,
-            status: 'playing',
-            splitFromAces: isSplittingAces
-        };
+        this.updateUI();
+        this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
+    }
 
-        currentHand.splitFromAces = isSplittingAces;
-        currentHand.cards.push(this.deck.draw());
-        newHand.cards.push(this.deck.draw());
+    split() {
+        if (this.engine.playerHands.length === 0) return;
+        const currentHand = this.engine.playerHands[this.engine.currentHandIndex];
 
-        this.playerHands.splice(this.currentHandIndex + 1, 0, newHand);
+        if (this.balance < currentHand.bet || this.engine.playerHands.length > CONFIG.MAX_SPLITS) {
+            return;
+        }
+
+        const initialBet = currentHand.bet;
+        this.balance -= initialBet;
+
+        const result = this.engine.split(this.engine.currentHandIndex);
+        if (!result) {
+            this.balance += initialBet;
+            return;
+        }
 
         if (this.soundManager) this.soundManager.play('card');
-        this.events.emit('player:split', { handIndex: this.currentHandIndex, isSplittingAces });
+        this.events.emit('player:split', { handIndex: this.engine.currentHandIndex, isSplittingAces: result.isSplittingAces });
 
-        // When splitting aces, each hand gets only one card and must stand
-        if (isSplittingAces) {
-            currentHand.status = 'stand';
-            newHand.status = 'stand';
+        if (result.isSplittingAces) {
             this.updateUI();
             this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
         } else {
@@ -419,23 +423,24 @@ export class GameManager {
     }
 
     surrender() {
-        if (this.gameOver || this.playerHands.length === 0) return;
-        const hand = this.playerHands[this.currentHandIndex];
-        if (hand.cards.length !== 2) return;
+        if (this.engine.gameOver || this.engine.playerHands.length === 0) return;
+
+        const result = this.engine.surrender(this.engine.currentHandIndex);
+        if (!result) return;
 
         if (this.soundManager) this.soundManager.play('chip');
-        hand.status = 'surrender';
 
-        const refund = Math.floor(hand.bet / 2);
-        this.balance += refund;
+        // Payout is handled in endGame based on engine result
+        // But we want immediate visual feedback in UI if possible?
+        // UI uses status 'surrender'.
 
         if (this.ui) this.ui.showMessage('Você desistiu.', 'tie');
         this.endGame();
     }
 
     nextHand() {
-        if (this.currentHandIndex < this.playerHands.length - 1) {
-            this.currentHandIndex++;
+        if (this.engine.currentHandIndex < this.engine.playerHands.length - 1) {
+            this.engine.currentHandIndex++;
             this.updateUI();
         } else {
             this.playDealer();
@@ -443,58 +448,38 @@ export class GameManager {
     }
 
     playDealer() {
-        const allBusted = this.playerHands.every(h => h.status === 'busted');
+        const allBusted = this.engine.playerHands.every(h => h.status === 'busted');
         if (allBusted) {
              this.endGame();
              return;
         }
 
-        this.dealerRevealed = true;
+        this.engine.dealerRevealed = true;
         this.events.emit('dealer:turn');
         this.updateUI();
 
-        const dealerTurn = () => {
-             const value = HandUtils.calculateHandValue(this.dealerHand);
-             const isSoft = HandUtils.isSoftHand(this.dealerHand);
-
-             if (value < 17 || (value === 17 && isSoft)) {
-                 this.dealerHand.push(this.deck.draw());
+        const dealerTurnStep = () => {
+             if (this.engine.dealerShouldHit()) {
+                 this.engine.dealerHit();
                  if (this.soundManager) this.soundManager.play('card');
                  this.updateUI();
-                 this.addTimeout(dealerTurn, CONFIG.DELAYS.DEALER_TURN);
+                 this.addTimeout(dealerTurnStep, CONFIG.DELAYS.DEALER_TURN);
              } else {
                  this.addTimeout(() => this.endGame(), CONFIG.DELAYS.NEXT_HAND);
              }
         };
 
-        this.addTimeout(dealerTurn, CONFIG.DELAYS.DEALER_TURN);
-    }
-
-    evaluateHand(hand, dealerValue, dealerBJ) {
-        const playerValue = HandUtils.calculateHandValue(hand.cards);
-        const playerBJ = HandUtils.isNaturalBlackjack(hand.cards, this.playerHands.length);
-
-        if (hand.status === 'surrender') return { result: 'surrender', winMultiplier: 0 };
-        if (hand.status === 'busted') return { result: 'lose', winMultiplier: 0 };
-
-        // Explicit BJ push: both player and dealer have natural Blackjack
-        if (playerBJ && dealerBJ) return { result: 'tie', winMultiplier: 1 };
-
-        if (dealerValue > 21) return { result: 'win', winMultiplier: 2 };
-        if (playerValue > dealerValue) return { result: 'win', winMultiplier: 2 };
-        if (dealerValue > playerValue) return { result: 'lose', winMultiplier: 0 };
-
-        return { result: 'tie', winMultiplier: 1 };
+        this.addTimeout(dealerTurnStep, CONFIG.DELAYS.DEALER_TURN);
     }
 
     endGame() {
-        this.gameOver = true;
-        this.dealerRevealed = true;
+        this.engine.gameOver = true;
+        this.engine.dealerRevealed = true;
         this.events.emit('game:ending');
-        const dealerValue = HandUtils.calculateHandValue(this.dealerHand);
-        const dealerBJ = (dealerValue === 21 && this.dealerHand.length === 2);
 
-        if (this.insuranceTaken && dealerBJ) {
+        const { dealerValue, dealerBJ, results } = this.engine.evaluateResults();
+
+        if (this.engine.insuranceTaken && dealerBJ) {
             const insuranceWin = Math.floor(this.currentBet / 2) * CONFIG.PAYOUT.INSURANCE;
             this.balance += insuranceWin;
             this.totalWinnings += (insuranceWin - Math.floor(this.currentBet / 2));
@@ -505,13 +490,8 @@ export class GameManager {
         let anyWin = false;
         let allLost = true;
 
-        this.playerHands.forEach(hand => {
-            const { result, winMultiplier } = this.evaluateHand(hand, dealerValue, dealerBJ);
-            let handWin = hand.bet * winMultiplier;
-
-            // Natural Blackjack payout (3:2) - only for single hand, not after split
-            if (HandUtils.isNaturalBlackjack(hand.cards, this.playerHands.length) && result === 'win') {
-                 handWin = Math.floor(hand.bet * CONFIG.PAYOUT.BLACKJACK);
+        results.forEach(({ hand, result, payout }) => {
+            if (HandUtils.isNaturalBlackjack(hand.cards, this.engine.playerHands.length) && result === 'win') {
                  this.blackjacks++;
             }
 
@@ -522,19 +502,21 @@ export class GameManager {
                 this.losses++;
             }
 
-            totalWin += handWin;
+            totalWin += payout;
+
             if (result !== 'lose') allLost = false;
         });
 
         this.balance += totalWin;
-        const totalBetOnHands = this.playerHands.reduce((sum, h) => sum + h.bet, 0);
+
+        const totalBetOnHands = this.engine.playerHands.reduce((sum, h) => sum + h.bet, 0);
         this.totalWinnings += (totalWin - totalBetOnHands);
 
         // Determine message
         let message = '';
         let messageClass = '';
-        if (this.playerHands.length === 1) {
-             const hand = this.playerHands[0];
+        if (this.engine.playerHands.length === 1) {
+             const hand = this.engine.playerHands[0];
              const pVal = HandUtils.calculateHandValue(hand.cards);
              if (hand.status === 'surrender') { message = 'Você desistiu.'; messageClass = 'tie'; }
              else if (hand.status === 'busted') { message = 'Você estourou! Dealer vence!'; messageClass = 'lose'; }
@@ -581,6 +563,8 @@ export class GameManager {
         if (this.settings.autoSave) this.saveGame();
     }
 
+    // resetGame, newGame, exportData, importData, updateSetting match original structure but use engine
+
     resetGame() {
         this.balance = CONFIG.INITIAL_BALANCE;
         this.wins = 0;
@@ -596,14 +580,10 @@ export class GameManager {
     }
 
     newGame() {
-        this.playerHands = [];
-        this.currentHandIndex = 0;
-        this.dealerHand = [];
+        this.engine.resetState();
         if (this.currentBet > this.balance) {
             this.currentBet = Math.max(10, this.balance);
         }
-        this.gameOver = false;
-        this.dealerRevealed = false;
 
         if (this.ui) {
             this.ui.toggleGameControls(false);
@@ -665,7 +645,6 @@ export class GameManager {
         reader.readAsText(file);
     }
 
-    // Settings Update
     updateSetting(key, value) {
         if (key in this.settings) {
             this.settings[key] = value;
