@@ -4,7 +4,9 @@
   "description": "Blackjack Premium - O melhor jogo de 21 online",
   "type": "module",
   "scripts": {
-    "dev": "npx serve .",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "pytest tests/",
     "lint": "eslint src/",
@@ -22,6 +24,7 @@
   "devDependencies": {
     "eslint": "^9.0.0",
     "prettier": "^3.0.0",
+    "vite": "^7.3.1",
     "vitest": "^4.0.18"
   }
 }
