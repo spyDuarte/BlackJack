@@ -592,6 +592,15 @@ export class GameManager {
         this.updateUI();
     }
 
+    rebetAndDeal() {
+        this.engine.resetState();
+        if (this.currentBet > this.balance) {
+            this.currentBet = Math.max(10, this.balance);
+        }
+        // Immediately start game with current bet
+        this.startGame();
+    }
+
     exportData() {
         if (!this.username) return;
         const data = {
