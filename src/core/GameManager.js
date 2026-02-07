@@ -100,6 +100,7 @@ export class GameManager {
             animationsEnabled: true,
             autoSave: true,
             showStats: false,
+            showCount: false, // Training mode
             volume: 0.5,
             theme: 'dark'
         };
@@ -120,6 +121,8 @@ export class GameManager {
             dealerRevealed: engineState.dealerRevealed,
             gameOver: engineState.gameOver,
             gameStarted: engineState.gameStarted,
+            runningCount: engineState.runningCount,
+            trueCount: engineState.trueCount,
             settings: this.settings
         };
     }
@@ -657,6 +660,7 @@ export class GameManager {
             if (this.ui) {
                 if (key === 'animationsEnabled') this.ui.setAnimationsEnabled(value);
                 if (key === 'showStats') this.ui.setStatsVisibility(value);
+                if (key === 'showCount') this.ui.setCountVisibility(value);
                 if (key === 'theme') this.ui.setTheme(value);
             }
             this.saveSettings();
