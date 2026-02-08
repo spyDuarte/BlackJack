@@ -2,12 +2,14 @@ import * as HandUtils from '../utils/HandUtils.js';
 import { BasicStrategy } from '../utils/BasicStrategy.js';
 import { CONFIG } from '../core/Constants.js';
 import { debounce } from '../utils/debounce.js';
+import { auth, googleProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from '../firebase-config.js';
 
 export class UIManager {
     constructor() {
         this.elements = {};
         this.animationsEnabled = true;
         this.game = null;
+        this.isRegisterMode = false;
     }
 
     initialize(game) {
@@ -64,7 +66,13 @@ export class UIManager {
             closeSettings: document.querySelector('.close'),
             loginScreen: document.getElementById('login-screen'),
             loginUsername: document.getElementById('login-username'),
+            loginEmail: document.getElementById('login-email'),
+            loginPassword: document.getElementById('login-password'),
             loginBtn: document.getElementById('login-btn'),
+            loginGoogleBtn: document.getElementById('login-google-btn'),
+            toggleAuthMode: document.getElementById('toggle-auth-mode'),
+            authTitle: document.getElementById('auth-title'),
+            authSubtitle: document.getElementById('auth-subtitle'),
             loginError: document.getElementById('login-error'),
             volumeSlider: document.getElementById('volume-slider'),
             volumeValue: document.getElementById('volume-value'),
@@ -85,10 +93,29 @@ export class UIManager {
         const el = this.elements;
         const game = this.game;
 
-        if (el.loginBtn) el.loginBtn.addEventListener('click', () => this.handleLogin());
-        if (el.loginUsername) {
-            el.loginUsername.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.handleLogin();
+        // Auth events
+        if (el.loginBtn) {
+            el.loginBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleAuthAction();
+            });
+        }
+
+        if (el.loginGoogleBtn) {
+            el.loginGoogleBtn.addEventListener('click', () => this.handleGoogleLogin());
+        }
+
+        if (el.toggleAuthMode) {
+            el.toggleAuthMode.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleAuthMode();
+            });
+        }
+
+        // Support Enter key on password field
+        if (el.loginPassword) {
+            el.loginPassword.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.handleAuthAction();
             });
         }
 
@@ -187,21 +214,98 @@ export class UIManager {
         return raw.replace(/[^a-zA-Z0-9_\-\u00C0-\u024F]/g, '').slice(0, 20);
     }
 
-    handleLogin() {
-        const rawUsername = this.elements.loginUsername.value.trim();
-        if (!rawUsername) {
-            this.showLoginError('Por favor, digite um nome de usuário.');
+    toggleAuthMode() {
+        this.isRegisterMode = !this.isRegisterMode;
+        const el = this.elements;
+
+        if (this.isRegisterMode) {
+            if (el.authTitle) el.authTitle.textContent = '♠️ Cadastro ♥️';
+            if (el.authSubtitle) el.authSubtitle.textContent = 'Crie sua conta para jogar.';
+            if (el.loginBtn) el.loginBtn.textContent = 'Cadastrar';
+            if (el.toggleAuthMode) el.toggleAuthMode.textContent = 'Já tem uma conta? Entrar';
+        } else {
+            if (el.authTitle) el.authTitle.textContent = '♠️ Login ♥️';
+            if (el.authSubtitle) el.authSubtitle.textContent = 'Entre com sua conta para começar.';
+            if (el.loginBtn) el.loginBtn.textContent = 'Entrar';
+            if (el.toggleAuthMode) el.toggleAuthMode.textContent = 'Registrar-se';
+        }
+
+        this.showLoginError(''); // Clear errors
+    }
+
+    async handleAuthAction() {
+        const email = this.elements.loginEmail.value.trim();
+        const password = this.elements.loginPassword.value;
+
+        if (!email || !password) {
+            this.showLoginError('Por favor, preencha todos os campos.');
             return;
         }
 
-        const username = this.sanitizeUsername(rawUsername);
-        if (username.length < 3) {
-            this.showLoginError('Nome de usuário deve ter pelo menos 3 caracteres (apenas letras, números e _).');
-            return;
+        if (password.length < 6) {
+             this.showLoginError('A senha deve ter pelo menos 6 caracteres.');
+             return;
         }
 
-        this.game.login(username);
+        this.setAuthLoading(true);
 
+        try {
+            if (this.isRegisterMode) {
+                await createUserWithEmailAndPassword(auth, email, password);
+            } else {
+                await signInWithEmailAndPassword(auth, email, password);
+            }
+            // Login handled by onAuthStateChanged in GameManager
+        } catch (error) {
+            console.error("Auth error:", error);
+            let msg = 'Erro ao autenticar.';
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                msg = 'E-mail ou senha inválidos.';
+            } else if (error.code === 'auth/email-already-in-use') {
+                msg = 'E-mail já está em uso.';
+            } else if (error.code === 'auth/weak-password') {
+                msg = 'A senha é muito fraca.';
+            } else if (error.code === 'auth/invalid-email') {
+                msg = 'E-mail inválido.';
+            }
+            this.showLoginError(msg);
+            this.setAuthLoading(false);
+        }
+    }
+
+    async handleGoogleLogin() {
+        this.setAuthLoading(true);
+        try {
+            await signInWithPopup(auth, googleProvider);
+            // Login handled by onAuthStateChanged in GameManager
+        } catch (error) {
+            console.error("Google auth error:", error);
+            this.showLoginError('Erro ao entrar com Google.');
+            this.setAuthLoading(false);
+        }
+    }
+
+    setAuthLoading(loading) {
+        if (this.elements.loginBtn) {
+            this.elements.loginBtn.disabled = loading;
+            this.elements.loginBtn.textContent = loading ? 'Aguarde...' : (this.isRegisterMode ? 'Cadastrar' : 'Entrar');
+        }
+        if (this.elements.loginGoogleBtn) {
+            this.elements.loginGoogleBtn.disabled = loading;
+        }
+    }
+
+    showLoginError(msg) {
+        if (this.elements.loginError) {
+            this.elements.loginError.textContent = msg;
+            if (this.elements.loginEmail) {
+                this.elements.loginEmail.classList.add('error');
+                setTimeout(() => this.elements.loginEmail.classList.remove('error'), 500);
+            }
+        }
+    }
+
+    onLoginSuccess() {
         if (this.elements.loginScreen) {
             this.elements.loginScreen.classList.add('hidden');
             setTimeout(() => {
@@ -211,14 +315,6 @@ export class UIManager {
                     this.elements.welcomeScreen.classList.remove('hidden');
                 }
             }, 500);
-        }
-    }
-
-    showLoginError(msg) {
-        if (this.elements.loginError) {
-            this.elements.loginError.textContent = msg;
-            this.elements.loginUsername.classList.add('error');
-            setTimeout(() => this.elements.loginUsername.classList.remove('error'), 500);
         }
     }
 
