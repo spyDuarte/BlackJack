@@ -70,14 +70,22 @@ export class UIManager {
             btnReset: document.getElementById('btn-reset-game'),
             closeSettings: document.querySelector('.close'),
             loginScreen: document.getElementById('login-screen'),
-            loginUsername: document.getElementById('login-username'),
             loginEmail: document.getElementById('login-email'),
             loginPassword: document.getElementById('login-password'),
             loginBtn: document.getElementById('login-btn'),
-            toggleAuthMode: document.getElementById('toggle-auth-mode'),
-            authTitle: document.getElementById('auth-title'),
-            authSubtitle: document.getElementById('auth-subtitle'),
             loginError: document.getElementById('login-error'),
+
+            // Register Screen
+            registerScreen: document.getElementById('register-screen'),
+            registerEmail: document.getElementById('register-email'),
+            registerPassword: document.getElementById('register-password'),
+            registerBtn: document.getElementById('register-btn'),
+            registerError: document.getElementById('register-error'),
+
+            // Auth Controls
+            goToRegister: document.getElementById('go-to-register'),
+            goToLogin: document.getElementById('go-to-login'),
+
             volumeSlider: document.getElementById('volume-slider'),
             volumeValue: document.getElementById('volume-value'),
             themeDark: document.getElementById('theme-dark'),
@@ -105,16 +113,35 @@ export class UIManager {
             });
         }
 
-        if (el.toggleAuthMode) {
-            el.toggleAuthMode.addEventListener('click', (e) => {
+        if (el.registerBtn) {
+            el.registerBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.toggleAuthMode();
+                this.handleAuthAction();
+            });
+        }
+
+        if (el.goToRegister) {
+            el.goToRegister.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleAuthMode(true);
+            });
+        }
+
+        if (el.goToLogin) {
+            el.goToLogin.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleAuthMode(false);
             });
         }
 
         // Support Enter key on password field
         if (el.loginPassword) {
             el.loginPassword.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.handleAuthAction();
+            });
+        }
+        if (el.registerPassword) {
+            el.registerPassword.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') this.handleAuthAction();
             });
         }
@@ -214,28 +241,27 @@ export class UIManager {
         return raw.replace(/[^a-zA-Z0-9_\-\u00C0-\u024F]/g, '').slice(0, 20);
     }
 
-    toggleAuthMode() {
-        this.isRegisterMode = !this.isRegisterMode;
+    toggleAuthMode(isRegister) {
+        this.isRegisterMode = isRegister;
         const el = this.elements;
 
-        if (this.isRegisterMode) {
-            if (el.authTitle) el.authTitle.textContent = '♠️ Cadastro ♥️';
-            if (el.authSubtitle) el.authSubtitle.textContent = 'Crie sua conta para jogar.';
-            if (el.loginBtn) el.loginBtn.textContent = 'Cadastrar';
-            if (el.toggleAuthMode) el.toggleAuthMode.textContent = 'Já tem uma conta? Entrar';
+        if (isRegister) {
+            el.loginScreen.style.display = 'none';
+            el.registerScreen.style.display = 'flex';
+            el.registerScreen.classList.remove('hidden');
         } else {
-            if (el.authTitle) el.authTitle.textContent = '♠️ Login ♥️';
-            if (el.authSubtitle) el.authSubtitle.textContent = 'Entre com sua conta para começar.';
-            if (el.loginBtn) el.loginBtn.textContent = 'Entrar';
-            if (el.toggleAuthMode) el.toggleAuthMode.textContent = 'Registrar-se';
+            el.registerScreen.style.display = 'none';
+            el.loginScreen.style.display = 'flex';
+            el.loginScreen.classList.remove('hidden');
         }
 
         this.showLoginError(''); // Clear errors
     }
 
     async handleAuthAction() {
-        const email = this.elements.loginEmail.value.trim();
-        const password = this.elements.loginPassword.value;
+        const el = this.elements;
+        const email = this.isRegisterMode ? el.registerEmail.value.trim() : el.loginEmail.value.trim();
+        const password = this.isRegisterMode ? el.registerPassword.value : el.loginPassword.value;
 
         if (!email || !password) {
             this.showLoginError('Por favor, preencha todos os campos.');
@@ -293,18 +319,22 @@ export class UIManager {
     }
 
     setAuthLoading(loading) {
-        if (this.elements.loginBtn) {
-            this.elements.loginBtn.disabled = loading;
-            this.elements.loginBtn.textContent = loading ? 'Aguarde...' : (this.isRegisterMode ? 'Cadastrar' : 'Entrar');
+        const btn = this.isRegisterMode ? this.elements.registerBtn : this.elements.loginBtn;
+        if (btn) {
+            btn.disabled = loading;
+            btn.textContent = loading ? 'Aguarde...' : (this.isRegisterMode ? 'Cadastrar' : 'Entrar');
         }
     }
 
     showLoginError(msg) {
-        if (this.elements.loginError) {
-            this.elements.loginError.textContent = msg;
-            if (this.elements.loginEmail) {
-                this.elements.loginEmail.classList.add('error');
-                setTimeout(() => this.elements.loginEmail.classList.remove('error'), 500);
+        const errorEl = this.isRegisterMode ? this.elements.registerError : this.elements.loginError;
+        const inputEl = this.isRegisterMode ? this.elements.registerEmail : this.elements.loginEmail;
+
+        if (errorEl) {
+            errorEl.textContent = msg;
+            if (inputEl) {
+                inputEl.classList.add('error');
+                setTimeout(() => inputEl.classList.remove('error'), 500);
             }
         }
     }
@@ -312,8 +342,10 @@ export class UIManager {
     onLoginSuccess() {
         if (this.elements.loginScreen) {
             this.elements.loginScreen.classList.add('hidden');
+            this.elements.registerScreen.classList.add('hidden');
             setTimeout(() => {
                 this.elements.loginScreen.style.display = 'none';
+                this.elements.registerScreen.style.display = 'none';
                 if (this.elements.welcomeScreen) {
                     this.elements.welcomeScreen.style.display = 'flex';
                     this.elements.welcomeScreen.classList.remove('hidden');
