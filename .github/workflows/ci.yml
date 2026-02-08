@@ -36,6 +36,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Node dependencies
+        run: npm ci
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -50,4 +58,7 @@ jobs:
         run: python -m playwright install chromium chromium-headless-shell
 
       - name: Run E2E tests
-        run: pytest tests/ -v
+        run: |
+          npm run dev -- --port 3000 &
+          sleep 5
+          pytest tests/ -v
