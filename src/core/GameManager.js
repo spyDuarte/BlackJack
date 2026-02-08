@@ -4,6 +4,7 @@ import { StorageManager } from '../utils/StorageManager.js';
 import { debounce } from '../utils/debounce.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
 import * as HandUtils from '../utils/HandUtils.js';
+import { auth, onAuthStateChanged, signOut } from '../firebase-config.js';
 
 export class GameManager {
     static instance = null;
@@ -24,6 +25,7 @@ export class GameManager {
 
         this.engine = new BlackjackEngine();
         this.username = null;
+        this.userId = null; // Store Firebase UID
 
         this.initializeGameState();
         this.initializeSettings();
@@ -32,6 +34,32 @@ export class GameManager {
         this.timeouts = [];
 
         this.saveGame = debounce(this._saveGameImmediate.bind(this), 1000);
+
+        // Listen for auth state changes
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in
+                this.userId = user.uid;
+                this.username = user.displayName || user.email.split('@')[0];
+                this.loadGame();
+                this.loadSettings();
+                this.updateUI();
+
+                if (this.ui) {
+                     this.ui.onLoginSuccess();
+                     this.ui.setAuthLoading(false);
+                }
+            } else {
+                // User is signed out
+                this.userId = null;
+                this.username = null;
+                // Maybe reset game state or show login screen
+                // Ideally, we should show login screen if not already there
+                if (this.ui && this.ui.elements.loginScreen && this.ui.elements.loginScreen.style.display === 'none') {
+                    window.location.reload(); // Simple way to reset app state for logout
+                }
+            }
+        });
     }
 
     // Proxy properties to engine for backward compatibility and test support
@@ -59,16 +87,23 @@ export class GameManager {
     get deck() { return this.engine.deck; }
     set deck(v) { this.engine.deck = v; }
 
-    login(username) {
-        this.username = username;
-        this.loadGame();
-        this.loadSettings();
-        this.updateUI();
+    // Deprecated: login is handled by Firebase auth listener
+    login(_username) {
+        console.warn('Manual login called, but should use Firebase Auth');
+    }
+
+    async logout() {
+        try {
+            await signOut(auth);
+            if (this.ui) this.ui.showMessage('Desconectado.', 'info');
+        } catch (error) {
+            console.error('Logout error', error);
+        }
     }
 
     getStorageKey(key) {
-        if (!this.username) return null;
-        return `${key}-${this.username}`;
+        if (!this.userId) return null;
+        return `${key}-${this.userId}`;
     }
 
     addTimeout(fn, delay) {
