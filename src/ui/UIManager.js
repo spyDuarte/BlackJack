@@ -1,4 +1,5 @@
 import * as HandUtils from '../utils/HandUtils.js';
+import { BasicStrategy } from '../utils/BasicStrategy.js';
 import { CONFIG } from '../core/Constants.js';
 import { debounce } from '../utils/debounce.js';
 import { supabase } from '../supabaseClient.js';
@@ -48,6 +49,7 @@ export class UIManager {
             insuranceYesBtn: document.getElementById('insurance-yes-btn'),
             insuranceNoBtn: document.getElementById('insurance-no-btn'),
             surrenderBtn: document.getElementById('surrender-btn'),
+            hintBtn: document.getElementById('hint-btn'),
             rebetBtn: document.getElementById('rebet-btn'),
             statsContainer: document.getElementById('stats-container'),
             loading: document.querySelector('.loading'),
@@ -67,7 +69,6 @@ export class UIManager {
             loginEmail: document.getElementById('login-email'),
             loginPassword: document.getElementById('login-password'),
             loginBtn: document.getElementById('login-btn'),
-            loginGoogleBtn: document.getElementById('login-google-btn'),
             toggleAuthMode: document.getElementById('toggle-auth-mode'),
             authTitle: document.getElementById('auth-title'),
             authSubtitle: document.getElementById('auth-subtitle'),
@@ -99,10 +100,6 @@ export class UIManager {
             });
         }
 
-        if (el.loginGoogleBtn) {
-            el.loginGoogleBtn.addEventListener('click', () => this.handleGoogleLogin());
-        }
-
         if (el.toggleAuthMode) {
             el.toggleAuthMode.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -126,6 +123,7 @@ export class UIManager {
         if (el.doubleBtn) el.doubleBtn.addEventListener('click', () => game.double());
         if (el.splitBtn) el.splitBtn.addEventListener('click', () => game.split());
         if (el.surrenderBtn) el.surrenderBtn.addEventListener('click', () => game.surrender());
+        if (el.hintBtn) el.hintBtn.addEventListener('click', () => this.showHint());
 
         if (el.insuranceYesBtn) el.insuranceYesBtn.addEventListener('click', () => game.respondToInsurance(true));
         if (el.insuranceNoBtn) el.insuranceNoBtn.addEventListener('click', () => game.respondToInsurance(false));
@@ -284,28 +282,10 @@ export class UIManager {
         }
     }
 
-    async handleGoogleLogin() {
-        this.setAuthLoading(true);
-        try {
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-            });
-            if (error) throw error;
-            // Login flow continues via redirect usually, or popup handling depending on implementation
-        } catch (error) {
-            console.error("Google auth error:", error);
-            this.showLoginError('Erro ao entrar com Google.');
-            this.setAuthLoading(false);
-        }
-    }
-
     setAuthLoading(loading) {
         if (this.elements.loginBtn) {
             this.elements.loginBtn.disabled = loading;
             this.elements.loginBtn.textContent = loading ? 'Aguarde...' : (this.isRegisterMode ? 'Cadastrar' : 'Entrar');
-        }
-        if (this.elements.loginGoogleBtn) {
-            this.elements.loginGoogleBtn.disabled = loading;
         }
     }
 
@@ -370,6 +350,9 @@ export class UIManager {
     render(state) {
         if (!state) return;
 
+        // Clear previous hint highlights
+        this.clearHint();
+
         if (this.elements.balance) this.animateValue(this.elements.balance, state.balance, '$');
         if (this.elements.currentBet) this.animateValue(this.elements.currentBet, state.currentBet, '$');
         if (this.elements.wins) this.animateValue(this.elements.wins, state.wins);
@@ -421,6 +404,68 @@ export class UIManager {
         } else {
             if (this.elements.splitBtn) this.elements.splitBtn.style.display = 'none';
         }
+    }
+
+    showHint() {
+        if (!this.game) return;
+        const state = this.game.getState();
+        if (state.gameOver || !state.gameStarted) return;
+
+        const playerHand = state.playerHands[state.currentHandIndex];
+        const dealerUpCard = state.dealerHand[0];
+
+        const move = BasicStrategy.getBestMove(playerHand, dealerUpCard);
+
+        // Map move to button ID
+        const moveMap = {
+            'hit': 'hit-btn',
+            'stand': 'stand-btn',
+            'double': 'double-btn',
+            'split': 'split-btn',
+            'surrender': 'surrender-btn'
+        };
+
+        const btnId = moveMap[move];
+        // If double/split/surrender recommended but not available, fallback to hit or stand
+        let fallback = null;
+        if (move === 'double') fallback = 'hit-btn';
+        if (move === 'split' || move === 'surrender') fallback = 'hit-btn'; // Usually hit is safer fallback, or re-eval
+
+        let btn = document.getElementById(btnId);
+
+        if (!btn || btn.style.display === 'none' || btn.disabled) {
+            if (fallback) {
+                 // Basic fallback logic: if double not allowed, usually hit (except soft 18 vs 3-6 stands if double unavailable?
+                 // Basic Strategy usually implies alternative if primary not possible.
+                 // For simplicity, we just highlight fallback if primary is disabled
+                 btn = document.getElementById(fallback);
+            }
+        }
+
+        if (btn) {
+            this.clearHint();
+            btn.classList.add('hint-active');
+            // Remove hint after 2s
+            setTimeout(() => btn.classList.remove('hint-active'), 2000);
+
+            this.showToast(`Sugestão: ${this.getMoveName(move)}`, 'info', 1500);
+        }
+    }
+
+    getMoveName(move) {
+        const names = {
+            'hit': 'Pedir Carta',
+            'stand': 'Parar',
+            'double': 'Dobrar',
+            'split': 'Dividir',
+            'surrender': 'Desistir'
+        };
+        return names[move] || move;
+    }
+
+    clearHint() {
+        const btns = document.querySelectorAll('.hint-active');
+        btns.forEach(b => b.classList.remove('hint-active'));
     }
 
     renderHand(container, hand, isDealer, revealDealer) {

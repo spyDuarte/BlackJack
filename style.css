@@ -1254,51 +1254,6 @@ button:disabled {
     text-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
 
-.google-btn {
-    background: white;
-    color: #444;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    font-weight: 600;
-    font-size: 1em;
-    border: 1px solid #ccc;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    margin-top: 10px;
-    text-transform: none;
-    letter-spacing: normal;
-}
-
-.google-btn:hover:not(:disabled) {
-    background: #f8f8f8;
-    color: #333;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
-.google-btn::before {
-    display: none; /* Disable the expanding circle effect for google button */
-}
-
-.auth-divider {
-    color: rgba(255, 255, 255, 0.6);
-    margin: 10px 0;
-    font-size: 0.9em;
-    display: flex;
-    align-items: center;
-    width: 100%;
-    max-width: 300px;
-}
-
-.auth-divider::before,
-.auth-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.3);
-    margin: 0 10px;
-}
 
 .auth-toggle-text {
     margin-top: 15px !important;

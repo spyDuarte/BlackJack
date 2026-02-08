@@ -14,7 +14,6 @@ def test_login_ui_elements(page, game_url):
     assert page.is_visible("#login-email"), "Email input should be visible"
     assert page.is_visible("#login-password"), "Password input should be visible"
     assert page.is_visible("#login-btn"), "Login button should be visible"
-    assert page.is_visible("#login-google-btn"), "Google login button should be visible"
     assert page.is_visible("#toggle-auth-mode"), "Toggle auth mode link should be visible"
 
     # Check initial texts

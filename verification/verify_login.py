@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright
 import time
+import os
 
 def verify_login_screen():
     with sync_playwright() as p:
@@ -17,7 +18,8 @@ def verify_login_screen():
             print("Checking elements...")
             assert page.is_visible("#login-email"), "Email input not visible"
             assert page.is_visible("#login-password"), "Password input not visible"
-            assert page.is_visible("#login-google-btn"), "Google button not visible"
+            # Google button should NOT be visible
+            assert not page.is_visible("#login-google-btn"), "Google button IS visible"
             assert page.is_visible("#toggle-auth-mode"), "Toggle link not visible"
 
             print("Taking screenshot of Login Mode")
@@ -26,11 +28,13 @@ def verify_login_screen():
             # Click toggle to switch to register
             print("Switching to Register Mode")
             page.click("#toggle-auth-mode")
-            time.sleep(0.5) # Wait for text update
+            time.sleep(1.0) # Wait for text update
 
             # Check text changes
             title = page.text_content("#auth-title")
             btn_text = page.text_content("#login-btn")
+
+            # Logic uses "Cadastro" not "CADASTRO"
             assert "Cadastro" in title, f"Title should contain 'Cadastro', got '{title}'"
             assert "Cadastrar" in btn_text, f"Button should contain 'Cadastrar', got '{btn_text}'"
 
@@ -45,6 +49,13 @@ def verify_login_screen():
             raise e
         finally:
             browser.close()
+            # Cleanup screenshots
+            if os.path.exists("verification_login_supabase.png"):
+                os.remove("verification_login_supabase.png")
+            if os.path.exists("verification_register_supabase.png"):
+                os.remove("verification_register_supabase.png")
+            if os.path.exists("verification_failed.png"):
+                os.remove("verification_failed.png")
 
 if __name__ == "__main__":
     verify_login_screen()
