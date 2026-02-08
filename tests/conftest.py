@@ -14,8 +14,14 @@ class QuietHTTPHandler(http.server.SimpleHTTPRequestHandler):
 
 @pytest.fixture(scope="session")
 def server_port():
-    """Start a local HTTP server serving the project root and return its port."""
-    os.chdir(os.path.join(os.path.dirname(__file__), ".."))
+    """Start a local HTTP server serving the 'dist' directory (Vite build) and return its port."""
+    # Serve the 'dist' folder which contains the built artifacts
+    dist_dir = os.path.join(os.path.dirname(__file__), "..", "dist")
+    if not os.path.exists(dist_dir):
+        # Fallback to current directory for debugging if build failed/skipped locally
+        dist_dir = os.path.join(os.path.dirname(__file__), "..")
+
+    os.chdir(dist_dir)
     httpd = socketserver.TCPServer(("", 0), QuietHTTPHandler)
     port = httpd.server_address[1]
     server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -25,53 +31,20 @@ def server_port():
     httpd.shutdown()
 
 
-def _find_chromium_executable():
-    """Find a Chromium executable from Playwright's cache (multiple layouts)."""
-    cache_dir = os.path.expanduser("~/.cache/ms-playwright")
-    if not os.path.isdir(cache_dir):
-        return None
-
-    candidates = []
-    for entry in sorted(os.listdir(cache_dir), reverse=True):
-        entry_dir = os.path.join(cache_dir, entry)
-        if not os.path.isdir(entry_dir):
-            continue
-
-        # Chromium for Testing layout
-        if entry.startswith("chromium-"):
-            candidates.append(os.path.join(entry_dir, "chrome-linux", "chrome"))
-            candidates.append(os.path.join(entry_dir, "chrome-linux64", "chrome"))
-
-        # Headless shell layout
-        if entry.startswith("chromium_headless_shell-"):
-            candidates.append(
-                os.path.join(entry_dir, "chrome-headless-shell-linux64", "chrome-headless-shell")
-            )
-
-    for candidate in candidates:
-        if os.path.isfile(candidate):
-            return candidate
-    return None
-
-
 @pytest.fixture
 def page(server_port):
     """Create a fresh browser and page for each test."""
     with sync_playwright() as p:
-        launch_kwargs = {
-            "headless": True,
-            "args": [
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
                 "--no-sandbox",
                 "--disable-gpu",
                 "--single-process",
                 "--no-zygote",
                 "--disable-setuid-sandbox",
-            ],
-        }
-        executable = _find_chromium_executable()
-        if executable:
-            launch_kwargs["executable_path"] = executable
-        browser = p.chromium.launch(**launch_kwargs)
+            ]
+        )
         pg = browser.new_page()
         yield pg
         browser.close()
