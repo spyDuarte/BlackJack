@@ -17,6 +17,11 @@ export class UIManager {
         this.cacheElements();
         this.bindEvents();
         this.toggleLoading(false);
+
+        // Check if game already has a user (login happened before initialize)
+        if (this.game.userId) {
+            this.onLoginSuccess();
+        }
     }
 
     cacheElements() {
@@ -258,11 +263,16 @@ export class UIManager {
                     return;
                 }
             } else {
-                const { error: err } = await supabase.auth.signInWithPassword({
+                const { data, error: err } = await supabase.auth.signInWithPassword({
                     email: email,
                     password: password,
                 });
                 error = err;
+
+                // Failsafe: if listener doesn't trigger, manually trigger sign-in logic
+                if (!error && data.session && !this.game.userId) {
+                     this.game.onUserSignIn(data.session);
+                }
             }
 
             if (error) throw error;
