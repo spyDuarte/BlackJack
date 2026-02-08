@@ -49,7 +49,8 @@ def test_insurance_accepted_with_sufficient_balance(logged_in_page):
 
     # Accept insurance (costs half the bet = 50)
     page.evaluate("window.__game.respondToInsurance(true)")
-    time.sleep(0.5)
+    # Wait short time to ensure balance update but before game potentially ends (if BJ)
+    time.sleep(0.1)
 
     balance_after = page.evaluate("window.__game.balance")
     insurance_taken = page.evaluate("window.__game.insuranceTaken")

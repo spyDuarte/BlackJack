@@ -21,6 +21,7 @@ def test_surrender_returns_half_bet(logged_in_page):
 
     # Force player turn (skip insurance/dealer BJ checks)
     page.evaluate("""
+        window.__game.engine.gameOver = false;
         window.__game.playerHands[0].status = 'playing';
     """)
 

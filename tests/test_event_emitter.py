@@ -55,6 +55,7 @@ def test_player_hit_event(logged_in_page):
     time.sleep(1)
 
     page.evaluate("""
+        window.__game.engine.gameOver = false;
         window.__game.playerHands[0].status = 'playing';
         window.__game.hit();
     """)
@@ -86,6 +87,7 @@ def test_player_stand_event(logged_in_page):
     time.sleep(1)
 
     page.evaluate("""
+        window.__game.engine.gameOver = false;
         window.__game.playerHands[0].status = 'playing';
         window.__game.stand();
     """)

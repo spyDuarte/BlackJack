@@ -17,6 +17,7 @@ def test_keyboard_hit(logged_in_page):
 
     # Force player turn with controls visible
     page.evaluate("""
+        window.__game.engine.gameOver = false;
         document.getElementById('game-controls').style.display = 'flex';
         window.__game.playerHands[0].status = 'playing';
     """)
@@ -46,6 +47,7 @@ def test_keyboard_stand(logged_in_page):
     time.sleep(1)
 
     page.evaluate("""
+        window.__game.engine.gameOver = false;
         document.getElementById('game-controls').style.display = 'flex';
         window.__game.playerHands[0].status = 'playing';
     """)
@@ -71,6 +73,7 @@ def test_keyboard_visual_feedback(logged_in_page):
     time.sleep(1)
 
     page.evaluate("""
+        window.__game.engine.gameOver = false;
         document.getElementById('game-controls').style.display = 'flex';
         window.__game.playerHands[0].status = 'playing';
     """)
