@@ -38,28 +38,38 @@ export class GameManager {
         // Listen for auth state changes
         supabase.auth.onAuthStateChange((event, session) => {
             if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
-                // User is signed in
-                const user = session.user;
-                this.userId = user.id;
-                this.username = user.user_metadata?.full_name || user.email?.split('@')[0];
-                this.loadGame();
-                this.loadSettings();
-                this.updateUI();
-
-                if (this.ui) {
-                     this.ui.onLoginSuccess();
-                     this.ui.setAuthLoading(false);
-                }
+                this.onUserSignIn(session);
             } else if (event === 'SIGNED_OUT') {
-                // User is signed out
-                this.userId = null;
-                this.username = null;
-
-                if (this.ui && this.ui.elements.loginScreen && this.ui.elements.loginScreen.style.display === 'none') {
-                    window.location.reload();
-                }
+                this.onUserSignOut();
             }
         });
+    }
+
+    onUserSignIn(session) {
+        if (!session || !session.user) return;
+
+        // User is signed in
+        const user = session.user;
+        this.userId = user.id;
+        this.username = user.user_metadata?.full_name || user.email?.split('@')[0];
+        this.loadGame();
+        this.loadSettings();
+        this.updateUI();
+
+        if (this.ui) {
+            this.ui.onLoginSuccess();
+            this.ui.setAuthLoading(false);
+        }
+    }
+
+    onUserSignOut() {
+        // User is signed out
+        this.userId = null;
+        this.username = null;
+
+        if (this.ui && this.ui.elements.loginScreen && this.ui.elements.loginScreen.style.display === 'none') {
+            window.location.reload();
+        }
     }
 
     // Proxy properties to engine for backward compatibility and test support
