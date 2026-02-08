@@ -10,11 +10,11 @@ export class UIManager {
         this.animationsEnabled = true;
         this.game = null;
         this.isRegisterMode = false;
+        this.cacheElements();
     }
 
     initialize(game) {
         this.game = game;
-        this.cacheElements();
         this.bindEvents();
         this.toggleLoading(false);
     }
@@ -93,8 +93,9 @@ export class UIManager {
         const game = this.game;
 
         // Auth events
-        if (el.loginBtn) {
-            el.loginBtn.addEventListener('click', (e) => {
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) {
+            loginForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 this.handleAuthAction();
             });
@@ -104,13 +105,6 @@ export class UIManager {
             el.toggleAuthMode.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.toggleAuthMode();
-            });
-        }
-
-        // Support Enter key on password field
-        if (el.loginPassword) {
-            el.loginPassword.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.handleAuthAction();
             });
         }
 
