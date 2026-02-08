@@ -31,9 +31,28 @@
 
                 <button id="login-btn" class="start-btn" type="submit">Entrar</button>
 
+                <p class="auth-toggle-text">
+                    Não tem uma conta? <a href="#" id="go-to-register">Registrar-se</a>
+                </p>
+            </form>
+        </div>
+    </section>
+
+    <!-- Register Screen -->
+    <section class="login-screen hidden" id="register-screen" style="display: none;" aria-label="Tela de cadastro">
+        <div class="login-content">
+            <h1>♠️ Cadastro ♥️</h1>
+            <p>Crie sua conta para jogar.</p>
+            <form class="login-form" id="register-form" onsubmit="return false;">
+                <input type="email" id="register-email" placeholder="E-mail" autocomplete="email" required>
+                <input type="password" id="register-password" placeholder="Senha (min. 6 caracteres)" autocomplete="new-password" required>
+
+                <div class="error-msg" id="register-error" role="alert"></div>
+
+                <button id="register-btn" class="start-btn" type="submit">Cadastrar</button>
 
                 <p class="auth-toggle-text">
-                    Não tem uma conta? <a href="#" id="toggle-auth-mode">Registrar-se</a>
+                    Já tem uma conta? <a href="#" id="go-to-login">Entrar</a>
                 </p>
             </form>
         </div>

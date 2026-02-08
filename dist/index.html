@@ -6,7 +6,7 @@
     <meta name="description" content="Blackjack Premium - O melhor jogo de 21 online">
     <meta name="keywords" content="blackjack, 21, jogo, cartas, casino">
     <meta name="author" content="Blackjack Premium">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';">
     <title>Blackjack Premium - 21 | Jogue Agora</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,7 +15,7 @@
     <meta name="theme-color" content="#FFD700">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <script type="module" crossorigin src="./assets/main-RQn7nNmB.js"></script>
+  <script type="module" crossorigin src="./assets/main-Bz3QpTYT.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/main-BYQUJVim.css">
 </head>
 <body>
@@ -32,9 +32,28 @@
 
                 <button id="login-btn" class="start-btn" type="submit">Entrar</button>
 
+                <p class="auth-toggle-text">
+                    Não tem uma conta? <a href="#" id="go-to-register">Registrar-se</a>
+                </p>
+            </form>
+        </div>
+    </section>
+
+    <!-- Register Screen -->
+    <section class="login-screen hidden" id="register-screen" style="display: none;" aria-label="Tela de cadastro">
+        <div class="login-content">
+            <h1>♠️ Cadastro ♥️</h1>
+            <p>Crie sua conta para jogar.</p>
+            <form class="login-form" id="register-form" onsubmit="return false;">
+                <input type="email" id="register-email" placeholder="E-mail" autocomplete="email" required>
+                <input type="password" id="register-password" placeholder="Senha (min. 6 caracteres)" autocomplete="new-password" required>
+
+                <div class="error-msg" id="register-error" role="alert"></div>
+
+                <button id="register-btn" class="start-btn" type="submit">Cadastrar</button>
 
                 <p class="auth-toggle-text">
-                    Não tem uma conta? <a href="#" id="toggle-auth-mode">Registrar-se</a>
+                    Já tem uma conta? <a href="#" id="go-to-login">Entrar</a>
                 </p>
             </form>
         </div>
