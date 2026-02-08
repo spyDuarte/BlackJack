@@ -36,20 +36,16 @@ def _find_chromium_executable():
 def page():
     """Create a fresh browser and page for each test."""
     with sync_playwright() as p:
-        launch_kwargs = {
-            "headless": True,
-            "args": [
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
                 "--no-sandbox",
                 "--disable-gpu",
                 "--single-process",
                 "--no-zygote",
                 "--disable-setuid-sandbox",
-            ],
-        }
-        executable = _find_chromium_executable()
-        if executable:
-            launch_kwargs["executable_path"] = executable
-        browser = p.chromium.launch(**launch_kwargs)
+            ]
+        )
         pg = browser.new_page()
         yield pg
         browser.close()
