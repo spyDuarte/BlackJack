@@ -1,64 +1,45 @@
-"""Test: Login system with per-user data persistence."""
+"""Test: Login system UI verification."""
 import time
-
 
 def test_login_screen_visible(page, game_url):
     page.goto(game_url)
     assert page.is_visible("#login-screen"), "Login screen should be visible"
 
-
-def test_user_data_persistence(page, game_url):
+def test_login_ui_elements(page, game_url):
+    """Verifies that the new login UI elements are present."""
     page.goto(game_url)
-
-    # Login as User1
     page.wait_for_selector("#login-screen")
-    page.fill("#login-username", "User1")
-    page.click("#login-btn")
-    page.wait_for_selector("#welcome-screen", state="visible")
-    page.click("#start-game-btn")
-    page.wait_for_selector(".container", state="visible")
 
-    balance_text = page.text_content("#balance")
-    assert "$1000" in balance_text
+    # Check for email and password fields
+    assert page.is_visible("#login-email"), "Email input should be visible"
+    assert page.is_visible("#login-password"), "Password input should be visible"
+    assert page.is_visible("#login-btn"), "Login button should be visible"
+    assert page.is_visible("#login-google-btn"), "Google login button should be visible"
+    assert page.is_visible("#toggle-auth-mode"), "Toggle auth mode link should be visible"
 
-    # Modify balance and save
-    page.evaluate("window.__game.balance = 2000; window.__game.saveGame(); window.__game.updateUI();")
-    time.sleep(1.5)  # Wait for debounced save
+    # Check initial texts
+    assert "Entrar" in page.text_content("#login-btn")
+    assert "Registrar-se" in page.text_content("#toggle-auth-mode")
 
-    # Reload and login as User1 again
-    page.reload()
-    page.wait_for_selector("#login-screen", state="visible")
-    page.fill("#login-username", "User1")
-    page.click("#login-btn")
-    page.wait_for_selector("#welcome-screen", state="visible")
-    page.click("#start-game-btn")
-    page.wait_for_selector(".container", state="visible")
+def test_register_ui_transition(page, game_url):
+    """Verifies transition to register mode."""
+    page.on("console", lambda msg: print(f"CONSOLE: {msg.text}"))
+    page.on("pageerror", lambda err: print(f"PAGE ERROR: {err}"))
 
-    balance_text = page.text_content("#balance")
-    assert "$2000" in balance_text, f"Expected $2000, got {balance_text}"
-
-
-def test_separate_user_data(page, game_url):
     page.goto(game_url)
-
-    # Login as User1 and change balance
     page.wait_for_selector("#login-screen")
-    page.fill("#login-username", "User1")
-    page.click("#login-btn")
-    page.wait_for_selector("#welcome-screen", state="visible")
-    page.click("#start-game-btn")
-    page.wait_for_selector(".container", state="visible")
-    page.evaluate("window.__game.balance = 2000; window.__game.saveGame(); window.__game.updateUI();")
-    time.sleep(1.5)
 
-    # Reload and login as User2
-    page.reload()
-    page.wait_for_selector("#login-screen", state="visible")
-    page.fill("#login-username", "User2")
-    page.click("#login-btn")
-    page.wait_for_selector("#welcome-screen", state="visible")
-    page.click("#start-game-btn")
-    page.wait_for_selector(".container", state="visible")
+    # Click toggle link to switch to register
+    page.click("#toggle-auth-mode")
 
-    balance_text = page.text_content("#balance")
-    assert "$1000" in balance_text, f"User2 should have $1000, got {balance_text}"
+    # Check if text changed
+    assert "Cadastrar" in page.text_content("#login-btn")
+    assert "Já tem uma conta? Entrar" in page.text_content("#toggle-auth-mode")
+
+    # Inputs should still be visible (same elements used)
+    assert page.is_visible("#login-email")
+    assert page.is_visible("#login-password")
+
+    # Click toggle link to switch back to login
+    page.click("#toggle-auth-mode")
+    assert "Entrar" in page.text_content("#login-btn")

@@ -28,6 +28,6 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
-    "firebase": "^12.9.0"
+    "@supabase/supabase-js": "^2.95.3"
   }
 }

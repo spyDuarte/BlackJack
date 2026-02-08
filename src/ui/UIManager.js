@@ -1,7 +1,7 @@
 import * as HandUtils from '../utils/HandUtils.js';
 import { CONFIG } from '../core/Constants.js';
 import { debounce } from '../utils/debounce.js';
-import { auth, googleProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from '../firebase-config.js';
+import { supabase } from '../supabaseClient.js';
 
 export class UIManager {
     constructor() {
@@ -247,23 +247,37 @@ export class UIManager {
         this.setAuthLoading(true);
 
         try {
+            let error;
             if (this.isRegisterMode) {
-                await createUserWithEmailAndPassword(auth, email, password);
+                const { data, error: err } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                });
+                error = err;
+                if (!error && data.user && !data.session) {
+                    this.showLoginError('Verifique seu e-mail para confirmar o cadastro!');
+                    this.setAuthLoading(false);
+                    return;
+                }
             } else {
-                await signInWithEmailAndPassword(auth, email, password);
+                const { error: err } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+                error = err;
             }
-            // Login handled by onAuthStateChanged in GameManager
+
+            if (error) throw error;
+            // Login handled by onAuthStateChange in GameManager
         } catch (error) {
             console.error("Auth error:", error);
-            let msg = 'Erro ao autenticar.';
-            if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+            let msg = error.message || 'Erro ao autenticar.';
+            if (msg.includes('Invalid login credentials')) {
                 msg = 'E-mail ou senha inválidos.';
-            } else if (error.code === 'auth/email-already-in-use') {
-                msg = 'E-mail já está em uso.';
-            } else if (error.code === 'auth/weak-password') {
-                msg = 'A senha é muito fraca.';
-            } else if (error.code === 'auth/invalid-email') {
-                msg = 'E-mail inválido.';
+            } else if (msg.includes('User already registered')) {
+                msg = 'E-mail já está cadastrado.';
+            } else if (msg.includes('Password should be at least')) {
+                msg = 'A senha deve ter pelo menos 6 caracteres.';
             }
             this.showLoginError(msg);
             this.setAuthLoading(false);
@@ -273,8 +287,11 @@ export class UIManager {
     async handleGoogleLogin() {
         this.setAuthLoading(true);
         try {
-            await signInWithPopup(auth, googleProvider);
-            // Login handled by onAuthStateChanged in GameManager
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+            });
+            if (error) throw error;
+            // Login flow continues via redirect usually, or popup handling depending on implementation
         } catch (error) {
             console.error("Google auth error:", error);
             this.showLoginError('Erro ao entrar com Google.');

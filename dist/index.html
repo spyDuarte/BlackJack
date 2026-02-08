@@ -15,19 +15,38 @@
     <meta name="theme-color" content="#FFD700">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <script type="module" crossorigin src="./assets/main--kHW8FmP.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/main-DAIfeb1l.css">
+  <script type="module" crossorigin src="./assets/main-BS2o1JUO.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/main-BlZ8OH_R.css">
 </head>
 <body>
     <!-- Login Screen -->
     <section class="login-screen" id="login-screen" aria-label="Tela de login">
         <div class="login-content">
-            <h1>♠️ Login ♥️</h1>
-            <p>Digite seu nome de usuário para começar.</p>
+            <h1 id="auth-title">♠️ Login ♥️</h1>
+            <p id="auth-subtitle">Entre com sua conta para começar.</p>
             <form class="login-form" id="login-form" onsubmit="return false;">
-                <input type="text" id="login-username" placeholder="Nome de Usuário" autocomplete="off" maxlength="20">
+                <input type="email" id="login-email" placeholder="E-mail" autocomplete="email" required>
+                <input type="password" id="login-password" placeholder="Senha" autocomplete="current-password" required>
+
                 <div class="error-msg" id="login-error" role="alert"></div>
-                <button id="login-btn" class="start-btn" type="button">Entrar</button>
+
+                <button id="login-btn" class="start-btn" type="submit">Entrar</button>
+
+                <div class="auth-divider">ou</div>
+
+                <button id="login-google-btn" type="button" class="google-btn">
+                    <svg class="google-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px">
+                        <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+                        <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+                        <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+                        <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+                    </svg>
+                    <span>Entrar com Google</span>
+                </button>
+
+                <p class="auth-toggle-text">
+                    Não tem uma conta? <a href="#" id="toggle-auth-mode">Registrar-se</a>
+                </p>
             </form>
         </div>
     </section>
@@ -82,9 +101,16 @@
 
         <section class="game-area" role="region" aria-label="Mesa de jogo">
             <!-- Deck Shoe Indicator -->
-            <div class="shoe-indicator" id="shoe-indicator" title="Cartas restantes no sapato" aria-label="Indicador do sapato">
-                <div class="shoe-bar" id="shoe-bar"></div>
-                <span class="shoe-label" id="shoe-label">100%</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div class="shoe-indicator" id="shoe-indicator" title="Cartas restantes no sapato" aria-label="Indicador do sapato" style="margin-bottom: 0; flex-grow: 1; margin-right: 15px;">
+                    <div class="shoe-bar" id="shoe-bar"></div>
+                    <span class="shoe-label" id="shoe-label">100%</span>
+                </div>
+
+                <div id="count-container" style="display: none; background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 20px; font-size: 0.9em; gap: 15px;">
+                    <span title="Running Count" style="color: var(--primary-gold);">RC: <strong id="running-count" style="color: white;">0</strong></span>
+                    <span title="True Count" style="color: var(--primary-gold);">TC: <strong id="true-count" style="color: white;">0</strong></span>
+                </div>
             </div>
 
             <div class="dealer-area">
@@ -167,6 +193,11 @@
             <div class="setting-item">
                 <label for="sound-enabled">🔊 Sons</label>
                 <input type="checkbox" id="sound-enabled" checked>
+            </div>
+
+            <div class="setting-item">
+                <label for="show-count">🧠 Modo Treino (Contagem)</label>
+                <input type="checkbox" id="show-count">
             </div>
 
             <div class="setting-item">
