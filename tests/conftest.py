@@ -1,29 +1,7 @@
 import pytest
 import os
 import time
-import threading
-import http.server
-import socketserver
 from playwright.sync_api import sync_playwright
-
-
-class QuietHTTPHandler(http.server.SimpleHTTPRequestHandler):
-    def log_message(self, format, *args):
-        pass
-
-
-@pytest.fixture(scope="session")
-def server_port():
-    """Start a local HTTP server serving the project root and return its port."""
-    os.chdir(os.path.join(os.path.dirname(__file__), ".."))
-    httpd = socketserver.TCPServer(("", 0), QuietHTTPHandler)
-    port = httpd.server_address[1]
-    server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-    server_thread.start()
-    time.sleep(0.5)
-    yield port
-    httpd.shutdown()
-
 
 def _find_chromium_executable():
     """Find a Chromium executable from Playwright's cache (multiple layouts)."""
@@ -55,7 +33,7 @@ def _find_chromium_executable():
 
 
 @pytest.fixture
-def page(server_port):
+def page():
     """Create a fresh browser and page for each test."""
     with sync_playwright() as p:
         launch_kwargs = {
@@ -78,26 +56,6 @@ def page(server_port):
 
 
 @pytest.fixture
-def game_url(server_port):
+def game_url():
     """Return the full URL to the game's index.html."""
-    return f"http://localhost:{server_port}/index.html"
-
-
-@pytest.fixture
-def logged_in_page(page, game_url):
-    """Navigate to the game, login as TestUser, and start the game.
-
-    Returns the page object ready for game interaction.
-    """
-    page.goto(game_url, wait_until="domcontentloaded")
-    page.wait_for_selector("#login-screen", state="attached")
-    time.sleep(0.5)  # Wait for CSS animations
-    page.click("#login-username")
-    page.keyboard.type("TestUser")
-    page.click("#login-btn")
-    page.wait_for_selector("#start-game-btn", state="attached")
-    time.sleep(0.5)
-    page.click("#start-game-btn")
-    page.wait_for_selector(".container", state="attached")
-    time.sleep(0.5)
-    return page
+    return "http://localhost:3000"
