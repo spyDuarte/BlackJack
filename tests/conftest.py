@@ -1,6 +1,8 @@
 import pytest
 import os
 import time
+import random
+import string
 from playwright.sync_api import sync_playwright
 
 def _find_chromium_executable():
@@ -59,3 +61,63 @@ def page():
 def game_url():
     """Return the full URL to the game's index.html."""
     return "http://localhost:3000"
+
+@pytest.fixture
+def logged_in_page(page, game_url):
+    """
+    Fixture that returns a page where a user has 'logged in' via direct manipulation
+    of the GameManager instance, bypassing Supabase network calls.
+    It also navigates past the Welcome Screen to the main game area.
+    """
+    page.goto(game_url)
+
+    # Wait for game instance to be available
+    page.wait_for_function("window.__game !== undefined")
+
+    # Inject fake user and trigger login success
+    page.evaluate("""
+        () => {
+            const game = window.__game;
+            game.userId = 'test-user-id';
+            game.username = 'Test User';
+            game.loadGame();
+            game.updateUI();
+
+            if (game.ui) {
+                game.ui.onLoginSuccess();
+                game.ui.setAuthLoading(false);
+            }
+        }
+    """)
+
+    # Wait for login screen to disappear
+    try:
+        page.wait_for_selector("#login-screen", state="hidden", timeout=5000)
+    except Exception:
+        page.evaluate("document.getElementById('login-screen').style.display = 'none'")
+
+    # Wait for Welcome Screen and click Start
+    # The login success transition shows Welcome Screen.
+    try:
+        page.wait_for_selector("#welcome-screen", timeout=3000)
+        # Check if welcome screen is visible
+        if page.is_visible("#welcome-screen"):
+             page.click("#start-game-btn")
+             # Wait for welcome screen to disappear
+             page.wait_for_selector("#welcome-screen", state="hidden", timeout=5000)
+    except Exception as e:
+        print(f"Welcome screen handling warning: {e}")
+        # Force hide welcome screen if needed
+        page.evaluate("if(document.getElementById('welcome-screen')) document.getElementById('welcome-screen').style.display = 'none'")
+
+    # Wait for game UI (balance) to ensure loaded
+    page.wait_for_selector("#balance", timeout=5000)
+
+    # Ensure no overlays
+    page.evaluate("""
+        () => {
+            document.querySelectorAll('.modal, .overlay').forEach(el => el.style.display = 'none');
+        }
+    """)
+
+    return page
