@@ -5,7 +5,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
     console.error(
-        'Supabase credentials missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_KEY in your .env file.'
+        'Supabase credentials missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_KEY in your .env file or environment variables.'
     );
 }
 
