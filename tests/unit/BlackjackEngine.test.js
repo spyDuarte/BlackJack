@@ -91,11 +91,12 @@ describe('BlackjackEngine', () => {
     });
 
     it('split creates two hands', () => {
-        // Setup initial pair (Dealing order: P, P, D, D)
+        // Setup initial pair (Standard dealing order: P, D, P, D)
+        // We want Player to have 8-8.
         mockDeckInstance.draw
             .mockReturnValueOnce({ suit: '♠', value: '8' }) // Player 1
-            .mockReturnValueOnce({ suit: '♣', value: '8' }) // Player 2
             .mockReturnValueOnce({ suit: '♥', value: '10' }) // Dealer 1
+            .mockReturnValueOnce({ suit: '♣', value: '8' }) // Player 2
             .mockReturnValueOnce({ suit: '♦', value: '5' }); // Dealer 2
 
         engine.startGame(100);

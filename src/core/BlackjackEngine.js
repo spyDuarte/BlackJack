@@ -50,10 +50,10 @@ export class BlackjackEngine {
         this.gameStarted = true;
 
         // Deal 2 cards to player and dealer
-        // Dealing order: Player, Player, Dealer, Dealer (matching previous implementation behavior)
+        // Standard dealing order: Player, Dealer, Player, Dealer
         const p1 = this.deck.draw();
-        const p2 = this.deck.draw();
         const d1 = this.deck.draw();
+        const p2 = this.deck.draw();
         const d2 = this.deck.draw(); // Hole card, not counted yet
 
         this.playerHands = [{
