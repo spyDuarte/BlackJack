@@ -1,15 +1,10 @@
 const CACHE_NAME = 'blackjack-premium-v3';
-const ASSETS = [
-    './',
-    './index.html',
-    './style.css',
-    './src/main.js',
-    './manifest.json'
-];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll(['./', './index.html']);
+        })
     );
     self.skipWaiting();
 });
@@ -26,6 +21,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // Only handle same-origin GET requests
     if (event.request.method !== 'GET') return;
 
     const url = new URL(event.request.url);

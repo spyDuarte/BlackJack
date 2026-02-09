@@ -2,7 +2,7 @@
     "name": "Blackjack Premium",
     "short_name": "Blackjack",
     "description": "Blackjack Premium - O melhor jogo de 21 online",
-    "start_url": "/index.html",
+    "start_url": "./index.html",
     "display": "standalone",
     "background_color": "#0a3d2e",
     "theme_color": "#FFD700",
