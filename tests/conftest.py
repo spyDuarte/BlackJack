@@ -72,8 +72,12 @@ def page():
             if "Executable doesn't exist" in message:
                 pytest.skip(f"Chromium unavailable for E2E tests: {message}")
             raise
-        pg = browser.new_page()
+
+        # Use reduced motion to disable animations and improve stability
+        context = browser.new_context(reduced_motion="reduce")
+        pg = context.new_page()
         yield pg
+        context.close()
         browser.close()
 
 
