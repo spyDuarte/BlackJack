@@ -113,28 +113,24 @@ export class UIManager {
         const game = this.game;
 
         // Auth events
-        if (el.loginBtn) {
-            el.loginBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.handleAuthAction();
-            });
-        }
-
         if (el.loginScreen) {
             const loginForm = el.loginScreen.querySelector('#login-form');
             if (loginForm) {
                 loginForm.addEventListener('submit', (e) => {
                     e.preventDefault();
-                    this.handleAuthAction();
+                    this.handleAuthAction('login');
                 });
             }
         }
 
-        if (el.registerBtn) {
-            el.registerBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.handleAuthAction();
-            });
+        if (el.registerScreen) {
+            const registerForm = el.registerScreen.querySelector('#register-form');
+            if (registerForm) {
+                registerForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleAuthAction('register');
+                });
+            }
         }
 
         if (el.registerScreen) {
@@ -299,12 +295,15 @@ export class UIManager {
         });
     }
 
-    async handleAuthAction() {
+    async handleAuthAction(mode = null) {
         const el = this.elements;
-        const email = this.isRegisterMode ? el.registerEmail.value.trim() : el.loginEmail.value.trim();
-        const password = this.isRegisterMode ? el.registerPassword.value : el.loginPassword.value;
+        const isRegisterMode = mode ? mode === 'register' : this.isRegisterMode;
+        this.isRegisterMode = isRegisterMode;
 
-        if (this.isRegisterMode) {
+        const email = isRegisterMode ? el.registerEmail.value.trim() : el.loginEmail.value.trim();
+        const password = isRegisterMode ? el.registerPassword.value : el.loginPassword.value;
+
+        if (isRegisterMode) {
             const username = el.registerUsername ? el.registerUsername.value.trim() : '';
             const confirmPassword = el.registerConfirmPassword ? el.registerConfirmPassword.value : '';
 
@@ -344,7 +343,7 @@ export class UIManager {
 
         try {
             let error;
-            if (this.isRegisterMode) {
+            if (isRegisterMode) {
                 const username = this.sanitizeUsername(el.registerUsername.value.trim());
                 const { data, error: err } = await supabase.auth.signUp({
                     email: email,
