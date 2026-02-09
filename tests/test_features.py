@@ -11,8 +11,8 @@ def test_insurance_modal(logged_in_page):
     const padding = new Array(100).fill({suit: '\u2666', value: '2'});
     const targetCards = [
         {suit: '\u2660', value: '10'},
-        {suit: '\u2660', value: 'A'},
         {suit: '\u2665', value: 'K'},
+        {suit: '\u2660', value: 'A'},
         {suit: '\u2665', value: 'Q'}
     ];
     window.__game.deck.cards = [...padding, ...targetCards];
