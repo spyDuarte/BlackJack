@@ -161,22 +161,9 @@ export class UIManager {
             });
         }
 
-        // Support Enter key on password field
-        if (el.loginPassword) {
-            el.loginPassword.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.handleAuthAction();
-            });
-        }
+        // Password strength feedback on register form
         if (el.registerPassword) {
-            el.registerPassword.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.handleAuthAction();
-            });
             el.registerPassword.addEventListener('input', () => this.updatePasswordStrength());
-        }
-        if (el.registerConfirmPassword) {
-            el.registerConfirmPassword.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.handleAuthAction();
-            });
         }
         if (el.togglePassword) {
             el.togglePassword.addEventListener('click', () => this.togglePasswordVisibility());
@@ -298,7 +285,18 @@ export class UIManager {
             el.loginScreen.classList.remove('hidden');
         }
 
-        this.showLoginError(''); // Clear errors
+        this.clearAuthErrors();
+    }
+
+    clearAuthErrors() {
+        const el = this.elements;
+        [el.loginError, el.registerError].forEach((errorEl) => {
+            if (errorEl) errorEl.textContent = '';
+        });
+
+        [el.loginEmail, el.registerEmail].forEach((inputEl) => {
+            if (inputEl) inputEl.classList.remove('error');
+        });
     }
 
     async handleAuthAction() {
@@ -341,6 +339,7 @@ export class UIManager {
             }
         }
 
+        this.clearAuthErrors();
         this.setAuthLoading(true);
 
         try {
@@ -386,6 +385,8 @@ export class UIManager {
                 msg = 'E-mail já está cadastrado.';
             } else if (msg.includes('Password should be at least')) {
                 msg = 'A senha deve ter pelo menos 6 caracteres.';
+            } else if (msg.includes('Email not confirmed')) {
+                msg = 'Confirme seu e-mail antes de entrar.';
             }
             this.showLoginError(msg);
             this.setAuthLoading(false);
@@ -406,7 +407,7 @@ export class UIManager {
 
         if (errorEl) {
             errorEl.textContent = msg;
-            if (inputEl) {
+            if (inputEl && msg) {
                 inputEl.classList.add('error');
                 setTimeout(() => inputEl.classList.remove('error'), 500);
             }
