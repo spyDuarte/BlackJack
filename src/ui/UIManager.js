@@ -120,11 +120,31 @@ export class UIManager {
             });
         }
 
+        if (el.loginScreen) {
+            const loginForm = el.loginScreen.querySelector('#login-form');
+            if (loginForm) {
+                loginForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleAuthAction();
+                });
+            }
+        }
+
         if (el.registerBtn) {
             el.registerBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.handleAuthAction();
             });
+        }
+
+        if (el.registerScreen) {
+            const registerForm = el.registerScreen.querySelector('#register-form');
+            if (registerForm) {
+                registerForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleAuthAction();
+                });
+            }
         }
 
         if (el.goToRegister) {
@@ -267,10 +287,12 @@ export class UIManager {
         const el = this.elements;
 
         if (isRegister) {
+            el.loginScreen.classList.add('hidden');
             el.loginScreen.style.display = 'none';
             el.registerScreen.style.display = 'flex';
             el.registerScreen.classList.remove('hidden');
         } else {
+            el.registerScreen.classList.add('hidden');
             el.registerScreen.style.display = 'none';
             el.loginScreen.style.display = 'flex';
             el.loginScreen.classList.remove('hidden');
