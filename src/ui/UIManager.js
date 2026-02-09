@@ -133,6 +133,16 @@ export class UIManager {
             }
         }
 
+        if (el.registerScreen) {
+            const registerForm = el.registerScreen.querySelector('#register-form');
+            if (registerForm) {
+                registerForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleAuthAction();
+                });
+            }
+        }
+
         if (el.goToRegister) {
             el.goToRegister.addEventListener('click', (e) => {
                 e.preventDefault();
