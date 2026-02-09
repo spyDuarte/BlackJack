@@ -3,30 +3,44 @@ import os
 import time
 import random
 import string
+import shutil
 from playwright.sync_api import sync_playwright
 
 def _find_chromium_executable():
-    """Find a Chromium executable from Playwright's cache (multiple layouts)."""
+    """Find a Chromium executable from Playwright cache or system installation."""
+    env_executable = os.getenv("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH")
+    if env_executable and os.path.isfile(env_executable):
+        return env_executable
+
     cache_dir = os.path.expanduser("~/.cache/ms-playwright")
-    if not os.path.isdir(cache_dir):
-        return None
-
     candidates = []
-    for entry in sorted(os.listdir(cache_dir), reverse=True):
-        entry_dir = os.path.join(cache_dir, entry)
-        if not os.path.isdir(entry_dir):
-            continue
+    if os.path.isdir(cache_dir):
+        for entry in sorted(os.listdir(cache_dir), reverse=True):
+            entry_dir = os.path.join(cache_dir, entry)
+            if not os.path.isdir(entry_dir):
+                continue
 
-        # Chromium for Testing layout
-        if entry.startswith("chromium-"):
-            candidates.append(os.path.join(entry_dir, "chrome-linux", "chrome"))
-            candidates.append(os.path.join(entry_dir, "chrome-linux64", "chrome"))
+            # Chromium for Testing layout
+            if entry.startswith("chromium-"):
+                candidates.append(os.path.join(entry_dir, "chrome-linux", "chrome"))
+                candidates.append(os.path.join(entry_dir, "chrome-linux64", "chrome"))
 
-        # Headless shell layout
-        if entry.startswith("chromium_headless_shell-"):
-            candidates.append(
-                os.path.join(entry_dir, "chrome-headless-shell-linux64", "chrome-headless-shell")
-            )
+            # Headless shell layout
+            if entry.startswith("chromium_headless_shell-"):
+                candidates.append(
+                    os.path.join(entry_dir, "chrome-headless-shell-linux64", "chrome-headless-shell")
+                )
+
+    for command in ("chromium", "chromium-browser", "google-chrome", "google-chrome-stable"):
+        command_path = shutil.which(command)
+        if command_path:
+            candidates.append(command_path)
+
+    candidates.extend([
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/google-chrome",
+    ])
 
     for candidate in candidates:
         if os.path.isfile(candidate):
@@ -51,7 +65,13 @@ def page():
         executable = _find_chromium_executable()
         if executable:
             launch_kwargs["executable_path"] = executable
-        browser = p.chromium.launch(**launch_kwargs)
+        try:
+            browser = p.chromium.launch(**launch_kwargs)
+        except Exception as exc:
+            message = str(exc)
+            if "Executable doesn't exist" in message:
+                pytest.skip(f"Chromium unavailable for E2E tests: {message}")
+            raise
         pg = browser.new_page()
         yield pg
         browser.close()

@@ -113,18 +113,24 @@ export class UIManager {
         const game = this.game;
 
         // Auth events
-        if (el.loginBtn) {
-            el.loginBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.handleAuthAction();
-            });
+        if (el.loginScreen) {
+            const loginForm = el.loginScreen.querySelector('#login-form');
+            if (loginForm) {
+                loginForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleAuthAction('login');
+                });
+            }
         }
 
-        if (el.registerBtn) {
-            el.registerBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.handleAuthAction();
-            });
+        if (el.registerScreen) {
+            const registerForm = el.registerScreen.querySelector('#register-form');
+            if (registerForm) {
+                registerForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleAuthAction('register');
+                });
+            }
         }
 
         if (el.goToRegister) {
@@ -141,22 +147,9 @@ export class UIManager {
             });
         }
 
-        // Support Enter key on password field
-        if (el.loginPassword) {
-            el.loginPassword.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.handleAuthAction();
-            });
-        }
+        // Password strength feedback on register form
         if (el.registerPassword) {
-            el.registerPassword.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.handleAuthAction();
-            });
             el.registerPassword.addEventListener('input', () => this.updatePasswordStrength());
-        }
-        if (el.registerConfirmPassword) {
-            el.registerConfirmPassword.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.handleAuthAction();
-            });
         }
         if (el.togglePassword) {
             el.togglePassword.addEventListener('click', () => this.togglePasswordVisibility());
@@ -267,24 +260,40 @@ export class UIManager {
         const el = this.elements;
 
         if (isRegister) {
+            el.loginScreen.classList.add('hidden');
             el.loginScreen.style.display = 'none';
             el.registerScreen.style.display = 'flex';
             el.registerScreen.classList.remove('hidden');
         } else {
+            el.registerScreen.classList.add('hidden');
             el.registerScreen.style.display = 'none';
             el.loginScreen.style.display = 'flex';
             el.loginScreen.classList.remove('hidden');
         }
 
-        this.showLoginError(''); // Clear errors
+        this.clearAuthErrors();
     }
 
-    async handleAuthAction() {
+    clearAuthErrors() {
         const el = this.elements;
-        const email = this.isRegisterMode ? el.registerEmail.value.trim() : el.loginEmail.value.trim();
-        const password = this.isRegisterMode ? el.registerPassword.value : el.loginPassword.value;
+        [el.loginError, el.registerError].forEach((errorEl) => {
+            if (errorEl) errorEl.textContent = '';
+        });
 
-        if (this.isRegisterMode) {
+        [el.loginEmail, el.registerEmail].forEach((inputEl) => {
+            if (inputEl) inputEl.classList.remove('error');
+        });
+    }
+
+    async handleAuthAction(mode = null) {
+        const el = this.elements;
+        const isRegisterMode = mode ? mode === 'register' : this.isRegisterMode;
+        this.isRegisterMode = isRegisterMode;
+
+        const email = isRegisterMode ? el.registerEmail.value.trim() : el.loginEmail.value.trim();
+        const password = isRegisterMode ? el.registerPassword.value : el.loginPassword.value;
+
+        if (isRegisterMode) {
             const username = el.registerUsername ? el.registerUsername.value.trim() : '';
             const confirmPassword = el.registerConfirmPassword ? el.registerConfirmPassword.value : '';
 
@@ -319,11 +328,12 @@ export class UIManager {
             }
         }
 
+        this.clearAuthErrors();
         this.setAuthLoading(true);
 
         try {
             let error;
-            if (this.isRegisterMode) {
+            if (isRegisterMode) {
                 const username = this.sanitizeUsername(el.registerUsername.value.trim());
                 const { data, error: err } = await supabase.auth.signUp({
                     email: email,
@@ -364,6 +374,8 @@ export class UIManager {
                 msg = 'E-mail já está cadastrado.';
             } else if (msg.includes('Password should be at least')) {
                 msg = 'A senha deve ter pelo menos 6 caracteres.';
+            } else if (msg.includes('Email not confirmed')) {
+                msg = 'Confirme seu e-mail antes de entrar.';
             }
             this.showLoginError(msg);
             this.setAuthLoading(false);
@@ -384,7 +396,7 @@ export class UIManager {
 
         if (errorEl) {
             errorEl.textContent = msg;
-            if (inputEl) {
+            if (inputEl && msg) {
                 inputEl.classList.add('error');
                 setTimeout(() => inputEl.classList.remove('error'), 500);
             }
