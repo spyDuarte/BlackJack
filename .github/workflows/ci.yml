@@ -21,6 +21,11 @@ jobs:
       - name: Install Node dependencies
         run: npm install
 
+      - name: Create .env from GitHub Secrets
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> .env
+          echo "VITE_SUPABASE_KEY=${{ secrets.VITE_SUPABASE_KEY }}" >> .env
+
       - name: Run lint
         run: npm run lint
 
@@ -44,8 +49,10 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Create .env file
-        run: cp .env.example .env
+      - name: Create .env from GitHub Secrets
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> .env
+          echo "VITE_SUPABASE_KEY=${{ secrets.VITE_SUPABASE_KEY }}" >> .env
 
       - name: Set up Python
         uses: actions/setup-python@v5
