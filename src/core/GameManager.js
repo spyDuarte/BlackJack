@@ -51,7 +51,7 @@ export class GameManager {
         // User is signed in
         const user = session.user;
         this.userId = user.id;
-        this.username = user.user_metadata?.full_name || user.email?.split('@')[0];
+        this.username = user.user_metadata?.username || user.user_metadata?.full_name || user.email?.split('@')[0];
         this.loadGame();
         this.loadSettings();
         this.updateUI();

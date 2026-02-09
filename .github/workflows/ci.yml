@@ -70,7 +70,25 @@ jobs:
           pip install -r requirements.txt
 
       - name: Install Playwright browser
-        run: python -m playwright install chromium chromium-headless-shell
+        run: |
+          python -m playwright install chromium chromium-headless-shell || true
+
+      - name: Install Chromium fallback
+        run: |
+          if ! compgen -G "$HOME/.cache/ms-playwright/chromium-*/chrome-linux*/chrome" > /dev/null && ! compgen -G "$HOME/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell" > /dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium
+          fi
+
+      - name: Set Chromium executable fallback
+        run: |
+          if command -v chromium-browser >/dev/null 2>&1; then
+            echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$(command -v chromium-browser)" >> $GITHUB_ENV
+          elif command -v chromium >/dev/null 2>&1; then
+            echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$(command -v chromium)" >> $GITHUB_ENV
+          elif command -v google-chrome >/dev/null 2>&1; then
+            echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$(command -v google-chrome)" >> $GITHUB_ENV
+          fi
 
       - name: Patch CSP for E2E tests
         run: sed -i "s/script-src 'self' 'unsafe-inline'/script-src 'self' 'unsafe-inline' 'unsafe-eval'/" index.html
