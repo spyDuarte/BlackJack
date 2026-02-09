@@ -40,12 +40,33 @@
 
     <!-- Register Screen -->
     <section class="login-screen hidden" id="register-screen" style="display: none;" aria-label="Tela de cadastro">
-        <div class="login-content">
+        <div class="login-content register-content">
             <h1>♠️ Cadastro ♥️</h1>
             <p>Crie sua conta para jogar.</p>
             <form class="login-form" id="register-form" onsubmit="return false;">
-                <input type="email" id="register-email" placeholder="E-mail" autocomplete="email" required>
-                <input type="password" id="register-password" placeholder="Senha (min. 6 caracteres)" autocomplete="new-password" required>
+                <div class="form-field">
+                    <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username" minlength="3" maxlength="20" required>
+                    <span class="field-hint" id="username-hint">3 a 20 caracteres (letras, números, _ ou -)</span>
+                </div>
+
+                <div class="form-field">
+                    <input type="email" id="register-email" placeholder="E-mail" autocomplete="email" required>
+                </div>
+
+                <div class="form-field">
+                    <div class="password-wrapper">
+                        <input type="password" id="register-password" placeholder="Senha (min. 6 caracteres)" autocomplete="new-password" minlength="6" required>
+                        <button type="button" class="toggle-password" id="toggle-password" aria-label="Mostrar senha" tabindex="-1">👁️</button>
+                    </div>
+                    <div class="password-strength" id="password-strength">
+                        <div class="strength-bar" id="strength-bar"></div>
+                    </div>
+                    <span class="strength-label" id="strength-label"></span>
+                </div>
+
+                <div class="form-field">
+                    <input type="password" id="register-confirm-password" placeholder="Confirmar senha" autocomplete="new-password" required>
+                </div>
 
                 <div class="error-msg" id="register-error" role="alert"></div>
 

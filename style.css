@@ -1255,6 +1255,130 @@ button:disabled {
 }
 
 
+/* Register form enhancements */
+.register-content {
+    max-width: 450px;
+}
+
+.form-field {
+    width: 100%;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.field-hint {
+    font-size: 0.75em;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.password-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrapper input {
+    padding-right: 45px !important;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1em;
+    padding: 4px 8px;
+    min-width: auto;
+    box-shadow: none;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.toggle-password:hover {
+    opacity: 1;
+    box-shadow: none;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.toggle-password::before {
+    display: none;
+}
+
+.password-strength {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.strength-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 2px;
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.strength-bar.strength-weak {
+    background: var(--lose-color);
+}
+
+.strength-bar.strength-medium {
+    background: var(--tie-color);
+}
+
+.strength-bar.strength-strong {
+    background: var(--win-color);
+}
+
+.strength-bar.strength-very-strong {
+    background: linear-gradient(90deg, var(--win-color), #00d4aa);
+}
+
+.strength-label {
+    font-size: 0.75em;
+    font-weight: 600;
+    text-align: center;
+    min-height: 18px;
+}
+
+.strength-label.strength-weak {
+    color: var(--lose-color);
+}
+
+.strength-label.strength-medium {
+    color: var(--tie-color);
+}
+
+.strength-label.strength-strong {
+    color: var(--win-color);
+}
+
+.strength-label.strength-very-strong {
+    color: #00d4aa;
+}
+
+.login-form input.error {
+    border-color: var(--error-color) !important;
+    animation: inputShake 0.4s ease;
+}
+
+@keyframes inputShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+}
+
 .auth-toggle-text {
     margin-top: 15px !important;
     font-size: 0.9em !important;

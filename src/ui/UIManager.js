@@ -77,10 +77,17 @@ export class UIManager {
 
             // Register Screen
             registerScreen: document.getElementById('register-screen'),
+            registerUsername: document.getElementById('register-username'),
             registerEmail: document.getElementById('register-email'),
             registerPassword: document.getElementById('register-password'),
+            registerConfirmPassword: document.getElementById('register-confirm-password'),
             registerBtn: document.getElementById('register-btn'),
             registerError: document.getElementById('register-error'),
+            togglePassword: document.getElementById('toggle-password'),
+            passwordStrength: document.getElementById('password-strength'),
+            strengthBar: document.getElementById('strength-bar'),
+            strengthLabel: document.getElementById('strength-label'),
+            usernameHint: document.getElementById('username-hint'),
 
             // Auth Controls
             goToRegister: document.getElementById('go-to-register'),
@@ -143,6 +150,20 @@ export class UIManager {
         if (el.registerPassword) {
             el.registerPassword.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') this.handleAuthAction();
+            });
+            el.registerPassword.addEventListener('input', () => this.updatePasswordStrength());
+        }
+        if (el.registerConfirmPassword) {
+            el.registerConfirmPassword.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.handleAuthAction();
+            });
+        }
+        if (el.togglePassword) {
+            el.togglePassword.addEventListener('click', () => this.togglePasswordVisibility());
+        }
+        if (el.registerUsername) {
+            el.registerUsername.addEventListener('input', (e) => {
+                e.target.value = this.sanitizeUsername(e.target.value);
             });
         }
 
@@ -263,14 +284,39 @@ export class UIManager {
         const email = this.isRegisterMode ? el.registerEmail.value.trim() : el.loginEmail.value.trim();
         const password = this.isRegisterMode ? el.registerPassword.value : el.loginPassword.value;
 
-        if (!email || !password) {
-            this.showLoginError('Por favor, preencha todos os campos.');
-            return;
-        }
+        if (this.isRegisterMode) {
+            const username = el.registerUsername ? el.registerUsername.value.trim() : '';
+            const confirmPassword = el.registerConfirmPassword ? el.registerConfirmPassword.value : '';
 
-        if (password.length < 6) {
-             this.showLoginError('A senha deve ter pelo menos 6 caracteres.');
-             return;
+            if (!username || !email || !password || !confirmPassword) {
+                this.showLoginError('Por favor, preencha todos os campos.');
+                return;
+            }
+
+            if (username.length < 3) {
+                this.showLoginError('O nome de usuário deve ter pelo menos 3 caracteres.');
+                return;
+            }
+
+            if (password.length < 6) {
+                this.showLoginError('A senha deve ter pelo menos 6 caracteres.');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                this.showLoginError('As senhas não coincidem.');
+                return;
+            }
+        } else {
+            if (!email || !password) {
+                this.showLoginError('Por favor, preencha todos os campos.');
+                return;
+            }
+
+            if (password.length < 6) {
+                this.showLoginError('A senha deve ter pelo menos 6 caracteres.');
+                return;
+            }
         }
 
         this.setAuthLoading(true);
@@ -278,9 +324,15 @@ export class UIManager {
         try {
             let error;
             if (this.isRegisterMode) {
+                const username = this.sanitizeUsername(el.registerUsername.value.trim());
                 const { data, error: err } = await supabase.auth.signUp({
                     email: email,
                     password: password,
+                    options: {
+                        data: {
+                            username: username,
+                        },
+                    },
                 });
                 error = err;
                 if (!error && data.user && !data.session) {
@@ -337,6 +389,52 @@ export class UIManager {
                 setTimeout(() => inputEl.classList.remove('error'), 500);
             }
         }
+    }
+
+    togglePasswordVisibility() {
+        const el = this.elements;
+        if (!el.registerPassword) return;
+        const isPassword = el.registerPassword.type === 'password';
+        el.registerPassword.type = isPassword ? 'text' : 'password';
+        if (el.togglePassword) {
+            el.togglePassword.textContent = isPassword ? '🙈' : '👁️';
+            el.togglePassword.setAttribute('aria-label', isPassword ? 'Ocultar senha' : 'Mostrar senha');
+        }
+    }
+
+    updatePasswordStrength() {
+        const el = this.elements;
+        const password = el.registerPassword ? el.registerPassword.value : '';
+
+        if (!el.strengthBar || !el.strengthLabel) return;
+
+        if (!password) {
+            el.strengthBar.style.width = '0%';
+            el.strengthBar.className = 'strength-bar';
+            el.strengthLabel.textContent = '';
+            return;
+        }
+
+        let score = 0;
+        if (password.length >= 6) score++;
+        if (password.length >= 10) score++;
+        if (/[A-Z]/.test(password)) score++;
+        if (/[0-9]/.test(password)) score++;
+        if (/[^A-Za-z0-9]/.test(password)) score++;
+
+        const levels = [
+            { label: 'Muito fraca', cls: 'strength-weak', width: '20%' },
+            { label: 'Fraca', cls: 'strength-weak', width: '40%' },
+            { label: 'Média', cls: 'strength-medium', width: '60%' },
+            { label: 'Forte', cls: 'strength-strong', width: '80%' },
+            { label: 'Muito forte', cls: 'strength-very-strong', width: '100%' },
+        ];
+
+        const level = levels[Math.min(score, levels.length - 1)];
+        el.strengthBar.style.width = level.width;
+        el.strengthBar.className = `strength-bar ${level.cls}`;
+        el.strengthLabel.textContent = level.label;
+        el.strengthLabel.className = `strength-label ${level.cls}`;
     }
 
     onLoginSuccess() {
