@@ -10,7 +10,6 @@ export class BlackjackEngine {
     constructor() {
         /** @type {Deck} */
         this.deck = new Deck();
-        this.runningCount = 0;
         this.resetState();
     }
 
@@ -35,17 +34,6 @@ export class BlackjackEngine {
     shuffleDeck() {
         this.deck.reset();
         this.deck.shuffle();
-        this.runningCount = 0;
-    }
-
-    /**
-     * Updates the running count based on the card value.
-     * @param {Object} card - The card to count.
-     */
-    updateRunningCount(card) {
-        if (card) {
-            this.runningCount += HandUtils.getHiLoValue(card);
-        }
     }
 
     /**
@@ -67,11 +55,6 @@ export class BlackjackEngine {
         const p2 = this.deck.draw();
         const d1 = this.deck.draw();
         const d2 = this.deck.draw(); // Hole card, not counted yet
-
-        this.updateRunningCount(p1);
-        this.updateRunningCount(p2);
-        this.updateRunningCount(d1);
-        // D2 is hidden, do not count yet
 
         this.playerHands = [{
             cards: [p1, p2],
@@ -96,10 +79,6 @@ export class BlackjackEngine {
     }
 
     set dealerRevealed(value) {
-        if (value && !this._dealerRevealed && this.dealerHand.length > 1) {
-            // Revealing hole card
-            this.updateRunningCount(this.dealerHand[1]);
-        }
         this._dealerRevealed = value;
     }
 
@@ -117,7 +96,6 @@ export class BlackjackEngine {
         if (!hand || hand.status !== 'playing') return null;
 
         const card = this.deck.draw();
-        this.updateRunningCount(card);
         hand.cards.push(card);
 
         const newValue = HandUtils.calculateHandValue(hand.cards);
@@ -152,7 +130,6 @@ export class BlackjackEngine {
         if (!hand || hand.status !== 'playing') return null;
 
         const card = this.deck.draw();
-        this.updateRunningCount(card);
         hand.cards.push(card);
         hand.bet *= 2;
 
@@ -194,8 +171,6 @@ export class BlackjackEngine {
         // Deal new cards
         const c1 = this.deck.draw();
         const c2 = this.deck.draw();
-        this.updateRunningCount(c1);
-        this.updateRunningCount(c2);
 
         hand.cards.push(c1);
         newHand.cards.push(c2);
@@ -250,7 +225,6 @@ export class BlackjackEngine {
     dealerHit() {
         if (this.dealerShouldHit()) {
              const card = this.deck.draw();
-             this.updateRunningCount(card);
              this.dealerHand.push(card);
              return card;
         }
@@ -351,9 +325,7 @@ export class BlackjackEngine {
             gameStarted: this.gameStarted,
             gameOver: this.gameOver,
             remainingCards: this.deck.remainingCards,
-            totalCards: this.deck.totalCards,
-            runningCount: this.runningCount,
-            trueCount: Math.round(this.runningCount / Math.max(1, this.deck.remainingCards / 52))
+            totalCards: this.deck.totalCards
         };
     }
 }

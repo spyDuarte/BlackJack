@@ -108,10 +108,7 @@ export class UIManager {
             importInput: document.getElementById('btn-import-data'),
             toastContainer: document.getElementById('toast-container'),
             shoeBar: document.getElementById('shoe-bar'),
-            shoeLabel: document.getElementById('shoe-label'),
-            countContainer: document.getElementById('count-container'),
-            runningCount: document.getElementById('running-count'),
-            trueCount: document.getElementById('true-count')
+            shoeLabel: document.getElementById('shoe-label')
         };
     }
 
@@ -239,7 +236,6 @@ export class UIManager {
         this.bindCheckbox('animations-enabled', (checked) => game.updateSetting('animationsEnabled', checked));
         this.bindCheckbox('auto-save', (checked) => game.updateSetting('autoSave', checked));
         this.bindCheckbox('show-stats', (checked) => game.updateSetting('showStats', checked));
-        this.bindCheckbox('show-count', (checked) => game.updateSetting('showCount', checked));
 
         if (el.volumeSlider) {
             el.volumeSlider.addEventListener('input', (e) => {
@@ -561,9 +557,6 @@ export class UIManager {
         if (this.elements.dealerScore) this.elements.dealerScore.textContent = state.dealerRevealed ? dealerValue : '?';
         if (this.elements.playerScore) this.elements.playerScore.textContent = playerValue;
 
-        if (this.elements.runningCount) this.elements.runningCount.textContent = state.runningCount;
-        if (this.elements.trueCount) this.elements.trueCount.textContent = state.trueCount;
-
         this.updateStats(state.wins, state.losses, state.totalWinnings, state.blackjacks);
 
         // Update Buttons
@@ -794,9 +787,6 @@ export class UIManager {
     setAnimationsEnabled(enabled) { this.animationsEnabled = enabled; }
     setStatsVisibility(visible) {
         if (this.elements.statsContainer) this.elements.statsContainer.style.display = visible ? 'block' : 'none';
-    }
-    setCountVisibility(visible) {
-        if (this.elements.countContainer) this.elements.countContainer.style.display = visible ? 'flex' : 'none';
     }
     setVolume(value) {
         const percent = Math.round(value * 100);
