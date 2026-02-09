@@ -19,7 +19,7 @@
 </head>
 <body>
     <!-- Login Screen -->
-    <section class="login-screen" id="login-screen" aria-label="Tela de login">
+    <section class="login-screen hidden" id="login-screen" style="display: none;" aria-label="Tela de login">
         <div class="login-content">
             <h1 id="auth-title">♠️ Login ♥️</h1>
             <p id="auth-subtitle">Entre com sua conta para começar.</p>
@@ -103,7 +103,7 @@
 
     <main class="container">
         <header class="header">
-            <button class="settings-btn" id="settings-btn" title="Configurações">⚙️</button>
+            <button class="user-btn" id="user-btn" title="Menu">👤</button>
             <h1>♠️ BLACKJACK ♥️</h1>
             <div class="subtitle">PREMIUM EDITION</div>
         </header>
@@ -215,8 +215,22 @@
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal" role="dialog" aria-labelledby="settings-title" aria-modal="true">
         <div class="modal-content">
-            <span class="close" role="button" aria-label="Fechar configurações">&times;</span>
-            <h2 id="settings-title" style="color: var(--primary-gold); margin-bottom: 20px;">⚙️ Configurações</h2>
+            <span class="close" role="button" aria-label="Fechar menu">&times;</span>
+            <h2 id="settings-title" style="color: var(--primary-gold); margin-bottom: 20px;">👤 Menu</h2>
+
+            <!-- Auth Section -->
+            <div id="auth-section" style="text-align: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-gold);">
+                <div id="user-info" style="margin-bottom: 15px; font-weight: bold; color: white;">Visitante</div>
+                <div id="guest-controls">
+                    <button id="menu-login-btn" style="padding: 10px 20px; font-size: 0.9em; margin-right: 10px;">Entrar</button>
+                    <button id="menu-register-btn" style="padding: 10px 20px; font-size: 0.9em;">Cadastrar</button>
+                </div>
+                <div id="user-controls" style="display: none;">
+                    <button id="menu-logout-btn" style="padding: 10px 20px; font-size: 0.9em; background: var(--btn-danger);">Sair</button>
+                </div>
+            </div>
+
+            <h3 style="color: var(--primary-gold); margin-bottom: 15px; font-size: 1.1em;">⚙️ Configurações</h3>
 
             <div class="setting-item">
                 <label for="sound-enabled">🔊 Sons</label>

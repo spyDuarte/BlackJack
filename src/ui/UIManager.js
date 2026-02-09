@@ -48,7 +48,7 @@ export class UIManager {
             betDoubleValue: document.getElementById('bet-double-value'),
             betMaxValue: document.getElementById('bet-max-value'),
             splitBtn: document.getElementById('split-btn'),
-            settingsBtn: document.getElementById('settings-btn'),
+            userBtn: document.getElementById('user-btn'),
             settingsModal: document.getElementById('settings-modal'),
             insuranceModal: document.getElementById('insurance-modal'),
             insuranceYesBtn: document.getElementById('insurance-yes-btn'),
@@ -74,6 +74,14 @@ export class UIManager {
             loginPassword: document.getElementById('login-password'),
             loginBtn: document.getElementById('login-btn'),
             loginError: document.getElementById('login-error'),
+
+            // Menu/Auth Elements
+            userInfo: document.getElementById('user-info'),
+            guestControls: document.getElementById('guest-controls'),
+            userControls: document.getElementById('user-controls'),
+            menuLoginBtn: document.getElementById('menu-login-btn'),
+            menuRegisterBtn: document.getElementById('menu-register-btn'),
+            menuLogoutBtn: document.getElementById('menu-logout-btn'),
 
             // Register Screen
             registerScreen: document.getElementById('register-screen'),
@@ -205,8 +213,25 @@ export class UIManager {
             });
         });
 
-        if (el.settingsBtn) el.settingsBtn.addEventListener('click', () => this.toggleSettingsModal(true));
+        if (el.userBtn) el.userBtn.addEventListener('click', () => {
+            this.updateAuthUI();
+            this.toggleSettingsModal(true);
+        });
         if (el.closeSettings) el.closeSettings.addEventListener('click', () => this.toggleSettingsModal(false));
+
+        // Menu/Auth Buttons
+        if (el.menuLoginBtn) el.menuLoginBtn.addEventListener('click', () => {
+            this.toggleSettingsModal(false);
+            this.toggleAuthMode(false);
+        });
+        if (el.menuRegisterBtn) el.menuRegisterBtn.addEventListener('click', () => {
+            this.toggleSettingsModal(false);
+            this.toggleAuthMode(true);
+        });
+        if (el.menuLogoutBtn) el.menuLogoutBtn.addEventListener('click', () => {
+            this.toggleSettingsModal(false);
+            game.logout();
+        });
 
         window.addEventListener('click', (e) => {
             if (e.target === el.settingsModal) this.toggleSettingsModal(false);
@@ -450,17 +475,32 @@ export class UIManager {
     }
 
     onLoginSuccess() {
+        // Just hide auth screens if visible
         if (this.elements.loginScreen) {
             this.elements.loginScreen.classList.add('hidden');
+            this.elements.loginScreen.style.display = 'none';
+        }
+        if (this.elements.registerScreen) {
             this.elements.registerScreen.classList.add('hidden');
-            setTimeout(() => {
-                this.elements.loginScreen.style.display = 'none';
-                this.elements.registerScreen.style.display = 'none';
-                if (this.elements.welcomeScreen) {
-                    this.elements.welcomeScreen.style.display = 'flex';
-                    this.elements.welcomeScreen.classList.remove('hidden');
-                }
-            }, 500);
+            this.elements.registerScreen.style.display = 'none';
+        }
+        this.updateAuthUI();
+    }
+
+    updateAuthUI() {
+        const el = this.elements;
+        if (!el.userInfo) return;
+
+        if (this.game.userId) {
+            // User is logged in
+            el.userInfo.textContent = `👤 ${this.game.username || 'Jogador'}`;
+            if (el.guestControls) el.guestControls.style.display = 'none';
+            if (el.userControls) el.userControls.style.display = 'block';
+        } else {
+            // Guest mode
+            el.userInfo.textContent = '👤 Visitante';
+            if (el.guestControls) el.guestControls.style.display = 'block';
+            if (el.userControls) el.userControls.style.display = 'none';
         }
     }
 

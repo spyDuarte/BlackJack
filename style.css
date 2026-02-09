@@ -160,10 +160,10 @@ h1 {
     letter-spacing: 3px;
 }
 
-.settings-btn {
+.user-btn {
     position: absolute;
     top: 10px;
-    right: 10px;
+    left: 10px;
     background: rgba(255, 215, 0, 0.2);
     border: 1px solid rgba(255, 215, 0, 0.5);
     color: var(--primary-gold);
@@ -172,11 +172,17 @@ h1 {
     cursor: pointer;
     transition: var(--transition-smooth);
     font-size: 1.2em;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
 }
 
-.settings-btn:hover {
+.user-btn:hover {
     background: rgba(255, 215, 0, 0.3);
-    transform: rotate(90deg);
+    transform: scale(1.1);
 }
 
 .game-info {
