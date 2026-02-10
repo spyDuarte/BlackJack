@@ -697,6 +697,7 @@ export class GameManager {
     // resetGame, newGame, exportData, importData, updateSetting match original structure but use engine
 
     resetGame() {
+        if (this.ui) this.ui.hideError();
         this.balance = CONFIG.INITIAL_BALANCE;
         this.wins = 0;
         this.losses = 0;
