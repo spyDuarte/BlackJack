@@ -192,9 +192,41 @@ export class GameManager {
             losses: this.losses,
             blackjacks: this.blackjacks,
             totalWinnings: this.totalWinnings,
-            gameStarted: this.engine.gameStarted
+            gameStarted: this.engine.gameStarted,
+            updatedAt: Date.now()
         };
         StorageManager.set(this.getStorageKey('blackjack-premium-save'), JSON.stringify(gameState));
+
+        // Sync with Supabase
+        if (this.userId) {
+            this.saveStatsToSupabase();
+        }
+    }
+
+    async saveStatsToSupabase() {
+        if (!this.userId) return;
+
+        try {
+            const stats = {
+                user_id: this.userId,
+                balance: this.balance,
+                wins: this.wins,
+                losses: this.losses,
+                blackjacks: this.blackjacks,
+                total_winnings: this.totalWinnings,
+                updated_at: new Date().toISOString()
+            };
+
+            const { error } = await supabase
+                .from('statistics')
+                .upsert(stats, { onConflict: 'user_id' });
+
+            if (error) {
+                console.error('Error saving stats to Supabase:', error);
+            }
+        } catch (err) {
+            console.error('Unexpected error saving stats:', err);
+        }
     }
 
     migrateData(gameState) {
@@ -204,9 +236,10 @@ export class GameManager {
         return gameState;
     }
 
-    loadGame() {
+    async loadGame() {
         if (!this.username) return;
 
+        let localTimestamp = 0;
         const savedGame = StorageManager.get(this.getStorageKey('blackjack-premium-save'));
         if (savedGame) {
             try {
@@ -217,23 +250,75 @@ export class GameManager {
                 this.losses = gameState.losses || 0;
                 this.blackjacks = gameState.blackjacks || 0;
                 this.totalWinnings = gameState.totalWinnings || 0;
+                localTimestamp = gameState.updatedAt || 0;
+
                 // Note: We don't restore round state fully yet, just stats/balance
                 if (gameState.gameStarted) {
                      // If game was interrupted, ideally we should restore it.
                      // But for now, we just reset the round state (as Engine resets on init)
-                     // Or we could try to restore Engine state if we saved it.
-                     // The previous implementation saved 'gameStarted' boolean but not the cards?
-                     // Actually previous implementation saved 'playerHands' etc in 'getState()'
-                     // but '_saveGameImmediate' ONLY saved: balance, wins, losses, blackjacks, totalWinnings, gameStarted.
-                     // It did NOT save the cards! So reloading a game in progress would lose the cards anyway?
-                     // Yes, looking at previous code, it seems persistence was only for stats/balance.
-                     // So behavior is preserved.
                 }
             } catch {
                 console.warn('Could not parse game state');
             }
         }
+
         this.loadSettings();
+        this.updateUI();
+
+        // Sync with Supabase
+        if (this.userId) {
+            await this.loadStatsFromSupabase(localTimestamp);
+        }
+    }
+
+    async loadStatsFromSupabase(localTimestamp) {
+        if (!this.userId) return;
+
+        try {
+            const { data, error } = await supabase
+                .from('statistics')
+                .select('*')
+                .eq('user_id', this.userId)
+                .single();
+
+            if (data) {
+                const remoteTimestamp = new Date(data.updated_at).getTime();
+
+                // If remote is newer or we have no local timestamp (fresh login/device), use remote
+                if (remoteTimestamp > localTimestamp || localTimestamp === 0) {
+                    this.balance = Number(data.balance);
+                    this.wins = data.wins;
+                    this.losses = data.losses;
+                    this.blackjacks = data.blackjacks;
+                    this.totalWinnings = Number(data.total_winnings);
+
+                    this.updateUI();
+
+                    // Update local storage to match remote without triggering another network save
+                    const gameState = {
+                        version: CONFIG.STORAGE_VERSION,
+                        balance: this.balance,
+                        wins: this.wins,
+                        losses: this.losses,
+                        blackjacks: this.blackjacks,
+                        totalWinnings: this.totalWinnings,
+                        gameStarted: this.engine.gameStarted,
+                        updatedAt: Date.now()
+                    };
+                    StorageManager.set(this.getStorageKey('blackjack-premium-save'), JSON.stringify(gameState));
+                } else if (localTimestamp > remoteTimestamp) {
+                    // Local is newer, push to remote
+                    this.saveStatsToSupabase();
+                }
+            } else if (error && error.code === 'PGRST116') {
+                 // No remote stats found, create them from local state
+                 this.saveStatsToSupabase();
+            } else if (error) {
+                console.error('Error fetching stats:', error);
+            }
+        } catch (err) {
+            console.error('Unexpected error loading stats:', err);
+        }
     }
 
     saveSettings() {
