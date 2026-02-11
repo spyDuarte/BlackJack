@@ -223,9 +223,11 @@ export class GameManager {
 
             if (error) {
                 console.error('Error saving stats to Supabase:', error);
+                if (this.ui) this.ui.showToast('Erro ao salvar progresso na nuvem.', 'error');
             }
         } catch (err) {
             console.error('Unexpected error saving stats:', err);
+            if (this.ui) this.ui.showToast('Erro de conexão ao salvar.', 'error');
         }
     }
 
@@ -310,14 +312,19 @@ export class GameManager {
                     // Local is newer, push to remote
                     this.saveStatsToSupabase();
                 }
+
+                if (this.ui) this.ui.showToast('Progresso sincronizado!', 'success');
             } else if (error && error.code === 'PGRST116') {
                  // No remote stats found, create them from local state
                  this.saveStatsToSupabase();
+                 if (this.ui) this.ui.showToast('Novo perfil criado na nuvem.', 'info');
             } else if (error) {
                 console.error('Error fetching stats:', error);
+                if (this.ui) this.ui.showToast('Erro ao baixar dados da nuvem.', 'error');
             }
         } catch (err) {
             console.error('Unexpected error loading stats:', err);
+            if (this.ui) this.ui.showToast('Erro de conexão ao sincronizar.', 'error');
         }
     }
 
@@ -553,23 +560,8 @@ export class GameManager {
         }
     }
 
-    // Surrender method deprecated as per user request to remove the button.
-    // Keeping method stub or removing logic could be options, but for now we leave it reachable only via console/events if triggered.
-    // Ideally, we should just disable it.
     surrender() {
-        console.warn('Surrender is disabled.');
-        return;
-        /*
-        if (this.engine.gameOver || this.engine.playerHands.length === 0) return;
-
-        const result = this.engine.surrender(this.engine.currentHandIndex);
-        if (!result) return;
-
-        if (this.soundManager) this.soundManager.play('chip');
-
-        if (this.ui) this.ui.showMessage('Você desistiu.', 'tie');
-        this.endGame();
-        */
+        // Disabled
     }
 
     nextHand() {
