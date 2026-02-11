@@ -571,10 +571,8 @@ export class UIManager {
                  this.elements.splitBtn.disabled = !canSplit;
             }
 
-            const canSurrender = currentHand.cards.length === 2 && state.playerHands.length === 1 && currentHand.status === 'playing';
             if (this.elements.surrenderBtn) {
-                this.elements.surrenderBtn.style.display = canSurrender ? 'inline-block' : 'none';
-                this.elements.surrenderBtn.disabled = !canSurrender;
+                this.elements.surrenderBtn.style.display = 'none';
             }
 
             if (this.elements.doubleBtn) {

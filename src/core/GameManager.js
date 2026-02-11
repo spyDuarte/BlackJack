@@ -553,7 +553,13 @@ export class GameManager {
         }
     }
 
+    // Surrender method deprecated as per user request to remove the button.
+    // Keeping method stub or removing logic could be options, but for now we leave it reachable only via console/events if triggered.
+    // Ideally, we should just disable it.
     surrender() {
+        console.warn('Surrender is disabled.');
+        return;
+        /*
         if (this.engine.gameOver || this.engine.playerHands.length === 0) return;
 
         const result = this.engine.surrender(this.engine.currentHandIndex);
@@ -561,12 +567,9 @@ export class GameManager {
 
         if (this.soundManager) this.soundManager.play('chip');
 
-        // Payout is handled in endGame based on engine result
-        // But we want immediate visual feedback in UI if possible?
-        // UI uses status 'surrender'.
-
         if (this.ui) this.ui.showMessage('Você desistiu.', 'tie');
         this.endGame();
+        */
     }
 
     nextHand() {
