@@ -702,6 +702,10 @@ export class GameManager {
         this.losses = 0;
         this.blackjacks = 0;
         this.totalWinnings = 0;
+        // Reset the shoe (deck)
+        if (this.engine && this.engine.deck) {
+            this.engine.deck.reset();
+        }
         this.newGame();
         if (this.ui) {
             this.ui.showMessage('Jogo reiniciado!', 'win');
