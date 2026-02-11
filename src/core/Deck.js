@@ -93,7 +93,11 @@ export class Deck {
 
             const maxUint32 = 4294967296;
             const limit = maxUint32 - (maxUint32 % max);
-            const buffer = new Uint32Array(1);
+
+            if (!this._randomBuffer) {
+                this._randomBuffer = new Uint32Array(1);
+            }
+            const buffer = this._randomBuffer;
 
             do {
                 crypto.getRandomValues(buffer);
