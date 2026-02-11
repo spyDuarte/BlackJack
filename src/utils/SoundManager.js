@@ -29,6 +29,7 @@ export class SoundManager {
         };
 
         // Lazy initialization: defer AudioContext creation until first user interaction
+        this.cardNoiseBuffer = null;
     }
 
     async ensureInitialized() {
@@ -169,13 +170,15 @@ export class SoundManager {
 
             if (type === 'card') {
                 // Card sound: filtered noise burst simulating a card flip
-                const bufferSize = this.context.sampleRate * 0.08;
-                const noiseBuffer = this.context.createBuffer(1, bufferSize, this.context.sampleRate);
-                const data = noiseBuffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                if (!this.cardNoiseBuffer) {
+                    const bufferSize = this.context.sampleRate * 0.08;
+                    this.cardNoiseBuffer = this.context.createBuffer(1, bufferSize, this.context.sampleRate);
+                    const data = this.cardNoiseBuffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                }
 
                 const noise = this.context.createBufferSource();
-                noise.buffer = noiseBuffer;
+                noise.buffer = this.cardNoiseBuffer;
 
                 const filter = this.context.createBiquadFilter();
                 filter.type = 'highpass';
