@@ -29,6 +29,7 @@ export class SoundManager {
         };
 
         // Lazy initialization: defer AudioContext creation until first user interaction
+        this.syntheticBuffers = {};
     }
 
     async ensureInitialized() {
@@ -169,10 +170,17 @@ export class SoundManager {
 
             if (type === 'card') {
                 // Card sound: filtered noise burst simulating a card flip
-                const bufferSize = this.context.sampleRate * 0.08;
-                const noiseBuffer = this.context.createBuffer(1, bufferSize, this.context.sampleRate);
-                const data = noiseBuffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                let noiseBuffer;
+
+                if (this.syntheticBuffers['card']) {
+                    noiseBuffer = this.syntheticBuffers['card'];
+                } else {
+                    const bufferSize = this.context.sampleRate * 0.08;
+                    noiseBuffer = this.context.createBuffer(1, bufferSize, this.context.sampleRate);
+                    const data = noiseBuffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                    this.syntheticBuffers['card'] = noiseBuffer;
+                }
 
                 const noise = this.context.createBufferSource();
                 noise.buffer = noiseBuffer;
