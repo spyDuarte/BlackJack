@@ -269,7 +269,7 @@ export class GameManager {
 
         // Sync with Supabase
         if (this.userId) {
-            await this.loadStatsFromSupabase(localTimestamp);
+            this.loadStatsFromSupabase(localTimestamp).catch(console.error);
         }
     }
 

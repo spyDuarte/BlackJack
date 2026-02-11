@@ -7,6 +7,7 @@ export class SoundManager {
         this.initialized = false;
         this.maxConcurrent = 5;
         this.activeSources = [];
+        this.cardNoiseBuffer = null;
 
         // Configuration for sound files with variations
         // NOTE: Assets are currently missing, so we use empty arrays to trigger fallback to synthetic sounds
@@ -183,7 +184,7 @@ export class SoundManager {
                 }
 
                 const noise = this.context.createBufferSource();
-                noise.buffer = noiseBuffer;
+                noise.buffer = this.cardNoiseBuffer;
 
                 const filter = this.context.createBiquadFilter();
                 filter.type = 'highpass';
