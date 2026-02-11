@@ -25,7 +25,8 @@ export default [
                 crypto: "readonly",
                 location: "readonly",
                 btoa: "readonly",
-                atob: "readonly"
+                atob: "readonly",
+                globalThis: "readonly"
             }
         },
         rules: {

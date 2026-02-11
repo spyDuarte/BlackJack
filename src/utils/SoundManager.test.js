@@ -46,7 +46,7 @@ describe('SoundManager', () => {
     };
 
     // Mock global AudioContext
-    global.window = {
+    globalThis.window = {
         AudioContext: class { constructor() { return contextMock; } },
         webkitAudioContext: class { constructor() { return contextMock; } },
     };

@@ -43,8 +43,14 @@ export class StorageManager {
 
     static encode(value) {
         try {
-            const checksum = StorageManager.checksum(value);
-            const payload = JSON.stringify({ d: value, c: checksum });
+            // Optimize by stringifying once to avoid double JSON serialization for objects
+            const strValue = JSON.stringify(value);
+            const checksum = typeof value === 'string'
+                ? StorageManager.checksum(value)
+                : StorageManager.checksum(strValue);
+
+            // Manual JSON construction to reuse strValue
+            const payload = `{"d":${strValue},"c":${checksum}}`;
             return btoa(unescape(encodeURIComponent(payload)));
         } catch {
             return value;
@@ -69,10 +75,26 @@ export class StorageManager {
     static checksum(str) {
         let hash = 0;
         const s = typeof str === 'string' ? str : JSON.stringify(str);
-        for (let i = 0; i < s.length; i++) {
-            const char = s.charCodeAt(i);
+        const len = s.length;
+        let i = 0;
+
+        // Unroll loop for performance (4x)
+        while (i < len - 3) {
+            hash = ((hash << 5) - hash) + s.charCodeAt(i++);
+            hash |= 0;
+            hash = ((hash << 5) - hash) + s.charCodeAt(i++);
+            hash |= 0;
+            hash = ((hash << 5) - hash) + s.charCodeAt(i++);
+            hash |= 0;
+            hash = ((hash << 5) - hash) + s.charCodeAt(i++);
+            hash |= 0;
+        }
+
+        // Handle remaining characters
+        while (i < len) {
+            const char = s.charCodeAt(i++);
             hash = ((hash << 5) - hash) + char;
-            hash |= 0; // Convert to 32-bit integer
+            hash |= 0;
         }
         return hash;
     }
