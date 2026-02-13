@@ -553,8 +553,24 @@ export class UIManager {
              playerValue = HandUtils.calculateHandValue(state.playerHands[state.currentHandIndex].cards);
         }
 
-        if (this.elements.dealerScore) this.elements.dealerScore.textContent = state.dealerRevealed ? dealerValue : '?';
-        if (this.elements.playerScore) this.elements.playerScore.textContent = playerValue;
+        if (this.elements.dealerScore) {
+            const newVal = state.dealerRevealed ? dealerValue : '?';
+            if (this.elements.dealerScore.textContent !== String(newVal)) {
+                this.elements.dealerScore.textContent = newVal;
+                this.elements.dealerScore.classList.remove('pulse');
+                void this.elements.dealerScore.offsetWidth;
+                this.elements.dealerScore.classList.add('pulse');
+            }
+        }
+
+        if (this.elements.playerScore) {
+            if (this.elements.playerScore.textContent !== String(playerValue)) {
+                this.elements.playerScore.textContent = playerValue;
+                this.elements.playerScore.classList.remove('pulse');
+                void this.elements.playerScore.offsetWidth;
+                this.elements.playerScore.classList.add('pulse');
+            }
+        }
 
         this.updateStats(state.wins, state.losses, state.totalWinnings, state.blackjacks);
 
@@ -581,6 +597,17 @@ export class UIManager {
         } else {
             if (this.elements.splitBtn) this.elements.splitBtn.style.display = 'none';
         }
+
+        // Highlight selected chip
+        const chips = document.querySelectorAll('.chip');
+        chips.forEach(chip => {
+            const val = parseInt(chip.dataset.value);
+            if (val === state.currentBet) {
+                chip.classList.add('selected');
+            } else {
+                chip.classList.remove('selected');
+            }
+        });
     }
 
     renderHand(container, hand, isDealer, revealDealer) {
@@ -947,6 +974,15 @@ export class UIManager {
         const pct = totalCards > 0 ? Math.round((remainingCards / totalCards) * 100) : 100;
         this.elements.shoeBar.style.setProperty('--shoe-pct', `${pct}%`);
         this.elements.shoeLabel.textContent = `${pct}%`;
+
+        this.elements.shoeBar.classList.remove('high', 'medium', 'low');
+        if (pct > 50) {
+            this.elements.shoeBar.classList.add('high');
+        } else if (pct > 20) {
+            this.elements.shoeBar.classList.add('medium');
+        } else {
+            this.elements.shoeBar.classList.add('low');
+        }
     }
 
     updateStats(wins, losses, totalWinnings, blackjacks) {
