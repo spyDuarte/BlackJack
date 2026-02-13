@@ -25,6 +25,7 @@ export class SoundManager {
             card: { frequency: 800, duration: 0.1 },
             win: { frequency: 523.25, duration: 0.3 },
             lose: { frequency: 220, duration: 0.5 },
+            push: { frequency: 440, duration: 0.22 },
             chip: { frequency: 1000, duration: 0.05 },
             button: { frequency: 600, duration: 0.08 }
         };
@@ -99,11 +100,11 @@ export class SoundManager {
      * Enforces a pool limit of maxConcurrent simultaneous sounds.
      * @param {string} type - The category of sound to play (e.g., 'card', 'chip')
      */
-    play(type) {
+    async play(type) {
         if (!this.enabled) return;
 
         // Lazy init on first play (triggered by user interaction)
-        this.ensureInitialized();
+        await this.ensureInitialized();
         if (!this.context) return;
 
         // Auto-resume context if suspended
@@ -184,7 +185,7 @@ export class SoundManager {
                 }
 
                 const noise = this.context.createBufferSource();
-                noise.buffer = this.cardNoiseBuffer;
+                noise.buffer = noiseBuffer;
 
                 const filter = this.context.createBiquadFilter();
                 filter.type = 'highpass';
@@ -228,6 +229,19 @@ export class SoundManager {
                 gain.gain.exponentialRampToValueAtTime(0.01, ct + 0.5);
                 osc.start(ct);
                 osc.stop(ct + 0.5);
+            } else if (type === 'push') {
+                // Push/tie sound: neutral muted descending tone
+                const osc = this.context.createOscillator();
+                const gain = this.context.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, ct);
+                osc.frequency.linearRampToValueAtTime(380, ct + 0.18);
+                osc.connect(gain);
+                gain.connect(this.context.destination);
+                gain.gain.setValueAtTime(vol * 0.55, ct);
+                gain.gain.exponentialRampToValueAtTime(0.01, ct + 0.22);
+                osc.start(ct);
+                osc.stop(ct + 0.22);
             } else if (type === 'chip') {
                 // Chip sound: quick metallic click with two short tones
                 [1200, 1800].forEach((freq, i) => {

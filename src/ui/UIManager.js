@@ -1,5 +1,6 @@
 import * as HandUtils from '../utils/HandUtils.js';
 import { CONFIG } from '../core/Constants.js';
+import { BasicStrategy } from '../utils/BasicStrategy.js';
 import { debounce } from '../utils/debounce.js';
 import { supabase } from '../supabaseClient.js';
 
@@ -16,11 +17,7 @@ export class UIManager {
         this.cacheElements();
         this.bindEvents();
         this.toggleLoading(false);
-
-        // Check if game already has a user (login happened before initialize)
-        if (this.game.userId) {
-            this.onLoginSuccess();
-        }
+        this.updateAuthUI();
     }
 
     cacheElements() {
@@ -107,7 +104,19 @@ export class UIManager {
             importInput: document.getElementById('btn-import-data'),
             toastContainer: document.getElementById('toast-container'),
             shoeBar: document.getElementById('shoe-bar'),
-            shoeLabel: document.getElementById('shoe-label')
+            shoeLabel: document.getElementById('shoe-label'),
+
+            // Modal tabs
+            tabBtnSettings: document.getElementById('tab-btn-settings'),
+            tabBtnAccount: document.getElementById('tab-btn-account'),
+            tabSettings: document.getElementById('tab-settings'),
+            tabAccount: document.getElementById('tab-account'),
+
+            // Account tab elements
+            accountLoggedIn: document.getElementById('account-logged-in'),
+            accountLoggedOut: document.getElementById('account-logged-out'),
+            loginSection: document.getElementById('login-section'),
+            registerSection: document.getElementById('register-section')
         };
     }
 
@@ -115,25 +124,29 @@ export class UIManager {
         const el = this.elements;
         const game = this.game;
 
-        // Auth events
-        if (el.loginScreen) {
-            const loginForm = el.loginScreen.querySelector('#login-form');
-            if (loginForm) {
-                loginForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.handleAuthAction('login');
-                });
-            }
+        // Modal tab switching
+        if (el.tabBtnSettings) {
+            el.tabBtnSettings.addEventListener('click', () => this._switchTab('settings'));
+        }
+        if (el.tabBtnAccount) {
+            el.tabBtnAccount.addEventListener('click', () => this._switchTab('account'));
         }
 
-        if (el.registerScreen) {
-            const registerForm = el.registerScreen.querySelector('#register-form');
-            if (registerForm) {
-                registerForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.handleAuthAction('register');
-                });
-            }
+        // Auth events (forms are now inside the modal account tab)
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) {
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleAuthAction('login');
+            });
+        }
+
+        const registerForm = document.getElementById('register-form');
+        if (registerForm) {
+            registerForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleAuthAction('register');
+            });
         }
 
         if (el.goToRegister) {
@@ -178,13 +191,16 @@ export class UIManager {
         if (el.newGameBtn) el.newGameBtn.addEventListener('click', () => game.newGame());
         if (el.rebetBtn) el.rebetBtn.addEventListener('click', () => game.rebetAndDeal());
 
-        if (el.betDecrease) el.betDecrease.addEventListener('click', () => game.adjustBet(-10));
-        if (el.betIncrease) el.betIncrease.addEventListener('click', () => game.adjustBet(10));
+        if (el.betDecrease) el.betDecrease.addEventListener('click', () => game.adjustBet(-CONFIG.MIN_BET));
+        if (el.betIncrease) el.betIncrease.addEventListener('click', () => game.adjustBet(CONFIG.MIN_BET));
         if (el.betDoubleValue) el.betDoubleValue.addEventListener('click', () => game.multiplyBet(2));
         if (el.betMaxValue) el.betMaxValue.addEventListener('click', () => game.maxBet());
 
         if (el.betInput) {
-            el.betInput.addEventListener('change', (e) => game.setBet(parseInt(e.target.value)));
+            el.betInput.addEventListener('change', (e) => {
+                const value = parseInt(e.target.value, 10);
+                if (!isNaN(value)) game.setBet(value);
+            });
             el.betInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') game.startGame();
             });
@@ -213,15 +229,7 @@ export class UIManager {
         });
         if (el.closeSettings) el.closeSettings.addEventListener('click', () => this.toggleSettingsModal(false));
 
-        // Menu/Auth Buttons
-        if (el.menuLoginBtn) el.menuLoginBtn.addEventListener('click', () => {
-            this.toggleSettingsModal(false);
-            this.toggleAuthMode(false);
-        });
-        if (el.menuRegisterBtn) el.menuRegisterBtn.addEventListener('click', () => {
-            this.toggleSettingsModal(false);
-            this.toggleAuthMode(true);
-        });
+        // Logout button (inside account tab)
         if (el.menuLogoutBtn) el.menuLogoutBtn.addEventListener('click', () => {
             this.toggleSettingsModal(false);
             game.logout();
@@ -235,6 +243,7 @@ export class UIManager {
         this.bindCheckbox('animations-enabled', (checked) => game.updateSetting('animationsEnabled', checked));
         this.bindCheckbox('auto-save', (checked) => game.updateSetting('autoSave', checked));
         this.bindCheckbox('show-stats', (checked) => game.updateSetting('showStats', checked));
+        this.bindCheckbox('show-hints', (checked) => game.updateSetting('showHints', checked));
 
         if (el.volumeSlider) {
             el.volumeSlider.addEventListener('input', (e) => {
@@ -277,17 +286,8 @@ export class UIManager {
         this.isRegisterMode = isRegister;
         const el = this.elements;
 
-        if (isRegister) {
-            el.loginScreen.classList.add('hidden');
-            el.loginScreen.style.display = 'none';
-            el.registerScreen.style.display = 'flex';
-            el.registerScreen.classList.remove('hidden');
-        } else {
-            el.registerScreen.classList.add('hidden');
-            el.registerScreen.style.display = 'none';
-            el.loginScreen.style.display = 'flex';
-            el.loginScreen.classList.remove('hidden');
-        }
+        if (el.loginSection) el.loginSection.style.display = isRegister ? 'none' : 'block';
+        if (el.registerSection) el.registerSection.style.display = isRegister ? 'block' : 'none';
 
         this.clearAuthErrors();
     }
@@ -468,32 +468,47 @@ export class UIManager {
     }
 
     onLoginSuccess() {
-        // Just hide auth screens if visible
-        if (this.elements.loginScreen) {
-            this.elements.loginScreen.classList.add('hidden');
-            this.elements.loginScreen.style.display = 'none';
-        }
-        if (this.elements.registerScreen) {
-            this.elements.registerScreen.classList.add('hidden');
-            this.elements.registerScreen.style.display = 'none';
-        }
         this.updateAuthUI();
+        // Switch back to settings tab so the user can close and play
+        this._switchTab('settings');
     }
 
     updateAuthUI() {
         const el = this.elements;
-        if (!el.userInfo) return;
+        const isLoggedIn = !!this.game.userId;
 
-        if (this.game.userId) {
-            // User is logged in
-            el.userInfo.textContent = `👤 ${this.game.username || 'Jogador'}`;
-            if (el.guestControls) el.guestControls.style.display = 'none';
-            if (el.userControls) el.userControls.style.display = 'block';
-        } else {
-            // Guest mode
-            el.userInfo.textContent = '👤 Visitante';
-            if (el.guestControls) el.guestControls.style.display = 'block';
-            if (el.userControls) el.userControls.style.display = 'none';
+        if (el.accountLoggedIn) el.accountLoggedIn.style.display = isLoggedIn ? 'block' : 'none';
+        if (el.accountLoggedOut) el.accountLoggedOut.style.display = isLoggedIn ? 'none' : 'block';
+
+        if (el.userInfo) {
+            el.userInfo.textContent = isLoggedIn
+                ? `👤 ${this.game.username || 'Jogador'}`
+                : '';
+        }
+
+        // Badge on the header user-btn to indicate logged-in state
+        if (el.userBtn) {
+            el.userBtn.classList.toggle('logged-in', isLoggedIn);
+            el.userBtn.title = isLoggedIn
+                ? `Conta: ${this.game.username || 'Jogador'}`
+                : 'Menu (visitante)';
+        }
+    }
+
+    _switchTab(tabName) {
+        const el = this.elements;
+        const isSettings = tabName === 'settings';
+
+        if (el.tabSettings) el.tabSettings.style.display = isSettings ? 'block' : 'none';
+        if (el.tabAccount) el.tabAccount.style.display = isSettings ? 'none' : 'block';
+
+        if (el.tabBtnSettings) {
+            el.tabBtnSettings.classList.toggle('active', isSettings);
+            el.tabBtnSettings.setAttribute('aria-selected', String(isSettings));
+        }
+        if (el.tabBtnAccount) {
+            el.tabBtnAccount.classList.toggle('active', !isSettings);
+            el.tabBtnAccount.setAttribute('aria-selected', String(!isSettings));
         }
     }
 
@@ -506,20 +521,47 @@ export class UIManager {
         }
     }
 
+    syncCheckbox(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.checked = !!value;
+    }
+
     handleKeyboard(e) {
+        // Ignore keypresses inside input fields
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+
         if (e.key === 'Escape') {
             this.toggleSettingsModal(false);
             return;
         }
 
-        if (!this.elements.gameControls || this.elements.gameControls.style.display === 'none') return;
+        const el = this.elements;
+        const gameControlsVisible = el.gameControls && el.gameControls.style.display === 'flex';
+
+        // Post-round shortcuts (when game controls are hidden)
+        if (!gameControlsVisible) {
+            if ((e.key === 'Enter' || e.key === ' ') && el.rebetBtn && el.rebetBtn.style.display !== 'none') {
+                e.preventDefault();
+                el.rebetBtn.classList.add('kbd-active');
+                setTimeout(() => el.rebetBtn.classList.remove('kbd-active'), 150);
+                this.game.rebetAndDeal();
+                return;
+            }
+            if ((e.key === 'n' || e.key === 'N') && el.newGameBtn && el.newGameBtn.style.display !== 'none') {
+                el.newGameBtn.classList.add('kbd-active');
+                setTimeout(() => el.newGameBtn.classList.remove('kbd-active'), 150);
+                this.game.newGame();
+                return;
+            }
+            return;
+        }
 
         const keyMap = {
-            'h': { action: () => this.game.hit(), btn: this.elements.hitBtn },
-            's': { action: () => this.game.stand(), btn: this.elements.standBtn },
-            'd': { action: () => this.game.double(), btn: this.elements.doubleBtn },
-            'p': { action: () => this.game.split(), btn: this.elements.splitBtn },
-            'r': { action: () => this.game.surrender(), btn: this.elements.surrenderBtn }
+            'h': { action: () => this.game.hit(), btn: el.hitBtn },
+            's': { action: () => this.game.stand(), btn: el.standBtn },
+            'd': { action: () => this.game.double(), btn: el.doubleBtn },
+            'p': { action: () => this.game.split(), btn: el.splitBtn },
+            'r': { action: () => this.game.surrender(), btn: el.surrenderBtn }
         };
 
         const entry = keyMap[e.key.toLowerCase()];
@@ -587,7 +629,11 @@ export class UIManager {
             }
 
             if (this.elements.surrenderBtn) {
-                this.elements.surrenderBtn.style.display = 'none';
+                const canSurrender = state.playerHands.length === 1 &&
+                    currentHand.cards.length === 2 &&
+                    currentHand.status === 'playing';
+                this.elements.surrenderBtn.style.display = canSurrender ? 'inline-block' : 'none';
+                this.elements.surrenderBtn.disabled = !canSurrender;
             }
 
             if (this.elements.doubleBtn) {
@@ -915,6 +961,60 @@ export class UIManager {
 
         update();
     }
+
+    // ── Gameplay feedback helpers ──────────────────────────────────────
+
+    showStrategyHint(hand, dealerUpCard) {
+        const el = document.getElementById('strategy-hint');
+        if (!el || !this.game || !this.game.settings.showHints) {
+            if (el) el.style.display = 'none';
+            return;
+        }
+        const move = BasicStrategy.getBestMove(hand, dealerUpCard);
+        const labels = {
+            hit:       '💡 Estratégia: Pedir Carta (H)',
+            stand:     '💡 Estratégia: Parar (S)',
+            double:    '💡 Estratégia: Dobrar (D)',
+            split:     '💡 Estratégia: Dividir (P)',
+            surrender: '💡 Estratégia: Desistir (R)'
+        };
+        el.textContent = labels[move] || '';
+        el.className = `strategy-hint hint-${move}`;
+        el.style.display = 'block';
+    }
+
+    clearStrategyHint() {
+        const el = document.getElementById('strategy-hint');
+        if (el) { el.style.display = 'none'; el.textContent = ''; }
+    }
+
+    showBustAnimation() {
+        if (!this.animationsEnabled) return;
+        const container = this.elements.playerCards;
+        if (!container) return;
+        container.classList.remove('bust-shake');
+        void container.offsetWidth; // reflow to restart animation
+        container.classList.add('bust-shake');
+        setTimeout(() => container.classList.remove('bust-shake'), 600);
+    }
+
+    annotateHandResults(results) {
+        const container = this.elements.playerCards;
+        if (!container || !results) return;
+        const wrappers = container.querySelectorAll('.hand-container');
+        if (wrappers.length === 0) return; // single hand — no annotation needed
+        const labels = { win: '✅ Ganhou!', lose: '❌ Perdeu', tie: '🤝 Empate', surrender: '🏳️ Desistiu' };
+        const classes = { win: 'hand-result-win', lose: 'hand-result-lose', tie: 'hand-result-tie', surrender: 'hand-result-tie' };
+        wrappers.forEach((wrapper, i) => {
+            if (!results[i]) return;
+            const infoDiv = wrapper.querySelector('.hand-info');
+            if (!infoDiv) return;
+            infoDiv.textContent = labels[results[i].result] || '';
+            infoDiv.className = `hand-info ${classes[results[i].result] || ''}`;
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────
 
     showError(msg) {
         if (this.elements.errorMessage) this.elements.errorMessage.textContent = msg;

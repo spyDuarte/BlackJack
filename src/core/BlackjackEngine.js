@@ -213,9 +213,9 @@ export class BlackjackEngine {
      * @returns {boolean} True if dealer should hit.
      */
     dealerShouldHit() {
-         const value = HandUtils.calculateHandValue(this.dealerHand);
-         const isSoft = HandUtils.isSoftHand(this.dealerHand);
-         return (value < 17 || (value === 17 && isSoft));
+        const value = HandUtils.calculateHandValue(this.dealerHand);
+        const isSoft = HandUtils.isSoftHand(this.dealerHand);
+        return (value < 17 || (value === 17 && isSoft));
     }
 
     /**
@@ -224,9 +224,9 @@ export class BlackjackEngine {
      */
     dealerHit() {
         if (this.dealerShouldHit()) {
-             const card = this.deck.draw();
-             this.dealerHand.push(card);
-             return card;
+            const card = this.deck.draw();
+            this.dealerHand.push(card);
+            return card;
         }
         return null;
     }
@@ -236,18 +236,18 @@ export class BlackjackEngine {
      * @returns {Object} Final dealer hand and list of drawn cards.
      */
     dealerTurn() {
-         this.dealerRevealed = true; // Setter handles counting
-         const cardsDrawn = [];
+        this.dealerRevealed = true; // Setter handles counting
+        const cardsDrawn = [];
 
-         while (this.dealerShouldHit()) {
-             const card = this.dealerHit();
-             if (card) cardsDrawn.push(card);
-         }
+        while (this.dealerShouldHit()) {
+            const card = this.dealerHit();
+            if (card) cardsDrawn.push(card);
+        }
 
-         return {
-             dealerHand: this.dealerHand,
-             cardsDrawn
-         };
+        return {
+            dealerHand: this.dealerHand,
+            cardsDrawn
+        };
     }
 
     /**

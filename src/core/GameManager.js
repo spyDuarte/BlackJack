@@ -4,6 +4,7 @@ import { StorageManager } from '../utils/StorageManager.js';
 import { debounce } from '../utils/debounce.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
 import * as HandUtils from '../utils/HandUtils.js';
+import { BasicStrategy } from '../utils/BasicStrategy.js';
 import { supabase } from '../supabaseClient.js';
 
 export class GameManager {
@@ -63,13 +64,16 @@ export class GameManager {
     }
 
     onUserSignOut() {
-        // User is signed out
         this.userId = null;
         this.username = null;
+        this.initializeGameState();
 
-        if (this.ui && this.ui.elements.loginScreen && this.ui.elements.loginScreen.style.display === 'none') {
-            window.location.reload();
+        if (this.ui) {
+            this.ui.updateAuthUI();
+            this.ui.showToast('Você saiu da conta. Jogando como visitante.', 'info');
+            this.ui.showMessage('Escolha sua aposta!');
         }
+        this.updateUI();
     }
 
     // Proxy properties to engine for backward compatibility and test support
@@ -96,11 +100,6 @@ export class GameManager {
 
     get deck() { return this.engine.deck; }
     set deck(v) { this.engine.deck = v; }
-
-    // Deprecated: login is handled by Firebase auth listener
-    login(_username) {
-        console.warn('Manual login called, but should use Supabase Auth');
-    }
 
     async logout() {
         try {
@@ -146,6 +145,7 @@ export class GameManager {
             animationsEnabled: true,
             autoSave: true,
             showStats: false,
+            showHints: true,
             volume: 0.5,
             theme: 'dark'
         };
@@ -175,7 +175,7 @@ export class GameManager {
         if (this.ui) {
             this.ui.hideWelcomeScreen();
             this.ui.toggleLoading(true);
-            setTimeout(() => {
+            this.addTimeout(() => {
                 this.ui.toggleLoading(false);
                 this.updateUI();
             }, CONFIG.DELAYS.LOADING);
@@ -183,7 +183,7 @@ export class GameManager {
     }
 
     _saveGameImmediate() {
-        if (!this.username) return;
+        if (!this.userId) return;
 
         const gameState = {
             version: CONFIG.STORAGE_VERSION,
@@ -195,12 +195,8 @@ export class GameManager {
             gameStarted: this.engine.gameStarted,
             updatedAt: Date.now()
         };
-        StorageManager.set(this.getStorageKey('blackjack-premium-save'), JSON.stringify(gameState));
-
-        // Sync with Supabase
-        if (this.userId) {
-            this.saveStatsToSupabase();
-        }
+        StorageManager.set(this.getStorageKey('blackjack-premium-save'), gameState);
+        this.saveStatsToSupabase();
     }
 
     async saveStatsToSupabase() {
@@ -239,13 +235,13 @@ export class GameManager {
     }
 
     async loadGame() {
-        if (!this.username) return;
+        if (!this.userId) return;
 
         let localTimestamp = 0;
         const savedGame = StorageManager.get(this.getStorageKey('blackjack-premium-save'));
         if (savedGame) {
             try {
-                let gameState = JSON.parse(savedGame);
+                let gameState = typeof savedGame === 'object' ? savedGame : JSON.parse(savedGame);
                 gameState = this.migrateData(gameState);
                 this.balance = gameState.balance || 1000;
                 this.wins = gameState.wins || 0;
@@ -307,7 +303,7 @@ export class GameManager {
                         gameStarted: this.engine.gameStarted,
                         updatedAt: Date.now()
                     };
-                    StorageManager.set(this.getStorageKey('blackjack-premium-save'), JSON.stringify(gameState));
+                    StorageManager.set(this.getStorageKey('blackjack-premium-save'), gameState);
                 } else if (localTimestamp > remoteTimestamp) {
                     // Local is newer, push to remote
                     this.saveStatsToSupabase();
@@ -329,17 +325,18 @@ export class GameManager {
     }
 
     saveSettings() {
-        if (!this.username) return;
-        StorageManager.set(this.getStorageKey('blackjack-premium-settings'), JSON.stringify(this.settings));
+        if (!this.userId) return;
+        StorageManager.set(this.getStorageKey('blackjack-premium-settings'), this.settings);
     }
 
     loadSettings() {
-        if (!this.username) return;
+        if (!this.userId) return;
 
         const savedSettings = StorageManager.get(this.getStorageKey('blackjack-premium-settings'));
         if (savedSettings) {
             try {
-                this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
+                const parsed = typeof savedSettings === 'object' ? savedSettings : JSON.parse(savedSettings);
+                this.settings = { ...this.settings, ...parsed };
                 if (this.soundManager) {
                     this.soundManager.setEnabled(this.settings.soundEnabled);
                     this.soundManager.setVolume(this.settings.volume);
@@ -349,6 +346,8 @@ export class GameManager {
                     this.ui.setStatsVisibility(this.settings.showStats);
                     this.ui.setVolume(this.settings.volume);
                     if (this.settings.theme) this.ui.setTheme(this.settings.theme);
+                    this.ui.syncCheckbox('show-hints', this.settings.showHints !== false);
+                    if (!this.settings.showHints) this.ui.clearStrategyHint();
                 }
             } catch {
                 console.warn('Could not parse settings');
@@ -367,7 +366,7 @@ export class GameManager {
     // Game Actions
 
     adjustBet(amount) {
-        const newBet = Math.max(10, Math.min(this.balance, this.currentBet + amount));
+        const newBet = Math.max(CONFIG.MIN_BET, Math.min(this.balance, this.currentBet + amount));
         this.currentBet = newBet;
         if (this.soundManager) this.soundManager.play('chip');
         this.updateUI();
@@ -375,14 +374,14 @@ export class GameManager {
 
     setBet(amount) {
         if (amount <= this.balance) {
-             this.currentBet = Math.max(10, amount);
+             this.currentBet = Math.max(CONFIG.MIN_BET, amount);
              if (this.soundManager) this.soundManager.play('chip');
              this.updateUI();
         }
     }
 
     multiplyBet(factor) {
-        const newBet = Math.max(10, Math.min(this.balance, Math.floor(this.currentBet * factor)));
+        const newBet = Math.max(CONFIG.MIN_BET, Math.min(this.balance, Math.floor(this.currentBet * factor)));
         this.currentBet = newBet;
         if (this.soundManager) this.soundManager.play('chip');
         this.updateUI();
@@ -395,7 +394,7 @@ export class GameManager {
     }
 
     startGame() {
-        if (this.currentBet < 10 || this.currentBet > this.balance) {
+        if (this.currentBet < CONFIG.MIN_BET || this.currentBet > this.balance) {
             if (this.ui) this.ui.showMessage('Aposta inválida!', 'lose');
             if (this.soundManager) this.soundManager.play('lose');
             return;
@@ -427,7 +426,7 @@ export class GameManager {
         const dealerUpVal = HandUtils.getCardNumericValue(dealerUpCard);
 
         if (dealerUpCard.value === 'A') {
-             setTimeout(() => {
+             this.addTimeout(() => {
                  if (this.ui) this.ui.toggleInsuranceModal(true);
              }, CONFIG.DELAYS.INSURANCE_MODAL);
         } else if (dealerUpVal === 10) {
@@ -443,10 +442,20 @@ export class GameManager {
             this.ui.showMessage('Sua vez!');
         }
         this.updateUI();
+        this._updateStrategyHint();
 
         const pVal = HandUtils.calculateHandValue(this.engine.playerHands[0].cards);
         if (pVal === 21) {
              this.addTimeout(() => this.endGame(), CONFIG.DELAYS.TURN);
+        }
+    }
+
+    _updateStrategyHint() {
+        if (!this.ui || !this.settings.showHints) return;
+        const hand = this.engine.playerHands[this.engine.currentHandIndex];
+        const dealerUpCard = this.engine.dealerHand[0];
+        if (hand && dealerUpCard) {
+            this.ui.showStrategyHint(hand, dealerUpCard);
         }
     }
 
@@ -497,8 +506,14 @@ export class GameManager {
 
         if (hand.status === 'busted') {
             this.events.emit('hand:bust', { handIndex: this.engine.currentHandIndex });
-            if (this.ui) this.ui.showMessage('Estourou!', 'lose');
+            if (this.ui) {
+                this.ui.showMessage('Estourou!', 'lose');
+                this.ui.showBustAnimation();
+                this.ui.clearStrategyHint();
+            }
             this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
+        } else {
+            this._updateStrategyHint();
         }
     }
 
@@ -506,6 +521,7 @@ export class GameManager {
         if (this.engine.gameOver) return;
         this.engine.stand(this.engine.currentHandIndex);
         this.events.emit('player:stand', { handIndex: this.engine.currentHandIndex });
+        if (this.ui) this.ui.clearStrategyHint();
         this.nextHand();
     }
 
@@ -561,7 +577,15 @@ export class GameManager {
     }
 
     surrender() {
-        // Disabled
+        if (this.engine.gameOver) return;
+
+        const result = this.engine.surrender(this.engine.currentHandIndex);
+        if (!result) return;
+
+        if (this.soundManager) this.soundManager.play('lose');
+        this.events.emit('player:surrender', { handIndex: this.engine.currentHandIndex });
+        this.updateUI();
+        this.addTimeout(() => this.endGame(), CONFIG.DELAYS.NEXT_HAND);
     }
 
     nextHand() {
@@ -655,23 +679,34 @@ export class GameManager {
              else if (dealerValue > pVal) { message = 'Dealer vence!'; messageClass = 'lose'; }
              else { message = 'Empate!'; messageClass = 'tie'; }
         } else {
-             if (totalWin > 0) {
-                 message = `Ganhou $${totalWin}!`;
+             // Multi-hand: compare profit, not just total returned
+             const totalBetReturn = this.engine.playerHands.reduce((sum, h) => sum + h.bet, 0);
+             const profit = totalWin - totalBetReturn;
+             if (profit > 0) {
+                 message = `Ganhou $${profit}!`;
                  messageClass = 'win';
+             } else if (profit === 0 && totalWin > 0) {
+                 message = 'Empate!';
+                 messageClass = 'tie';
              } else {
-                 message = 'Dealer venceu todas!';
+                 message = 'Dealer venceu!';
                  messageClass = 'lose';
              }
         }
 
+        const anyPush = results.some(r => r.result === 'tie');
         if (anyWin) {
             if (this.soundManager) this.soundManager.play('win');
             if (this.ui) this.ui.showWinAnimation(totalWin);
         } else if (allLost) {
             if (this.soundManager) this.soundManager.play('lose');
+        } else if (anyPush) {
+            if (this.soundManager) this.soundManager.play('push');
         }
 
         if (this.ui) {
+            this.ui.clearStrategyHint();
+            this.ui.annotateHandResults(results);
             this.ui.showMessage(message, messageClass);
             this.ui.showNewGameButton();
             this.ui.toggleGameControls(false);
@@ -679,8 +714,9 @@ export class GameManager {
 
         this.updateUI();
 
-        if (this.balance < 10) {
-            setTimeout(() => {
+        if (this.balance < CONFIG.MIN_BET) {
+            if (this.ui) this.ui.showToast('Saldo insuficiente! Reiniciando em 2 segundos...', 'lose', 2000);
+            this.addTimeout(() => {
                 this.resetGame();
             }, CONFIG.DELAYS.RESET);
         }
@@ -712,7 +748,7 @@ export class GameManager {
     newGame() {
         this.engine.resetState();
         if (this.currentBet > this.balance) {
-            this.currentBet = Math.max(10, this.balance);
+            this.currentBet = Math.max(CONFIG.MIN_BET, this.balance);
         }
 
         if (this.ui) {
@@ -725,17 +761,17 @@ export class GameManager {
     rebetAndDeal() {
         this.engine.resetState();
         if (this.currentBet > this.balance) {
-            this.currentBet = Math.max(10, this.balance);
+            this.currentBet = Math.max(CONFIG.MIN_BET, this.balance);
         }
         // Immediately start game with current bet
         this.startGame();
     }
 
     exportData() {
-        if (!this.username) return;
+        if (!this.userId) return;
         const data = {
             username: this.username,
-            version: 1,
+            version: CONFIG.STORAGE_VERSION,
             exportedAt: new Date().toISOString(),
             gameState: {
                 balance: this.balance,
@@ -797,6 +833,7 @@ export class GameManager {
                 if (key === 'animationsEnabled') this.ui.setAnimationsEnabled(value);
                 if (key === 'showStats') this.ui.setStatsVisibility(value);
                 if (key === 'theme') this.ui.setTheme(value);
+                if (key === 'showHints' && !value) this.ui.clearStrategyHint();
             }
             this.saveSettings();
         }
