@@ -1,6 +1,5 @@
 import * as HandUtils from '../utils/HandUtils.js';
 import { CONFIG } from '../core/Constants.js';
-import { BasicStrategy } from '../utils/BasicStrategy.js';
 import { debounce } from '../utils/debounce.js';
 import { supabase } from '../supabaseClient.js';
 
@@ -247,8 +246,6 @@ export class UIManager {
         this.bindCheckbox('animations-enabled', (checked) => game.updateSetting('animationsEnabled', checked));
         this.bindCheckbox('auto-save', (checked) => game.updateSetting('autoSave', checked));
         this.bindCheckbox('show-stats', (checked) => game.updateSetting('showStats', checked));
-        this.bindCheckbox('show-hints', (checked) => game.updateSetting('showHints', checked));
-
         if (el.volumeSlider) {
             el.volumeSlider.addEventListener('input', (e) => {
                 const value = parseInt(e.target.value);
@@ -967,30 +964,6 @@ export class UIManager {
     }
 
     // ── Gameplay feedback helpers ──────────────────────────────────────
-
-    showStrategyHint(hand, dealerUpCard) {
-        const el = document.getElementById('strategy-hint');
-        if (!el || !this.game || !this.game.settings.showHints) {
-            if (el) el.style.display = 'none';
-            return;
-        }
-        const move = BasicStrategy.getBestMove(hand, dealerUpCard);
-        const labels = {
-            hit:       '💡 Estratégia: Pedir Carta (H)',
-            stand:     '💡 Estratégia: Parar (S)',
-            double:    '💡 Estratégia: Dobrar (D)',
-            split:     '💡 Estratégia: Dividir (P)',
-            surrender: '💡 Estratégia: Desistir (R)'
-        };
-        el.textContent = labels[move] || '';
-        el.className = `strategy-hint hint-${move}`;
-        el.style.display = 'block';
-    }
-
-    clearStrategyHint() {
-        const el = document.getElementById('strategy-hint');
-        if (el) { el.style.display = 'none'; el.textContent = ''; }
-    }
 
     showBustAnimation() {
         if (!this.animationsEnabled) return;
