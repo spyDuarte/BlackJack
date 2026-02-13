@@ -31,7 +31,13 @@ export class EventEmitter {
 
     emit(event, ...args) {
         if (!this._listeners[event]) return false;
-        this._listeners[event].forEach(cb => cb(...args));
+        this._listeners[event].forEach(cb => {
+            try {
+                cb(...args);
+            } catch (err) {
+                console.error(`EventEmitter: error in listener for "${event}"`, err);
+            }
+        });
         return true;
     }
 }
