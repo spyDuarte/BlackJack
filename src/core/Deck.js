@@ -42,9 +42,9 @@ export class Deck {
         }
 
         this.cutCardReached = false;
-        // Place cut card randomly between 60-80% penetration
-        const minCut = Math.floor(this.totalCards * 0.2);
-        const maxCut = Math.floor(this.totalCards * 0.4);
+        // Place cut card leaving 20-40% of cards remaining (60-80% penetration)
+        const minCut = Math.floor(this.totalCards * CONFIG.PENETRATION_THRESHOLD);
+        const maxCut = Math.floor(this.totalCards * CONFIG.PENETRATION_THRESHOLD * 2);
         this.cutCardPosition = minCut + this._getRandomInt(maxCut - minCut);
     }
 
