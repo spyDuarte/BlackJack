@@ -199,7 +199,11 @@ export class UIManager {
         if (el.betInput) {
             el.betInput.addEventListener('change', (e) => {
                 const value = parseInt(e.target.value, 10);
-                if (!isNaN(value)) game.setBet(value);
+                if (!isNaN(value) && value >= CONFIG.MIN_BET && value <= game.balance) {
+                    game.setBet(value);
+                } else {
+                    e.target.value = game.currentBet;
+                }
             });
             el.betInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') game.startGame();
@@ -620,7 +624,7 @@ export class UIManager {
         if (state.playerHands.length > 0 && !state.gameOver) {
             const currentHand = state.playerHands[state.currentHandIndex];
             const canSplit = currentHand.cards.length === 2 &&
-                             currentHand.cards[0].value === currentHand.cards[1].value &&
+                             HandUtils.getCardNumericValue(currentHand.cards[0]) === HandUtils.getCardNumericValue(currentHand.cards[1]) &&
                              state.balance >= currentHand.bet &&
                              state.playerHands.length <= CONFIG.MAX_SPLITS;
             if (this.elements.splitBtn) {

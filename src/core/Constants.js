@@ -3,6 +3,7 @@ export const CONFIG = {
     PENETRATION_THRESHOLD: 0.2, // 20% remaining
     INITIAL_BALANCE: 1000,
     MIN_BET: 10,
+    MAX_BET: 10000,
     MAX_SPLITS: 3, // Maximum number of splits allowed (standard casino rule)
     FIVE_CARD_CHARLIE: false, // Set to true to enable 5-Card Charlie rule
     ANIMATION_SPEED: 500,

@@ -365,29 +365,30 @@ export class GameManager {
     // Game Actions
 
     adjustBet(amount) {
-        const newBet = Math.max(CONFIG.MIN_BET, Math.min(this.balance, this.currentBet + amount));
+        const maxAllowed = Math.min(this.balance, CONFIG.MAX_BET);
+        const newBet = Math.max(CONFIG.MIN_BET, Math.min(maxAllowed, this.currentBet + amount));
         this.currentBet = newBet;
         if (this.soundManager) this.soundManager.play('chip');
         this.updateUI();
     }
 
     setBet(amount) {
-        if (amount <= this.balance) {
-             this.currentBet = Math.max(CONFIG.MIN_BET, amount);
-             if (this.soundManager) this.soundManager.play('chip');
-             this.updateUI();
-        }
+        if (amount < CONFIG.MIN_BET || amount > this.balance) return;
+        this.currentBet = Math.min(amount, CONFIG.MAX_BET);
+        if (this.soundManager) this.soundManager.play('chip');
+        this.updateUI();
     }
 
     multiplyBet(factor) {
-        const newBet = Math.max(CONFIG.MIN_BET, Math.min(this.balance, Math.floor(this.currentBet * factor)));
+        const maxAllowed = Math.min(this.balance, CONFIG.MAX_BET);
+        const newBet = Math.max(CONFIG.MIN_BET, Math.min(maxAllowed, Math.floor(this.currentBet * factor)));
         this.currentBet = newBet;
         if (this.soundManager) this.soundManager.play('chip');
         this.updateUI();
     }
 
     maxBet() {
-        this.currentBet = this.balance;
+        this.currentBet = Math.min(this.balance, CONFIG.MAX_BET);
         if (this.soundManager) this.soundManager.play('chip');
         this.updateUI();
     }
@@ -496,7 +497,10 @@ export class GameManager {
         if (this.engine.gameOver) return;
 
         const result = this.engine.hit(this.engine.currentHandIndex);
-        if (!result) return;
+        if (!result) {
+            if (this.ui) this.ui.showToast('Não é possível pedir carta agora.', 'error', 2000);
+            return;
+        }
         const { hand } = result;
 
         if (this.soundManager) this.soundManager.play('card');
@@ -528,12 +532,16 @@ export class GameManager {
         if (this.engine.gameOver) return;
         const hand = this.engine.playerHands[this.engine.currentHandIndex];
 
-        if (this.balance < hand.bet) return;
+        if (this.balance < hand.bet) {
+            if (this.ui) this.ui.showToast('Saldo insuficiente para dobrar.', 'error', 2000);
+            return;
+        }
         this.balance -= hand.bet;
 
         const result = this.engine.double(this.engine.currentHandIndex);
         if (!result) {
             this.balance += hand.bet;
+            if (this.ui) this.ui.showToast('Não é possível dobrar agora.', 'error', 2000);
             return;
         }
 
@@ -551,7 +559,12 @@ export class GameManager {
         if (this.engine.playerHands.length === 0) return;
         const currentHand = this.engine.playerHands[this.engine.currentHandIndex];
 
-        if (this.balance < currentHand.bet || this.engine.playerHands.length > CONFIG.MAX_SPLITS) {
+        if (this.balance < currentHand.bet) {
+            if (this.ui) this.ui.showToast('Saldo insuficiente para dividir.', 'error', 2000);
+            return;
+        }
+        if (this.engine.playerHands.length > CONFIG.MAX_SPLITS) {
+            if (this.ui) this.ui.showToast('Limite de divisões atingido.', 'error', 2000);
             return;
         }
 
@@ -561,6 +574,7 @@ export class GameManager {
         const result = this.engine.split(this.engine.currentHandIndex);
         if (!result) {
             this.balance += initialBet;
+            if (this.ui) this.ui.showToast('Não é possível dividir esta mão.', 'error', 2000);
             return;
         }
 
@@ -579,7 +593,10 @@ export class GameManager {
         if (this.engine.gameOver) return;
 
         const result = this.engine.surrender(this.engine.currentHandIndex);
-        if (!result) return;
+        if (!result) {
+            if (this.ui) this.ui.showToast('Não é possível desistir agora.', 'error', 2000);
+            return;
+        }
 
         if (this.soundManager) this.soundManager.play('lose');
         this.events.emit('player:surrender', { handIndex: this.engine.currentHandIndex });
@@ -628,11 +645,16 @@ export class GameManager {
 
         const { dealerValue, dealerBJ, results } = this.engine.evaluateResults();
 
-        if (this.engine.insuranceTaken && dealerBJ) {
-            const insuranceWin = Math.floor(this.currentBet / 2) * CONFIG.PAYOUT.INSURANCE;
-            this.balance += insuranceWin;
-            this.totalWinnings += (insuranceWin - Math.floor(this.currentBet / 2));
-            if (this.ui) this.ui.showMessage('Seguro paga 2:1!', 'win');
+        if (this.engine.insuranceTaken) {
+            const insuranceCost = Math.floor(this.currentBet / 2);
+            if (dealerBJ) {
+                const insuranceWin = insuranceCost * CONFIG.PAYOUT.INSURANCE;
+                this.balance += insuranceWin;
+                this.totalWinnings += (insuranceWin - insuranceCost);
+                if (this.ui) this.ui.showMessage('Seguro paga 2:1!', 'win');
+            } else {
+                this.totalWinnings -= insuranceCost;
+            }
         }
 
         let totalWin = 0;
@@ -727,6 +749,7 @@ export class GameManager {
     // resetGame, newGame, exportData, importData, updateSetting match original structure but use engine
 
     resetGame() {
+        this.clearTimeouts();
         this.balance = CONFIG.INITIAL_BALANCE;
         this.wins = 0;
         this.losses = 0;
@@ -745,6 +768,7 @@ export class GameManager {
     }
 
     newGame() {
+        this.clearTimeouts();
         this.engine.resetState();
         if (this.currentBet > this.balance) {
             this.currentBet = Math.max(CONFIG.MIN_BET, this.balance);
@@ -758,6 +782,7 @@ export class GameManager {
     }
 
     rebetAndDeal() {
+        this.clearTimeouts();
         this.engine.resetState();
         if (this.currentBet > this.balance) {
             this.currentBet = Math.max(CONFIG.MIN_BET, this.balance);
@@ -791,6 +816,11 @@ export class GameManager {
     }
 
     importData(file) {
+        const MAX_IMPORT_SIZE = 1024 * 100; // 100KB limit
+        if (file.size > MAX_IMPORT_SIZE) {
+            if (this.ui) this.ui.showError('Arquivo muito grande. Máximo 100KB.');
+            return;
+        }
         const reader = new FileReader();
         reader.onload = (e) => {
             try {

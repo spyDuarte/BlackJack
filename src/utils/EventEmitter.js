@@ -29,6 +29,15 @@ export class EventEmitter {
         return this.on(event, wrapper);
     }
 
+    removeAllListeners(event) {
+        if (event) {
+            delete this._listeners[event];
+        } else {
+            this._listeners = {};
+        }
+        return this;
+    }
+
     emit(event, ...args) {
         if (!this._listeners[event]) return false;
         this._listeners[event].forEach(cb => {
