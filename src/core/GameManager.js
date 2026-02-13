@@ -97,11 +97,6 @@ export class GameManager {
     get deck() { return this.engine.deck; }
     set deck(v) { this.engine.deck = v; }
 
-    // Deprecated: login is handled by Firebase auth listener
-    login(_username) {
-        console.warn('Manual login called, but should use Supabase Auth');
-    }
-
     async logout() {
         try {
             const { error } = await supabase.auth.signOut();
@@ -183,7 +178,7 @@ export class GameManager {
     }
 
     _saveGameImmediate() {
-        if (!this.username) return;
+        if (!this.userId) return;
 
         const gameState = {
             version: CONFIG.STORAGE_VERSION,
@@ -195,7 +190,7 @@ export class GameManager {
             gameStarted: this.engine.gameStarted,
             updatedAt: Date.now()
         };
-        StorageManager.set(this.getStorageKey('blackjack-premium-save'), JSON.stringify(gameState));
+        StorageManager.set(this.getStorageKey('blackjack-premium-save'), gameState);
 
         // Sync with Supabase
         if (this.userId) {
@@ -239,13 +234,13 @@ export class GameManager {
     }
 
     async loadGame() {
-        if (!this.username) return;
+        if (!this.userId) return;
 
         let localTimestamp = 0;
         const savedGame = StorageManager.get(this.getStorageKey('blackjack-premium-save'));
         if (savedGame) {
             try {
-                let gameState = JSON.parse(savedGame);
+                let gameState = typeof savedGame === 'object' ? savedGame : JSON.parse(savedGame);
                 gameState = this.migrateData(gameState);
                 this.balance = gameState.balance || 1000;
                 this.wins = gameState.wins || 0;
@@ -307,7 +302,7 @@ export class GameManager {
                         gameStarted: this.engine.gameStarted,
                         updatedAt: Date.now()
                     };
-                    StorageManager.set(this.getStorageKey('blackjack-premium-save'), JSON.stringify(gameState));
+                    StorageManager.set(this.getStorageKey('blackjack-premium-save'), gameState);
                 } else if (localTimestamp > remoteTimestamp) {
                     // Local is newer, push to remote
                     this.saveStatsToSupabase();
@@ -329,17 +324,18 @@ export class GameManager {
     }
 
     saveSettings() {
-        if (!this.username) return;
-        StorageManager.set(this.getStorageKey('blackjack-premium-settings'), JSON.stringify(this.settings));
+        if (!this.userId) return;
+        StorageManager.set(this.getStorageKey('blackjack-premium-settings'), this.settings);
     }
 
     loadSettings() {
-        if (!this.username) return;
+        if (!this.userId) return;
 
         const savedSettings = StorageManager.get(this.getStorageKey('blackjack-premium-settings'));
         if (savedSettings) {
             try {
-                this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
+                const parsed = typeof savedSettings === 'object' ? savedSettings : JSON.parse(savedSettings);
+                this.settings = { ...this.settings, ...parsed };
                 if (this.soundManager) {
                     this.soundManager.setEnabled(this.settings.soundEnabled);
                     this.soundManager.setVolume(this.settings.volume);
@@ -367,7 +363,7 @@ export class GameManager {
     // Game Actions
 
     adjustBet(amount) {
-        const newBet = Math.max(10, Math.min(this.balance, this.currentBet + amount));
+        const newBet = Math.max(CONFIG.MIN_BET, Math.min(this.balance, this.currentBet + amount));
         this.currentBet = newBet;
         if (this.soundManager) this.soundManager.play('chip');
         this.updateUI();
@@ -375,14 +371,14 @@ export class GameManager {
 
     setBet(amount) {
         if (amount <= this.balance) {
-             this.currentBet = Math.max(10, amount);
+             this.currentBet = Math.max(CONFIG.MIN_BET, amount);
              if (this.soundManager) this.soundManager.play('chip');
              this.updateUI();
         }
     }
 
     multiplyBet(factor) {
-        const newBet = Math.max(10, Math.min(this.balance, Math.floor(this.currentBet * factor)));
+        const newBet = Math.max(CONFIG.MIN_BET, Math.min(this.balance, Math.floor(this.currentBet * factor)));
         this.currentBet = newBet;
         if (this.soundManager) this.soundManager.play('chip');
         this.updateUI();
@@ -395,7 +391,7 @@ export class GameManager {
     }
 
     startGame() {
-        if (this.currentBet < 10 || this.currentBet > this.balance) {
+        if (this.currentBet < CONFIG.MIN_BET || this.currentBet > this.balance) {
             if (this.ui) this.ui.showMessage('Aposta inválida!', 'lose');
             if (this.soundManager) this.soundManager.play('lose');
             return;
@@ -427,7 +423,7 @@ export class GameManager {
         const dealerUpVal = HandUtils.getCardNumericValue(dealerUpCard);
 
         if (dealerUpCard.value === 'A') {
-             setTimeout(() => {
+             this.addTimeout(() => {
                  if (this.ui) this.ui.toggleInsuranceModal(true);
              }, CONFIG.DELAYS.INSURANCE_MODAL);
         } else if (dealerUpVal === 10) {
@@ -561,7 +557,15 @@ export class GameManager {
     }
 
     surrender() {
-        // Disabled
+        if (this.engine.gameOver) return;
+
+        const result = this.engine.surrender(this.engine.currentHandIndex);
+        if (!result) return;
+
+        if (this.soundManager) this.soundManager.play('lose');
+        this.events.emit('player:surrender', { handIndex: this.engine.currentHandIndex });
+        this.updateUI();
+        this.addTimeout(() => this.endGame(), CONFIG.DELAYS.NEXT_HAND);
     }
 
     nextHand() {
@@ -679,8 +683,8 @@ export class GameManager {
 
         this.updateUI();
 
-        if (this.balance < 10) {
-            setTimeout(() => {
+        if (this.balance < CONFIG.MIN_BET) {
+            this.addTimeout(() => {
                 this.resetGame();
             }, CONFIG.DELAYS.RESET);
         }
@@ -712,7 +716,7 @@ export class GameManager {
     newGame() {
         this.engine.resetState();
         if (this.currentBet > this.balance) {
-            this.currentBet = Math.max(10, this.balance);
+            this.currentBet = Math.max(CONFIG.MIN_BET, this.balance);
         }
 
         if (this.ui) {
@@ -725,17 +729,17 @@ export class GameManager {
     rebetAndDeal() {
         this.engine.resetState();
         if (this.currentBet > this.balance) {
-            this.currentBet = Math.max(10, this.balance);
+            this.currentBet = Math.max(CONFIG.MIN_BET, this.balance);
         }
         // Immediately start game with current bet
         this.startGame();
     }
 
     exportData() {
-        if (!this.username) return;
+        if (!this.userId) return;
         const data = {
             username: this.username,
-            version: 1,
+            version: CONFIG.STORAGE_VERSION,
             exportedAt: new Date().toISOString(),
             gameState: {
                 balance: this.balance,

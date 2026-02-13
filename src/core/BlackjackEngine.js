@@ -213,9 +213,9 @@ export class BlackjackEngine {
      * @returns {boolean} True if dealer should hit.
      */
     dealerShouldHit() {
-         const value = HandUtils.calculateHandValue(this.dealerHand);
-         const isSoft = HandUtils.isSoftHand(this.dealerHand);
-         return (value < 17 || (value === 17 && isSoft));
+        const value = HandUtils.calculateHandValue(this.dealerHand);
+        const isSoft = HandUtils.isSoftHand(this.dealerHand);
+        return (value < 17 || (value === 17 && isSoft));
     }
 
     /**
@@ -224,9 +224,9 @@ export class BlackjackEngine {
      */
     dealerHit() {
         if (this.dealerShouldHit()) {
-             const card = this.deck.draw();
-             this.dealerHand.push(card);
-             return card;
+            const card = this.deck.draw();
+            this.dealerHand.push(card);
+            return card;
         }
         return null;
     }
@@ -236,18 +236,18 @@ export class BlackjackEngine {
      * @returns {Object} Final dealer hand and list of drawn cards.
      */
     dealerTurn() {
-         this.dealerRevealed = true; // Setter handles counting
-         const cardsDrawn = [];
+        this.dealerRevealed = true; // Setter handles counting
+        const cardsDrawn = [];
 
-         while (this.dealerShouldHit()) {
-             const card = this.dealerHit();
-             if (card) cardsDrawn.push(card);
-         }
+        while (this.dealerShouldHit()) {
+            const card = this.dealerHit();
+            if (card) cardsDrawn.push(card);
+        }
 
-         return {
-             dealerHand: this.dealerHand,
-             cardsDrawn
-         };
+        return {
+            dealerHand: this.dealerHand,
+            cardsDrawn
+        };
     }
 
     /**
@@ -259,50 +259,50 @@ export class BlackjackEngine {
         const dealerBJ = HandUtils.isNaturalBlackjack(this.dealerHand, 1);
 
         const results = this.playerHands.map(hand => {
-             const playerValue = HandUtils.calculateHandValue(hand.cards);
-             const playerBJ = HandUtils.isNaturalBlackjack(hand.cards, this.playerHands.length);
+            const playerValue = HandUtils.calculateHandValue(hand.cards);
+            const playerBJ = HandUtils.isNaturalBlackjack(hand.cards, this.playerHands.length);
 
-             let result = 'lose';
-             let winMultiplier = 0;
+            let result = 'lose';
+            let winMultiplier = 0;
 
-             if (hand.status === 'surrender') {
-                 result = 'surrender';
-                 winMultiplier = 0.5;
-             } else if (hand.status === 'busted') {
-                 result = 'lose';
-                 winMultiplier = 0;
-             } else if (dealerBJ) {
-                 if (playerBJ) {
-                     result = 'tie';
-                     winMultiplier = 1;
-                 } else {
-                     result = 'lose';
-                     winMultiplier = 0;
-                 }
-             } else if (dealerValue > 21) {
-                 result = 'win';
-                 winMultiplier = 2;
-                 if (playerBJ) winMultiplier = CONFIG.PAYOUT.BLACKJACK;
-             } else if (playerBJ) {
-                 result = 'win';
-                 winMultiplier = CONFIG.PAYOUT.BLACKJACK;
-             } else if (playerValue > dealerValue) {
-                 result = 'win';
-                 winMultiplier = 2;
-             } else if (playerValue === dealerValue) {
-                 result = 'tie';
-                 winMultiplier = 1;
-             } else {
-                 result = 'lose';
-                 winMultiplier = 0;
-             }
+            if (hand.status === 'surrender') {
+                result = 'surrender';
+                winMultiplier = 0.5;
+            } else if (hand.status === 'busted') {
+                result = 'lose';
+                winMultiplier = 0;
+            } else if (dealerBJ) {
+                if (playerBJ) {
+                    result = 'tie';
+                    winMultiplier = 1;
+                } else {
+                    result = 'lose';
+                    winMultiplier = 0;
+                }
+            } else if (dealerValue > 21) {
+                result = 'win';
+                winMultiplier = 2;
+                if (playerBJ) winMultiplier = CONFIG.PAYOUT.BLACKJACK;
+            } else if (playerBJ) {
+                result = 'win';
+                winMultiplier = CONFIG.PAYOUT.BLACKJACK;
+            } else if (playerValue > dealerValue) {
+                result = 'win';
+                winMultiplier = 2;
+            } else if (playerValue === dealerValue) {
+                result = 'tie';
+                winMultiplier = 1;
+            } else {
+                result = 'lose';
+                winMultiplier = 0;
+            }
 
-             return {
-                 hand,
-                 result,
-                 winMultiplier,
-                 payout: Math.floor(hand.bet * winMultiplier)
-             };
+            return {
+                hand,
+                result,
+                winMultiplier,
+                payout: Math.floor(hand.bet * winMultiplier)
+            };
         });
 
         return {

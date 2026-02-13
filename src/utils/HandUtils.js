@@ -91,6 +91,6 @@ export function getHiLoValue(card) {
     if (!card) return 0;
     const val = getCardNumericValue(card);
     if (val >= 2 && val <= 6) return 1;
-    if (val >= 10 || val === 11 || card.value === 'A') return -1; // 10, J, Q, K, A
+    if (val >= 10) return -1; // 10, J, Q, K, A
     return 0; // 7, 8, 9
 }
