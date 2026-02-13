@@ -178,13 +178,16 @@ export class UIManager {
         if (el.newGameBtn) el.newGameBtn.addEventListener('click', () => game.newGame());
         if (el.rebetBtn) el.rebetBtn.addEventListener('click', () => game.rebetAndDeal());
 
-        if (el.betDecrease) el.betDecrease.addEventListener('click', () => game.adjustBet(-10));
-        if (el.betIncrease) el.betIncrease.addEventListener('click', () => game.adjustBet(10));
+        if (el.betDecrease) el.betDecrease.addEventListener('click', () => game.adjustBet(-CONFIG.MIN_BET));
+        if (el.betIncrease) el.betIncrease.addEventListener('click', () => game.adjustBet(CONFIG.MIN_BET));
         if (el.betDoubleValue) el.betDoubleValue.addEventListener('click', () => game.multiplyBet(2));
         if (el.betMaxValue) el.betMaxValue.addEventListener('click', () => game.maxBet());
 
         if (el.betInput) {
-            el.betInput.addEventListener('change', (e) => game.setBet(parseInt(e.target.value)));
+            el.betInput.addEventListener('change', (e) => {
+                const value = parseInt(e.target.value, 10);
+                if (!isNaN(value)) game.setBet(value);
+            });
             el.betInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') game.startGame();
             });
@@ -587,7 +590,11 @@ export class UIManager {
             }
 
             if (this.elements.surrenderBtn) {
-                this.elements.surrenderBtn.style.display = 'none';
+                const canSurrender = state.playerHands.length === 1 &&
+                    currentHand.cards.length === 2 &&
+                    currentHand.status === 'playing';
+                this.elements.surrenderBtn.style.display = canSurrender ? 'inline-block' : 'none';
+                this.elements.surrenderBtn.disabled = !canSurrender;
             }
 
             if (this.elements.doubleBtn) {

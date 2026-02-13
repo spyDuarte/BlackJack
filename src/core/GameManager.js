@@ -170,7 +170,7 @@ export class GameManager {
         if (this.ui) {
             this.ui.hideWelcomeScreen();
             this.ui.toggleLoading(true);
-            setTimeout(() => {
+            this.addTimeout(() => {
                 this.ui.toggleLoading(false);
                 this.updateUI();
             }, CONFIG.DELAYS.LOADING);
@@ -191,11 +191,7 @@ export class GameManager {
             updatedAt: Date.now()
         };
         StorageManager.set(this.getStorageKey('blackjack-premium-save'), gameState);
-
-        // Sync with Supabase
-        if (this.userId) {
-            this.saveStatsToSupabase();
-        }
+        this.saveStatsToSupabase();
     }
 
     async saveStatsToSupabase() {

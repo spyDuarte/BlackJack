@@ -99,11 +99,11 @@ export class SoundManager {
      * Enforces a pool limit of maxConcurrent simultaneous sounds.
      * @param {string} type - The category of sound to play (e.g., 'card', 'chip')
      */
-    play(type) {
+    async play(type) {
         if (!this.enabled) return;
 
         // Lazy init on first play (triggered by user interaction)
-        this.ensureInitialized();
+        await this.ensureInitialized();
         if (!this.context) return;
 
         // Auto-resume context if suspended
@@ -184,7 +184,7 @@ export class SoundManager {
                 }
 
                 const noise = this.context.createBufferSource();
-                noise.buffer = this.cardNoiseBuffer;
+                noise.buffer = noiseBuffer;
 
                 const filter = this.context.createBiquadFilter();
                 filter.type = 'highpass';
