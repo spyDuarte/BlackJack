@@ -1851,28 +1851,6 @@ body.theme-light .modal-auth-form input:focus {
     position: relative;
 }
 
-/* ── Strategy hint bar ── */
-.strategy-hint {
-    text-align: center;
-    margin: 8px auto 0;
-    padding: 7px 18px;
-    border-radius: 50px;
-    font-size: 0.85em;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    width: fit-content;
-    background: rgba(0,0,0,0.35);
-    border: 1.5px solid rgba(255,255,255,0.12);
-    color: rgba(255,255,255,0.75);
-    transition: all 0.25s ease;
-}
-
-.strategy-hint.hint-hit    { border-color: #3498db; color: #5dade2; }
-.strategy-hint.hint-stand  { border-color: #2ecc71; color: #58d68d; }
-.strategy-hint.hint-double { border-color: #f39c12; color: #f8c471; }
-.strategy-hint.hint-split  { border-color: #9b59b6; color: #c39bd3; }
-.strategy-hint.hint-surrender { border-color: #e74c3c; color: #f1948a; }
-
 /* ── Bust shake animation ── */
 @keyframes bust-shake {
     0%,100% { transform: translateX(0); }

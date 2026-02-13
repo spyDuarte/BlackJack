@@ -144,7 +144,6 @@ export class GameManager {
             animationsEnabled: true,
             autoSave: true,
             showStats: false,
-            showHints: true,
             volume: 0.5,
             theme: 'dark'
         };
@@ -345,8 +344,6 @@ export class GameManager {
                     this.ui.setStatsVisibility(this.settings.showStats);
                     this.ui.setVolume(this.settings.volume);
                     if (this.settings.theme) this.ui.setTheme(this.settings.theme);
-                    this.ui.syncCheckbox('show-hints', this.settings.showHints !== false);
-                    if (!this.settings.showHints) this.ui.clearStrategyHint();
                 }
             } catch {
                 console.warn('Could not parse settings');
@@ -442,20 +439,10 @@ export class GameManager {
             this.ui.showMessage('Sua vez!');
         }
         this.updateUI();
-        this._updateStrategyHint();
 
         const pVal = HandUtils.calculateHandValue(this.engine.playerHands[0].cards);
         if (pVal === 21) {
              this.addTimeout(() => this.endGame(), CONFIG.DELAYS.TURN);
-        }
-    }
-
-    _updateStrategyHint() {
-        if (!this.ui || !this.settings.showHints) return;
-        const hand = this.engine.playerHands[this.engine.currentHandIndex];
-        const dealerUpCard = this.engine.dealerHand[0];
-        if (hand && dealerUpCard) {
-            this.ui.showStrategyHint(hand, dealerUpCard);
         }
     }
 
@@ -512,11 +499,8 @@ export class GameManager {
             if (this.ui) {
                 this.ui.showMessage('Estourou!', 'lose');
                 this.ui.showBustAnimation();
-                this.ui.clearStrategyHint();
             }
             this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
-        } else {
-            this._updateStrategyHint();
         }
     }
 
@@ -524,7 +508,6 @@ export class GameManager {
         if (this.engine.gameOver) return;
         this.engine.stand(this.engine.currentHandIndex);
         this.events.emit('player:stand', { handIndex: this.engine.currentHandIndex });
-        if (this.ui) this.ui.clearStrategyHint();
         this.nextHand();
     }
 
@@ -726,7 +709,6 @@ export class GameManager {
         }
 
         if (this.ui) {
-            this.ui.clearStrategyHint();
             this.ui.annotateHandResults(results);
             this.ui.showMessage(message, messageClass);
             this.ui.showNewGameButton();
@@ -862,7 +844,6 @@ export class GameManager {
                 if (key === 'animationsEnabled') this.ui.setAnimationsEnabled(value);
                 if (key === 'showStats') this.ui.setStatsVisibility(value);
                 if (key === 'theme') this.ui.setTheme(value);
-                if (key === 'showHints' && !value) this.ui.clearStrategyHint();
             }
             this.saveSettings();
         }
