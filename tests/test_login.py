@@ -7,6 +7,9 @@ def test_login_modal_access(page, game_url):
     # Check initial welcome screen is visible
     assert page.is_visible("#welcome-screen"), "Welcome screen should be visible"
 
+    # Start game to dismiss welcome screen so we can access header buttons
+    page.click("#start-game-btn")
+
     # Open settings/account modal
     page.click("#user-btn")
 
@@ -22,6 +25,9 @@ def test_login_modal_access(page, game_url):
 def test_login_ui_elements(page, game_url):
     """Verifies that the new login UI elements are present."""
     page.goto(game_url)
+
+    # Dismiss welcome screen
+    page.click("#start-game-btn")
 
     # Open modal and switch to account
     page.click("#user-btn")
@@ -43,6 +49,9 @@ def test_register_ui_transition(page, game_url):
     page.on("pageerror", lambda err: print(f"PAGE ERROR: {err}"))
 
     page.goto(game_url)
+
+    # Dismiss welcome screen
+    page.click("#start-game-btn")
 
     # Open modal and switch to account
     page.click("#user-btn")
