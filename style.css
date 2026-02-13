@@ -1739,3 +1739,114 @@ body.theme-transition *::after {
     animation: pulse-score 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     backface-visibility: hidden; /* Fix for jagged edges during animation */
 }
+
+/* ── Modal Tabs ── */
+.modal-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border-gold);
+    padding-bottom: 0;
+}
+
+.modal-tab {
+    flex: 1;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 6px 6px 0 0;
+    margin-bottom: -2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modal-tab:hover {
+    color: var(--primary-gold);
+    background: rgba(255, 215, 0, 0.05);
+}
+
+.modal-tab.active {
+    color: var(--primary-gold);
+    border-bottom-color: var(--primary-gold);
+    background: rgba(255, 215, 0, 0.08);
+}
+
+.tab-content {
+    animation: tabFadeIn 0.2s ease;
+}
+
+@keyframes tabFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Auth forms inside modal ── */
+.modal-auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.modal-auth-form input {
+    padding: 11px 16px;
+    font-size: 1em;
+    border-radius: 50px;
+    border: 2px solid var(--primary-gold);
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    width: 100%;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.modal-auth-form input:focus {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.25);
+}
+
+.modal-auth-form input.error {
+    border-color: var(--error-color);
+    box-shadow: 0 0 8px rgba(231, 76, 60, 0.4);
+    animation: shake 0.4s ease;
+}
+
+body.theme-light .modal-auth-form input {
+    background: rgba(0, 0, 0, 0.06);
+    color: #1a1a2e;
+}
+
+body.theme-light .modal-auth-form input:focus {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.auth-toggle-text a {
+    color: var(--primary-gold);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-toggle-text a:hover {
+    text-decoration: underline;
+}
+
+/* user-btn badge when logged in */
+.user-btn.logged-in::after {
+    content: '●';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.5em;
+    color: #2ecc71;
+    line-height: 1;
+}
+
+.user-btn {
+    position: relative;
+}

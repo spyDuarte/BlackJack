@@ -16,11 +16,7 @@ export class UIManager {
         this.cacheElements();
         this.bindEvents();
         this.toggleLoading(false);
-
-        // Check if game already has a user (login happened before initialize)
-        if (this.game.userId) {
-            this.onLoginSuccess();
-        }
+        this.updateAuthUI();
     }
 
     cacheElements() {
@@ -107,7 +103,19 @@ export class UIManager {
             importInput: document.getElementById('btn-import-data'),
             toastContainer: document.getElementById('toast-container'),
             shoeBar: document.getElementById('shoe-bar'),
-            shoeLabel: document.getElementById('shoe-label')
+            shoeLabel: document.getElementById('shoe-label'),
+
+            // Modal tabs
+            tabBtnSettings: document.getElementById('tab-btn-settings'),
+            tabBtnAccount: document.getElementById('tab-btn-account'),
+            tabSettings: document.getElementById('tab-settings'),
+            tabAccount: document.getElementById('tab-account'),
+
+            // Account tab elements
+            accountLoggedIn: document.getElementById('account-logged-in'),
+            accountLoggedOut: document.getElementById('account-logged-out'),
+            loginSection: document.getElementById('login-section'),
+            registerSection: document.getElementById('register-section')
         };
     }
 
@@ -115,25 +123,29 @@ export class UIManager {
         const el = this.elements;
         const game = this.game;
 
-        // Auth events
-        if (el.loginScreen) {
-            const loginForm = el.loginScreen.querySelector('#login-form');
-            if (loginForm) {
-                loginForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.handleAuthAction('login');
-                });
-            }
+        // Modal tab switching
+        if (el.tabBtnSettings) {
+            el.tabBtnSettings.addEventListener('click', () => this._switchTab('settings'));
+        }
+        if (el.tabBtnAccount) {
+            el.tabBtnAccount.addEventListener('click', () => this._switchTab('account'));
         }
 
-        if (el.registerScreen) {
-            const registerForm = el.registerScreen.querySelector('#register-form');
-            if (registerForm) {
-                registerForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.handleAuthAction('register');
-                });
-            }
+        // Auth events (forms are now inside the modal account tab)
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) {
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleAuthAction('login');
+            });
+        }
+
+        const registerForm = document.getElementById('register-form');
+        if (registerForm) {
+            registerForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleAuthAction('register');
+            });
         }
 
         if (el.goToRegister) {
@@ -216,15 +228,7 @@ export class UIManager {
         });
         if (el.closeSettings) el.closeSettings.addEventListener('click', () => this.toggleSettingsModal(false));
 
-        // Menu/Auth Buttons
-        if (el.menuLoginBtn) el.menuLoginBtn.addEventListener('click', () => {
-            this.toggleSettingsModal(false);
-            this.toggleAuthMode(false);
-        });
-        if (el.menuRegisterBtn) el.menuRegisterBtn.addEventListener('click', () => {
-            this.toggleSettingsModal(false);
-            this.toggleAuthMode(true);
-        });
+        // Logout button (inside account tab)
         if (el.menuLogoutBtn) el.menuLogoutBtn.addEventListener('click', () => {
             this.toggleSettingsModal(false);
             game.logout();
@@ -280,17 +284,8 @@ export class UIManager {
         this.isRegisterMode = isRegister;
         const el = this.elements;
 
-        if (isRegister) {
-            el.loginScreen.classList.add('hidden');
-            el.loginScreen.style.display = 'none';
-            el.registerScreen.style.display = 'flex';
-            el.registerScreen.classList.remove('hidden');
-        } else {
-            el.registerScreen.classList.add('hidden');
-            el.registerScreen.style.display = 'none';
-            el.loginScreen.style.display = 'flex';
-            el.loginScreen.classList.remove('hidden');
-        }
+        if (el.loginSection) el.loginSection.style.display = isRegister ? 'none' : 'block';
+        if (el.registerSection) el.registerSection.style.display = isRegister ? 'block' : 'none';
 
         this.clearAuthErrors();
     }
@@ -471,32 +466,47 @@ export class UIManager {
     }
 
     onLoginSuccess() {
-        // Just hide auth screens if visible
-        if (this.elements.loginScreen) {
-            this.elements.loginScreen.classList.add('hidden');
-            this.elements.loginScreen.style.display = 'none';
-        }
-        if (this.elements.registerScreen) {
-            this.elements.registerScreen.classList.add('hidden');
-            this.elements.registerScreen.style.display = 'none';
-        }
         this.updateAuthUI();
+        // Switch back to settings tab so the user can close and play
+        this._switchTab('settings');
     }
 
     updateAuthUI() {
         const el = this.elements;
-        if (!el.userInfo) return;
+        const isLoggedIn = !!this.game.userId;
 
-        if (this.game.userId) {
-            // User is logged in
-            el.userInfo.textContent = `👤 ${this.game.username || 'Jogador'}`;
-            if (el.guestControls) el.guestControls.style.display = 'none';
-            if (el.userControls) el.userControls.style.display = 'block';
-        } else {
-            // Guest mode
-            el.userInfo.textContent = '👤 Visitante';
-            if (el.guestControls) el.guestControls.style.display = 'block';
-            if (el.userControls) el.userControls.style.display = 'none';
+        if (el.accountLoggedIn) el.accountLoggedIn.style.display = isLoggedIn ? 'block' : 'none';
+        if (el.accountLoggedOut) el.accountLoggedOut.style.display = isLoggedIn ? 'none' : 'block';
+
+        if (el.userInfo) {
+            el.userInfo.textContent = isLoggedIn
+                ? `👤 ${this.game.username || 'Jogador'}`
+                : '';
+        }
+
+        // Badge on the header user-btn to indicate logged-in state
+        if (el.userBtn) {
+            el.userBtn.classList.toggle('logged-in', isLoggedIn);
+            el.userBtn.title = isLoggedIn
+                ? `Conta: ${this.game.username || 'Jogador'}`
+                : 'Menu (visitante)';
+        }
+    }
+
+    _switchTab(tabName) {
+        const el = this.elements;
+        const isSettings = tabName === 'settings';
+
+        if (el.tabSettings) el.tabSettings.style.display = isSettings ? 'block' : 'none';
+        if (el.tabAccount) el.tabAccount.style.display = isSettings ? 'none' : 'block';
+
+        if (el.tabBtnSettings) {
+            el.tabBtnSettings.classList.toggle('active', isSettings);
+            el.tabBtnSettings.setAttribute('aria-selected', String(isSettings));
+        }
+        if (el.tabBtnAccount) {
+            el.tabBtnAccount.classList.toggle('active', !isSettings);
+            el.tabBtnAccount.setAttribute('aria-selected', String(!isSettings));
         }
     }
 
