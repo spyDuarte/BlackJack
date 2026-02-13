@@ -152,8 +152,8 @@ export class BlackjackEngine {
         if (!hand) return null;
 
         if (hand.cards.length !== 2) return null;
-        // Strict equality check for split (e.g. 10 and J cannot be split in this rule set, only 10-10 or J-J)
-        if (hand.cards[0].value !== hand.cards[1].value) return null;
+        // Allow splitting any two cards with the same point value (e.g. 10-J, Q-K)
+        if (HandUtils.getCardNumericValue(hand.cards[0]) !== HandUtils.getCardNumericValue(hand.cards[1])) return null;
 
         // No re-splitting Aces
         if (hand.splitFromAces) return null;
@@ -279,6 +279,9 @@ export class BlackjackEngine {
                      result = 'lose';
                      winMultiplier = 0;
                  }
+             } else if (CONFIG.FIVE_CARD_CHARLIE && hand.cards.length >= 5 && playerValue <= 21) {
+                 result = 'win';
+                 winMultiplier = 2;
              } else if (dealerValue > 21) {
                  result = 'win';
                  winMultiplier = 2;
