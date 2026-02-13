@@ -1,14 +1,37 @@
 """Test: Login system UI verification."""
 import time
 
-def test_login_screen_visible(page, game_url):
+def test_login_modal_access(page, game_url):
     page.goto(game_url)
-    assert page.is_visible("#login-screen"), "Login screen should be visible"
+
+    # Check initial welcome screen is visible
+    assert page.is_visible("#welcome-screen"), "Welcome screen should be visible"
+
+    # Start game to dismiss welcome screen so we can access header buttons
+    page.click("#start-game-btn")
+
+    # Open settings/account modal
+    page.click("#user-btn")
+
+    # Ensure modal is visible
+    assert page.is_visible("#settings-modal"), "Settings modal should be visible"
+
+    # Switch to account tab
+    page.click("#tab-btn-account")
+
+    # Check login section visibility
+    assert page.is_visible("#login-section"), "Login section should be visible in account tab"
 
 def test_login_ui_elements(page, game_url):
     """Verifies that the new login UI elements are present."""
     page.goto(game_url)
-    page.wait_for_selector("#login-screen")
+
+    # Dismiss welcome screen
+    page.click("#start-game-btn")
+
+    # Open modal and switch to account
+    page.click("#user-btn")
+    page.click("#tab-btn-account")
 
     # Check for email and password fields
     assert page.is_visible("#login-email"), "Email input should be visible"
@@ -18,7 +41,7 @@ def test_login_ui_elements(page, game_url):
 
     # Check initial texts
     assert "Entrar" in page.text_content("#login-btn")
-    assert "Registrar-se" in page.text_content("#go-to-register")
+    assert "Cadastrar-se" in page.text_content("#go-to-register")
 
 def test_register_ui_transition(page, game_url):
     """Verifies transition to register mode."""
@@ -26,18 +49,24 @@ def test_register_ui_transition(page, game_url):
     page.on("pageerror", lambda err: print(f"PAGE ERROR: {err}"))
 
     page.goto(game_url)
-    page.wait_for_selector("#login-screen")
+
+    # Dismiss welcome screen
+    page.click("#start-game-btn")
+
+    # Open modal and switch to account
+    page.click("#user-btn")
+    page.click("#tab-btn-account")
 
     # Ensure Login is visible and Register is hidden
-    assert page.is_visible("#login-screen")
-    assert not page.is_visible("#register-screen")
+    assert page.is_visible("#login-section")
+    assert not page.is_visible("#register-section")
 
     # Click toggle link to switch to register
     page.click("#go-to-register")
 
     # Check if visibility switched
-    assert not page.is_visible("#login-screen")
-    assert page.is_visible("#register-screen")
+    assert not page.is_visible("#login-section")
+    assert page.is_visible("#register-section")
 
     # Check for Register elements
     assert page.is_visible("#register-email")
@@ -46,5 +75,5 @@ def test_register_ui_transition(page, game_url):
 
     # Click toggle link to switch back to login
     page.click("#go-to-login")
-    assert page.is_visible("#login-screen")
-    assert not page.is_visible("#register-screen")
+    assert page.is_visible("#login-section")
+    assert not page.is_visible("#register-section")

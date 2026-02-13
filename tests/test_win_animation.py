@@ -8,8 +8,8 @@ def test_win_animation(page, game_url):
     page.wait_for_selector(".container")
 
     # Hide login/welcome screens
-    page.evaluate("document.getElementById('login-screen').style.display = 'none'")
-    page.evaluate("document.getElementById('welcome-screen').style.display = 'none'")
+    if page.is_visible("#welcome-screen"):
+        page.evaluate("document.getElementById('welcome-screen').style.display = 'none'")
 
     page.wait_for_function("window.__game !== undefined")
 

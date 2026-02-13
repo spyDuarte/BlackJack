@@ -57,11 +57,11 @@ describe('SoundManager', () => {
     // soundManager.context is set by ensureInitialized using the mock
 
     // First call
-    soundManager.play('card');
+    await soundManager.play('card');
     expect(contextMock.createBuffer).toHaveBeenCalledTimes(1);
 
     // Second call
-    soundManager.play('card');
+    await soundManager.play('card');
     expect(contextMock.createBuffer).toHaveBeenCalledTimes(1);
   });
 });

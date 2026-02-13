@@ -114,12 +114,6 @@ def logged_in_page(page, game_url):
         }
     """)
 
-    # Wait for login screen to disappear
-    try:
-        page.wait_for_selector("#login-screen", state="hidden", timeout=5000)
-    except Exception:
-        page.evaluate("document.getElementById('login-screen').style.display = 'none'")
-
     # Wait for Welcome Screen and click Start
     # The login success transition shows Welcome Screen.
     try:

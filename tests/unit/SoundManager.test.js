@@ -59,21 +59,21 @@ describe('SoundManager', () => {
         soundManager.context = mockContext;
     });
 
-    it('should cache card noise buffer', () => {
+    it('should cache card noise buffer', async () => {
         // Play card sound first time
-        soundManager.play('card');
+        await soundManager.play('card');
 
         expect(createBufferMock).toHaveBeenCalledTimes(1);
 
         // Play card sound second time
-        soundManager.play('card');
+        await soundManager.play('card');
 
         // Should still be called only once
         expect(createBufferMock).toHaveBeenCalledTimes(1);
     });
 
-    it('should play other sounds without using the cached buffer logic', () => {
-        soundManager.play('win');
+    it('should play other sounds without using the cached buffer logic', async () => {
+        await soundManager.play('win');
         // 'win' sound uses oscillators, not createBuffer
         expect(createBufferMock).toHaveBeenCalledTimes(0);
     });
