@@ -4,6 +4,7 @@ export const CONFIG = {
     INITIAL_BALANCE: 1000,
     MIN_BET: 10,
     MAX_SPLITS: 3, // Maximum number of splits allowed (standard casino rule)
+    FIVE_CARD_CHARLIE: false, // Set to true to enable 5-Card Charlie rule
     ANIMATION_SPEED: 500,
     STORAGE_VERSION: 2, // Data version for migration support
     PAYOUT: {
