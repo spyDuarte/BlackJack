@@ -362,8 +362,7 @@ export class GameManager {
     // Game Actions
 
     adjustBet(amount) {
-        const maxAllowed = Math.min(this.balance, CONFIG.MAX_BET);
-        const newBet = Math.max(CONFIG.MIN_BET, Math.min(maxAllowed, this.currentBet + amount));
+        const newBet = Math.max(CONFIG.MIN_BET, Math.min(this.balance, this.currentBet + amount));
         this.currentBet = newBet;
         if (this.soundManager) this.soundManager.play('chip');
         this.updateUI();
@@ -371,21 +370,20 @@ export class GameManager {
 
     setBet(amount) {
         if (amount < CONFIG.MIN_BET || amount > this.balance) return;
-        this.currentBet = Math.min(amount, CONFIG.MAX_BET);
+        this.currentBet = amount;
         if (this.soundManager) this.soundManager.play('chip');
         this.updateUI();
     }
 
     multiplyBet(factor) {
-        const maxAllowed = Math.min(this.balance, CONFIG.MAX_BET);
-        const newBet = Math.max(CONFIG.MIN_BET, Math.min(maxAllowed, Math.floor(this.currentBet * factor)));
+        const newBet = Math.max(CONFIG.MIN_BET, Math.min(this.balance, Math.floor(this.currentBet * factor)));
         this.currentBet = newBet;
         if (this.soundManager) this.soundManager.play('chip');
         this.updateUI();
     }
 
     maxBet() {
-        this.currentBet = Math.min(this.balance, CONFIG.MAX_BET);
+        this.currentBet = this.balance;
         if (this.soundManager) this.soundManager.play('chip');
         this.updateUI();
     }
