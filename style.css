@@ -382,14 +382,14 @@ h1 {
     /* Be careful not to conflict with flipped state. */
     /* If flipped, we rotate Y 180. If hover, we might want +3deg. */
     /* Simplify: just lift */
-    transform: translateY(-8px) rotateY(var(--rotation, 0deg));
+    transform: translateY(-12px) rotateY(var(--rotation, 0deg)) scale(1.02);
 }
 .card.flipped:hover .card-inner {
     --rotation: 180deg;
 }
 .card:not(.flipped):hover .card-inner {
-    --rotation: 0deg; /* Actually existing hover was rotateY(3deg) */
-    transform: translateY(-8px) rotateY(3deg) rotateX(3deg);
+    --rotation: 0deg;
+    transform: translateY(-12px) rotateY(5deg) rotateX(2deg) scale(1.02);
 }
 
 .card:hover .card-front::after {
@@ -538,7 +538,7 @@ button:hover:not(:disabled) {
 }
 
 button:active:not(:disabled) {
-    transform: translateY(-1px) scale(1.02);
+    transform: translateY(1px) scale(0.98);
 }
 
 button:disabled {
@@ -1715,4 +1715,27 @@ body.theme-transition *::after {
 #rebet-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(243, 156, 18, 0.4);
+}
+
+/* UI Enhancements */
+.chip.selected {
+    box-shadow: 0 0 0 3px var(--bg-primary), 0 0 0 5px var(--primary-gold), 0 0 15px var(--primary-gold);
+    transform: translateY(-8px) scale(1.15);
+    z-index: 2;
+    filter: brightness(1.2);
+}
+
+.shoe-bar.high::after { background: var(--win-color) !important; }
+.shoe-bar.medium::after { background: var(--tie-color) !important; }
+.shoe-bar.low::after { background: var(--lose-color) !important; }
+
+@keyframes pulse-score {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); color: #fff; text-shadow: 0 0 10px var(--primary-gold); }
+    100% { transform: scale(1); }
+}
+
+.pulse {
+    animation: pulse-score 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    backface-visibility: hidden; /* Fix for jagged edges during animation */
 }
