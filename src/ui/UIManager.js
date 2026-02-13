@@ -1,5 +1,6 @@
 import * as HandUtils from '../utils/HandUtils.js';
 import { CONFIG } from '../core/Constants.js';
+import { BasicStrategy } from '../utils/BasicStrategy.js';
 import { debounce } from '../utils/debounce.js';
 import { supabase } from '../supabaseClient.js';
 
@@ -242,6 +243,7 @@ export class UIManager {
         this.bindCheckbox('animations-enabled', (checked) => game.updateSetting('animationsEnabled', checked));
         this.bindCheckbox('auto-save', (checked) => game.updateSetting('autoSave', checked));
         this.bindCheckbox('show-stats', (checked) => game.updateSetting('showStats', checked));
+        this.bindCheckbox('show-hints', (checked) => game.updateSetting('showHints', checked));
 
         if (el.volumeSlider) {
             el.volumeSlider.addEventListener('input', (e) => {
@@ -519,20 +521,47 @@ export class UIManager {
         }
     }
 
+    syncCheckbox(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.checked = !!value;
+    }
+
     handleKeyboard(e) {
+        // Ignore keypresses inside input fields
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+
         if (e.key === 'Escape') {
             this.toggleSettingsModal(false);
             return;
         }
 
-        if (!this.elements.gameControls || this.elements.gameControls.style.display === 'none') return;
+        const el = this.elements;
+        const gameControlsVisible = el.gameControls && el.gameControls.style.display === 'flex';
+
+        // Post-round shortcuts (when game controls are hidden)
+        if (!gameControlsVisible) {
+            if ((e.key === 'Enter' || e.key === ' ') && el.rebetBtn && el.rebetBtn.style.display !== 'none') {
+                e.preventDefault();
+                el.rebetBtn.classList.add('kbd-active');
+                setTimeout(() => el.rebetBtn.classList.remove('kbd-active'), 150);
+                this.game.rebetAndDeal();
+                return;
+            }
+            if ((e.key === 'n' || e.key === 'N') && el.newGameBtn && el.newGameBtn.style.display !== 'none') {
+                el.newGameBtn.classList.add('kbd-active');
+                setTimeout(() => el.newGameBtn.classList.remove('kbd-active'), 150);
+                this.game.newGame();
+                return;
+            }
+            return;
+        }
 
         const keyMap = {
-            'h': { action: () => this.game.hit(), btn: this.elements.hitBtn },
-            's': { action: () => this.game.stand(), btn: this.elements.standBtn },
-            'd': { action: () => this.game.double(), btn: this.elements.doubleBtn },
-            'p': { action: () => this.game.split(), btn: this.elements.splitBtn },
-            'r': { action: () => this.game.surrender(), btn: this.elements.surrenderBtn }
+            'h': { action: () => this.game.hit(), btn: el.hitBtn },
+            's': { action: () => this.game.stand(), btn: el.standBtn },
+            'd': { action: () => this.game.double(), btn: el.doubleBtn },
+            'p': { action: () => this.game.split(), btn: el.splitBtn },
+            'r': { action: () => this.game.surrender(), btn: el.surrenderBtn }
         };
 
         const entry = keyMap[e.key.toLowerCase()];
@@ -932,6 +961,60 @@ export class UIManager {
 
         update();
     }
+
+    // ── Gameplay feedback helpers ──────────────────────────────────────
+
+    showStrategyHint(hand, dealerUpCard) {
+        const el = document.getElementById('strategy-hint');
+        if (!el || !this.game || !this.game.settings.showHints) {
+            if (el) el.style.display = 'none';
+            return;
+        }
+        const move = BasicStrategy.getBestMove(hand, dealerUpCard);
+        const labels = {
+            hit:       '💡 Estratégia: Pedir Carta (H)',
+            stand:     '💡 Estratégia: Parar (S)',
+            double:    '💡 Estratégia: Dobrar (D)',
+            split:     '💡 Estratégia: Dividir (P)',
+            surrender: '💡 Estratégia: Desistir (R)'
+        };
+        el.textContent = labels[move] || '';
+        el.className = `strategy-hint hint-${move}`;
+        el.style.display = 'block';
+    }
+
+    clearStrategyHint() {
+        const el = document.getElementById('strategy-hint');
+        if (el) { el.style.display = 'none'; el.textContent = ''; }
+    }
+
+    showBustAnimation() {
+        if (!this.animationsEnabled) return;
+        const container = this.elements.playerCards;
+        if (!container) return;
+        container.classList.remove('bust-shake');
+        void container.offsetWidth; // reflow to restart animation
+        container.classList.add('bust-shake');
+        setTimeout(() => container.classList.remove('bust-shake'), 600);
+    }
+
+    annotateHandResults(results) {
+        const container = this.elements.playerCards;
+        if (!container || !results) return;
+        const wrappers = container.querySelectorAll('.hand-container');
+        if (wrappers.length === 0) return; // single hand — no annotation needed
+        const labels = { win: '✅ Ganhou!', lose: '❌ Perdeu', tie: '🤝 Empate', surrender: '🏳️ Desistiu' };
+        const classes = { win: 'hand-result-win', lose: 'hand-result-lose', tie: 'hand-result-tie', surrender: 'hand-result-tie' };
+        wrappers.forEach((wrapper, i) => {
+            if (!results[i]) return;
+            const infoDiv = wrapper.querySelector('.hand-info');
+            if (!infoDiv) return;
+            infoDiv.textContent = labels[results[i].result] || '';
+            infoDiv.className = `hand-info ${classes[results[i].result] || ''}`;
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────
 
     showError(msg) {
         if (this.elements.errorMessage) this.elements.errorMessage.textContent = msg;
