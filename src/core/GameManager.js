@@ -63,13 +63,16 @@ export class GameManager {
     }
 
     onUserSignOut() {
-        // User is signed out
         this.userId = null;
         this.username = null;
+        this.initializeGameState();
 
-        if (this.ui && this.ui.elements.loginScreen && this.ui.elements.loginScreen.style.display === 'none') {
-            window.location.reload();
+        if (this.ui) {
+            this.ui.updateAuthUI();
+            this.ui.showToast('Você saiu da conta. Jogando como visitante.', 'info');
+            this.ui.showMessage('Escolha sua aposta!');
         }
+        this.updateUI();
     }
 
     // Proxy properties to engine for backward compatibility and test support

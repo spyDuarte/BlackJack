@@ -18,69 +18,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Login Screen -->
-    <section class="login-screen" id="login-screen" aria-label="Tela de login">
-        <div class="login-content">
-            <h1 id="auth-title">♠️ Login ♥️</h1>
-            <p id="auth-subtitle">Entre com sua conta para começar.</p>
-            <form class="login-form" id="login-form" onsubmit="return false;">
-                <input type="email" id="login-email" placeholder="E-mail" autocomplete="email" required>
-                <input type="password" id="login-password" placeholder="Senha" autocomplete="current-password" required>
-
-                <div class="error-msg" id="login-error" role="alert"></div>
-
-                <button id="login-btn" class="start-btn" type="submit">Entrar</button>
-
-                <p class="auth-toggle-text">
-                    Não tem uma conta? <a href="#" id="go-to-register">Registrar-se</a>
-                </p>
-            </form>
-        </div>
-    </section>
-
-    <!-- Register Screen -->
-    <section class="login-screen hidden" id="register-screen" style="display: none;" aria-label="Tela de cadastro">
-        <div class="login-content register-content">
-            <h1>♠️ Cadastro ♥️</h1>
-            <p>Crie sua conta para jogar.</p>
-            <form class="login-form" id="register-form" onsubmit="return false;">
-                <div class="form-field">
-                    <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username" minlength="3" maxlength="20" required>
-                    <span class="field-hint" id="username-hint">3 a 20 caracteres (letras, números, _ ou -)</span>
-                </div>
-
-                <div class="form-field">
-                    <input type="email" id="register-email" placeholder="E-mail" autocomplete="email" required>
-                </div>
-
-                <div class="form-field">
-                    <div class="password-wrapper">
-                        <input type="password" id="register-password" placeholder="Senha (min. 6 caracteres)" autocomplete="new-password" minlength="6" required>
-                        <button type="button" class="toggle-password" id="toggle-password" aria-label="Mostrar senha" tabindex="-1">👁️</button>
-                    </div>
-                    <div class="password-strength" id="password-strength">
-                        <div class="strength-bar" id="strength-bar"></div>
-                    </div>
-                    <span class="strength-label" id="strength-label"></span>
-                </div>
-
-                <div class="form-field">
-                    <input type="password" id="register-confirm-password" placeholder="Confirmar senha" autocomplete="new-password" required>
-                </div>
-
-                <div class="error-msg" id="register-error" role="alert"></div>
-
-                <button id="register-btn" class="start-btn" type="submit">Cadastrar</button>
-
-                <p class="auth-toggle-text">
-                    Já tem uma conta? <a href="#" id="go-to-login">Entrar</a>
-                </p>
-            </form>
-        </div>
-    </section>
-
-    <!-- Welcome Screen -->
-    <section class="welcome-screen hidden" id="welcome-screen" style="display: none;" aria-label="Tela de boas-vindas">
+    <!-- Welcome Screen (shown by default — no login required) -->
+    <section class="welcome-screen" id="welcome-screen" aria-label="Tela de boas-vindas">
         <div class="welcome-content">
             <h1>♠️ BLACKJACK PREMIUM ♥️</h1>
             <p>Bem-vindo ao melhor jogo de Blackjack online! Desafie o dealer, faça suas apostas e tente chegar aos 21 pontos sem estourar.</p>
@@ -210,76 +149,138 @@
     <div id="settings-modal" class="modal" role="dialog" aria-labelledby="settings-title" aria-modal="true">
         <div class="modal-content">
             <span class="close" role="button" aria-label="Fechar menu">&times;</span>
-            <h2 id="settings-title" style="color: var(--primary-gold); margin-bottom: 20px;">👤 Menu</h2>
+            <h2 id="settings-title" style="color: var(--primary-gold); margin-bottom: 16px;">Menu</h2>
 
-            <!-- Auth Section -->
-            <div id="auth-section" style="text-align: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-gold);">
-                <div id="user-info" style="margin-bottom: 15px; font-weight: bold; color: white;">Visitante</div>
-                <div id="guest-controls">
-                    <button id="menu-login-btn" style="padding: 10px 20px; font-size: 0.9em; margin-right: 10px;">Entrar</button>
-                    <button id="menu-register-btn" style="padding: 10px 20px; font-size: 0.9em;">Cadastrar</button>
+            <!-- Tab Navigation -->
+            <div class="modal-tabs" role="tablist">
+                <button class="modal-tab active" id="tab-btn-settings" role="tab" aria-selected="true" aria-controls="tab-settings">⚙️ Configurações</button>
+                <button class="modal-tab" id="tab-btn-account" role="tab" aria-selected="false" aria-controls="tab-account">👤 Conta</button>
+            </div>
+
+            <!-- ── Tab: Configurações ── -->
+            <div id="tab-settings" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-settings">
+
+                <div class="setting-item">
+                    <label for="sound-enabled">🔊 Sons</label>
+                    <input type="checkbox" id="sound-enabled" checked>
                 </div>
-                <div id="user-controls" style="display: none;">
-                    <button id="menu-logout-btn" style="padding: 10px 20px; font-size: 0.9em; background: var(--btn-danger);">Sair</button>
+
+                <div class="setting-item">
+                    <label for="volume-slider">🔉 Volume</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="range" id="volume-slider" min="0" max="100" value="50" step="5">
+                        <span class="volume-value" id="volume-value">50%</span>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label for="animations-enabled">✨ Animações</label>
+                    <input type="checkbox" id="animations-enabled" checked>
+                </div>
+
+                <div class="setting-item">
+                    <label for="auto-save">💾 Salvamento Automático</label>
+                    <input type="checkbox" id="auto-save" checked>
+                </div>
+
+                <div class="setting-item">
+                    <label for="show-stats">📊 Mostrar Estatísticas</label>
+                    <input type="checkbox" id="show-stats">
+                </div>
+
+                <div class="setting-item">
+                    <label>🎨 Tema</label>
+                    <div class="theme-toggle">
+                        <button id="theme-dark" class="active">Escuro</button>
+                        <button id="theme-light">Claro</button>
+                    </div>
+                </div>
+
+                <hr style="border-color: var(--border-gold); margin: 20px 0;">
+
+                <div class="setting-item">
+                    <label>💾 Dados do Jogo</label>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="btn-export-data" style="padding: 8px 16px; font-size: 0.85em; min-width: auto;">Exportar</button>
+                        <label for="btn-import-data" style="cursor: pointer;">
+                            <span style="display: inline-block; padding: 8px 16px; font-size: 0.85em; background: linear-gradient(45deg, var(--primary-gold), var(--secondary-gold)); color: var(--dark-green); border-radius: 50px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Importar</span>
+                            <input type="file" id="btn-import-data" accept=".json" style="display: none;">
+                        </label>
+                    </div>
+                </div>
+
+                <div style="margin-top: 24px; text-align: center;">
+                    <button id="btn-reset-game" style="background: linear-gradient(45deg, #e74c3c, #c0392b);">🔄 Resetar Jogo</button>
                 </div>
             </div>
 
-            <h3 style="color: var(--primary-gold); margin-bottom: 15px; font-size: 1.1em;">⚙️ Configurações</h3>
+            <!-- ── Tab: Conta ── -->
+            <div id="tab-account" class="tab-content" style="display: none;" role="tabpanel" aria-labelledby="tab-btn-account">
 
-            <div class="setting-item">
-                <label for="sound-enabled">🔊 Sons</label>
-                <input type="checkbox" id="sound-enabled" checked>
-            </div>
-
-            <div class="setting-item">
-                <label for="volume-slider">🔉 Volume</label>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" id="volume-slider" min="0" max="100" value="50" step="5">
-                    <span class="volume-value" id="volume-value">50%</span>
+                <!-- Estado: logado -->
+                <div id="account-logged-in" style="display: none; text-align: center; padding: 20px 0;">
+                    <div id="user-info" style="margin-bottom: 16px; font-size: 1.1em; font-weight: bold; color: white;"></div>
+                    <p style="color: rgba(255,255,255,0.6); font-size: 0.9em; margin-bottom: 20px;">Seu progresso é sincronizado automaticamente na nuvem.</p>
+                    <button id="menu-logout-btn" style="background: linear-gradient(45deg, #e74c3c, #c0392b);">🚪 Sair da Conta</button>
                 </div>
-            </div>
 
-            <div class="setting-item">
-                <label for="animations-enabled">✨ Animações</label>
-                <input type="checkbox" id="animations-enabled" checked>
-            </div>
+                <!-- Estado: visitante — formulários de login/cadastro -->
+                <div id="account-logged-out">
 
-            <div class="setting-item">
-                <label for="auto-save">💾 Salvamento Automático</label>
-                <input type="checkbox" id="auto-save" checked>
-            </div>
+                    <!-- Formulário de Login -->
+                    <div id="login-section">
+                        <h3 style="color: var(--primary-gold); margin-bottom: 16px; text-align: center;">Entrar</h3>
+                        <form class="modal-auth-form" id="login-form" onsubmit="return false;">
+                            <input type="email" id="login-email" placeholder="E-mail" autocomplete="email" required>
+                            <input type="password" id="login-password" placeholder="Senha" autocomplete="current-password" required>
+                            <div class="error-msg" id="login-error" role="alert"></div>
+                            <button id="login-btn" class="start-btn" type="submit" style="width: 100%; margin-top: 4px;">Entrar</button>
+                        </form>
+                        <p class="auth-toggle-text" style="text-align: center; margin-top: 16px;">
+                            Não tem uma conta? <a href="#" id="go-to-register">Cadastrar-se</a>
+                        </p>
+                        <p class="auth-toggle-text" style="text-align: center; margin-top: 8px; font-size: 0.85em; color: rgba(255,255,255,0.5);">
+                            Jogar sem conta salva progresso apenas localmente.
+                        </p>
+                    </div>
 
-            <div class="setting-item">
-                <label for="show-stats">📊 Mostrar Estatísticas</label>
-                <input type="checkbox" id="show-stats">
-            </div>
+                    <!-- Formulário de Cadastro -->
+                    <div id="register-section" style="display: none;">
+                        <h3 style="color: var(--primary-gold); margin-bottom: 16px; text-align: center;">Criar Conta</h3>
+                        <form class="modal-auth-form" id="register-form" onsubmit="return false;">
+                            <div class="form-field">
+                                <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username" minlength="3" maxlength="20" required>
+                                <span class="field-hint" id="username-hint">3 a 20 caracteres (letras, números, _ ou -)</span>
+                            </div>
+                            <div class="form-field">
+                                <input type="email" id="register-email" placeholder="E-mail" autocomplete="email" required>
+                            </div>
+                            <div class="form-field">
+                                <div class="password-wrapper">
+                                    <input type="password" id="register-password" placeholder="Senha (min. 6 caracteres)" autocomplete="new-password" minlength="6" required>
+                                    <button type="button" class="toggle-password" id="toggle-password" aria-label="Mostrar senha" tabindex="-1">👁️</button>
+                                </div>
+                                <div class="password-strength" id="password-strength">
+                                    <div class="strength-bar" id="strength-bar"></div>
+                                </div>
+                                <span class="strength-label" id="strength-label"></span>
+                            </div>
+                            <div class="form-field">
+                                <input type="password" id="register-confirm-password" placeholder="Confirmar senha" autocomplete="new-password" required>
+                            </div>
+                            <div class="error-msg" id="register-error" role="alert"></div>
+                            <button id="register-btn" class="start-btn" type="submit" style="width: 100%; margin-top: 4px;">Cadastrar</button>
+                        </form>
+                        <p class="auth-toggle-text" style="text-align: center; margin-top: 16px;">
+                            Já tem uma conta? <a href="#" id="go-to-login">Entrar</a>
+                        </p>
+                    </div>
 
-            <div class="setting-item">
-                <label>🎨 Tema</label>
-                <div class="theme-toggle">
-                    <button id="theme-dark" class="active">Escuro</button>
-                    <button id="theme-light">Claro</button>
-                </div>
-            </div>
+                </div><!-- /account-logged-out -->
+            </div><!-- /tab-account -->
 
-            <hr style="border-color: var(--border-gold); margin: 20px 0;">
-
-            <div class="setting-item">
-                <label>💾 Dados do Jogo</label>
-                <div style="display: flex; gap: 8px;">
-                    <button id="btn-export-data" style="padding: 8px 16px; font-size: 0.85em; min-width: auto;">Exportar</button>
-                    <label for="btn-import-data" style="cursor: pointer;">
-                        <span style="display: inline-block; padding: 8px 16px; font-size: 0.85em; background: linear-gradient(45deg, var(--primary-gold), var(--secondary-gold)); color: var(--dark-green); border-radius: 50px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Importar</span>
-                        <input type="file" id="btn-import-data" accept=".json" style="display: none;">
-                    </label>
-                </div>
-            </div>
-
-            <div style="margin-top: 30px; text-align: center;">
-                <button id="btn-reset-game" style="background: linear-gradient(45deg, #e74c3c, #c0392b);">🔄 Resetar Jogo</button>
-            </div>
-        </div>
-    </div>
+        </div><!-- /modal-content -->
+    </div><!-- /settings-modal -->
 
     <!-- Insurance Modal -->
     <div id="insurance-modal" class="modal" role="dialog" aria-labelledby="insurance-title" aria-modal="true">
