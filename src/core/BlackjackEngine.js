@@ -1,5 +1,5 @@
 import { Deck } from './Deck.js';
-import { CONFIG } from './Constants.js';
+import { CONFIG, RULES } from './Constants.js';
 import * as HandUtils from '../utils/HandUtils.js';
 
 /**
@@ -126,8 +126,9 @@ export class BlackjackEngine {
      * @returns {Object|null} Result object or null if invalid.
      */
     double(handIndex) {
+        if (!this.canDouble(handIndex)) return null;
+
         const hand = this.playerHands[handIndex];
-        if (!hand || hand.status !== 'playing') return null;
 
         const card = this.deck.draw();
         hand.cards.push(card);
@@ -140,6 +141,28 @@ export class BlackjackEngine {
         }
 
         return { hand, card };
+    }
+
+    /**
+     * Checks if a given hand is eligible for a double-down action.
+     * @param {number} handIndex - Index of the hand.
+     * @returns {boolean} True when the hand can double.
+     */
+    canDouble(handIndex) {
+        const hand = this.playerHands[handIndex];
+        if (!hand || hand.status !== 'playing') return false;
+        if (hand.cards.length !== 2) return false;
+
+        const isSplitHand = this.playerHands.length > 1;
+        if (isSplitHand && !RULES.DOUBLE_AFTER_SPLIT) return false;
+
+        if (RULES.DOUBLE_TOTALS !== 'any') {
+            const validTotals = Array.isArray(RULES.DOUBLE_TOTALS) ? RULES.DOUBLE_TOTALS : [];
+            const handTotal = HandUtils.calculateHandValue(hand.cards);
+            if (!validTotals.includes(handTotal)) return false;
+        }
+
+        return true;
     }
 
     /**

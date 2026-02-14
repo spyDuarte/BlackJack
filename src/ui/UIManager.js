@@ -638,7 +638,7 @@ export class UIManager {
             }
 
             if (this.elements.doubleBtn) {
-                const canDouble = currentHand.status === 'playing' && state.balance >= currentHand.bet && currentHand.cards.length === 2;
+                const canDouble = this.game ? this.game.canDouble(state.currentHandIndex) : false;
                 this.elements.doubleBtn.disabled = !canDouble;
             }
         } else {

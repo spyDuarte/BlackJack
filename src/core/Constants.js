@@ -23,3 +23,10 @@ export const CONFIG = {
         INSURANCE_MODAL: 1000
     }
 };
+
+export const RULES = {
+    // Allows doubling after a split hand when true.
+    DOUBLE_AFTER_SPLIT: true,
+    // Set to 'any' for any 2-card hand, or an array like [9, 10, 11].
+    DOUBLE_TOTALS: 'any'
+};

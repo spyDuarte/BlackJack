@@ -510,14 +510,29 @@ export class GameManager {
         this.nextHand();
     }
 
+    canDouble(handIndex = this.engine.currentHandIndex) {
+        if (this.engine.gameOver) return false;
+
+        const hand = this.engine.playerHands[handIndex];
+        if (!hand) return false;
+
+        return this.engine.canDouble(handIndex) && this.balance >= hand.bet;
+    }
+
     double() {
         if (this.engine.gameOver) return;
         const hand = this.engine.playerHands[this.engine.currentHandIndex];
 
-        if (this.balance < hand.bet) {
-            if (this.ui) this.ui.showToast('Saldo insuficiente para dobrar.', 'error', 2000);
+        if (!this.canDouble(this.engine.currentHandIndex)) {
+            if (this.ui) {
+                const reason = hand && this.balance < hand.bet
+                    ? 'Saldo insuficiente para dobrar.'
+                    : 'Não é possível dobrar agora.';
+                this.ui.showToast(reason, 'error', 2000);
+            }
             return;
         }
+
         this.balance -= hand.bet;
 
         const result = this.engine.double(this.engine.currentHandIndex);

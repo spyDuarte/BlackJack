@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { BlackjackEngine } from '../../src/core/BlackjackEngine.js';
+import { RULES } from '../../src/core/Constants.js';
 import * as HandUtils from '../../src/utils/HandUtils.js';
 
 describe('Rule Refinements', () => {
@@ -8,6 +9,8 @@ describe('Rule Refinements', () => {
     beforeEach(() => {
         engine = new BlackjackEngine();
         engine.deck.cards = []; // Mock deck
+        RULES.DOUBLE_AFTER_SPLIT = true;
+        RULES.DOUBLE_TOTALS = 'any';
     });
 
     it('auto-stands on 21 when hitting', () => {
@@ -94,4 +97,89 @@ describe('Rule Refinements', () => {
         expect(result).not.toBeNull();
         expect(engine.playerHands[0].status).toBe('surrender');
     });
+
+    it('permits double when all base conditions are valid', () => {
+        engine.playerHands = [{
+            cards: [{ value: '5', suit: 'H' }, { value: '4', suit: 'D' }],
+            bet: 20,
+            status: 'playing',
+            splitFromAces: false
+        }];
+
+        engine.deck.draw = () => ({ value: 'K', suit: 'S' });
+
+        const result = engine.double(0);
+
+        expect(result).not.toBeNull();
+        expect(engine.playerHands[0].bet).toBe(40);
+        expect(engine.playerHands[0].cards.length).toBe(3);
+    });
+
+    it('denies double when hand is missing or not playing', () => {
+        engine.playerHands = [{
+            cards: [{ value: '5', suit: 'H' }, { value: '4', suit: 'D' }],
+            bet: 20,
+            status: 'stand',
+            splitFromAces: false
+        }];
+
+        expect(engine.double(1)).toBeNull();
+        expect(engine.double(0)).toBeNull();
+    });
+
+    it('denies double when hand does not have exactly 2 cards', () => {
+        engine.playerHands = [{
+            cards: [{ value: '5', suit: 'H' }, { value: '4', suit: 'D' }, { value: '2', suit: 'C' }],
+            bet: 20,
+            status: 'playing',
+            splitFromAces: false
+        }];
+
+        expect(engine.double(0)).toBeNull();
+    });
+
+    it('denies double after split when DOUBLE_AFTER_SPLIT is false', () => {
+        RULES.DOUBLE_AFTER_SPLIT = false;
+
+        engine.playerHands = [
+            {
+                cards: [{ value: '8', suit: 'H' }, { value: '2', suit: 'D' }],
+                bet: 20,
+                status: 'playing',
+                splitFromAces: false
+            },
+            {
+                cards: [{ value: '8', suit: 'C' }, { value: '3', suit: 'S' }],
+                bet: 20,
+                status: 'playing',
+                splitFromAces: false
+            }
+        ];
+
+        expect(engine.double(0)).toBeNull();
+    });
+
+    it('respects DOUBLE_TOTALS when configured to 9/10/11', () => {
+        RULES.DOUBLE_TOTALS = [9, 10, 11];
+
+        engine.playerHands = [{
+            cards: [{ value: '7', suit: 'H' }, { value: '2', suit: 'D' }],
+            bet: 20,
+            status: 'playing',
+            splitFromAces: false
+        }];
+        engine.deck.draw = () => ({ value: '2', suit: 'S' });
+
+        expect(engine.double(0)).not.toBeNull();
+
+        engine.playerHands = [{
+            cards: [{ value: '8', suit: 'H' }, { value: '8', suit: 'D' }],
+            bet: 20,
+            status: 'playing',
+            splitFromAces: false
+        }];
+
+        expect(engine.double(0)).toBeNull();
+    });
+
 });
