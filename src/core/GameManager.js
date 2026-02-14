@@ -1,5 +1,5 @@
 import { BlackjackEngine } from './BlackjackEngine.js';
-import { CONFIG } from './Constants.js';
+import { CONFIG, RULES, getActiveRuleProfile } from './Constants.js';
 import { StorageManager } from '../utils/StorageManager.js';
 import { debounce } from '../utils/debounce.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
@@ -164,7 +164,8 @@ export class GameManager {
             dealerRevealed: engineState.dealerRevealed,
             gameOver: engineState.gameOver,
             gameStarted: engineState.gameStarted,
-            settings: this.settings
+            settings: this.settings,
+            activeRuleProfile: RULES.ACTIVE_PROFILE
         };
     }
 
@@ -418,17 +419,22 @@ export class GameManager {
             this.ui.showMessage('Boa sorte!');
         }
 
+        const profile = getActiveRuleProfile();
         const dealerUpCard = dealerHand[0];
         const dealerUpVal = HandUtils.getCardNumericValue(dealerUpCard);
 
-        if (dealerUpCard.value === 'A') {
-             this.addTimeout(() => {
-                 if (this.ui) this.ui.toggleInsuranceModal(true);
-             }, CONFIG.DELAYS.INSURANCE_MODAL);
-        } else if (dealerUpVal === 10) {
-             this.addTimeout(() => this.checkDealerBlackjack(), CONFIG.DELAYS.DEAL);
+        if (profile.holeCardPolicy === 'peek') {
+            if (dealerUpCard.value === 'A') {
+                 this.addTimeout(() => {
+                     if (this.ui) this.ui.toggleInsuranceModal(true);
+                 }, CONFIG.DELAYS.INSURANCE_MODAL);
+            } else if (dealerUpVal === 10) {
+                 this.addTimeout(() => this.checkDealerBlackjack(), CONFIG.DELAYS.DEAL);
+            } else {
+                 this.addTimeout(() => this.startPlayerTurn(), CONFIG.DELAYS.DEAL);
+            }
         } else {
-             this.addTimeout(() => this.startPlayerTurn(), CONFIG.DELAYS.DEAL);
+            this.addTimeout(() => this.startPlayerTurn(), CONFIG.DELAYS.DEAL);
         }
     }
 
@@ -460,6 +466,15 @@ export class GameManager {
 
     respondToInsurance(accept) {
         if (this.ui) this.ui.toggleInsuranceModal(false);
+
+        const profile = getActiveRuleProfile();
+
+        if (profile.holeCardPolicy !== 'peek') {
+            if (this.ui) this.ui.showMessage('Seguro indisponível neste perfil.', '');
+            this.updateUI();
+            this.addTimeout(() => this.startPlayerTurn(), CONFIG.DELAYS.TURN);
+            return;
+        }
 
         if (accept) {
             const insuranceCost = Math.floor(this.currentBet / 2);
@@ -800,7 +815,8 @@ export class GameManager {
                 blackjacks: this.blackjacks,
                 totalWinnings: this.totalWinnings
             },
-            settings: this.settings
+            settings: this.settings,
+            activeRuleProfile: RULES.ACTIVE_PROFILE
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);

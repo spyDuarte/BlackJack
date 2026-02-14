@@ -28,8 +28,37 @@ export const CONFIG = {
 };
 
 export const RULES = {
-    // Allows doubling after a split hand when true.
-    DOUBLE_AFTER_SPLIT: true,
+    ACTIVE_PROFILE: 'vegas_strip',
+    PROFILES: {
+        vegas_strip: {
+            dealerHitsSoft17: true,
+            blackjackPayout: 2.5,
+            doubleAfterSplit: true,
+            resplitAces: false,
+            holeCardPolicy: 'peek',
+            surrenderType: 'late'
+        },
+        atlantic_city: {
+            dealerHitsSoft17: false,
+            blackjackPayout: 2.5,
+            doubleAfterSplit: true,
+            resplitAces: true,
+            holeCardPolicy: 'peek',
+            surrenderType: 'late'
+        },
+        european_no_hole_card: {
+            dealerHitsSoft17: false,
+            blackjackPayout: 2.2,
+            doubleAfterSplit: true,
+            resplitAces: false,
+            holeCardPolicy: 'no_peek',
+            surrenderType: 'none'
+        }
+    },
     // Set to 'any' for any 2-card hand, or an array like [9, 10, 11].
     DOUBLE_TOTALS: 'any'
 };
+
+export function getActiveRuleProfile() {
+    return RULES.PROFILES[RULES.ACTIVE_PROFILE] || RULES.PROFILES.vegas_strip;
+}
