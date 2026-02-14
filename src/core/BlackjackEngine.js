@@ -33,7 +33,8 @@ export class BlackjackEngine {
      */
     shuffleDeck() {
         this.deck.reset();
-        this.deck.shuffle();
+        this.deck.shuffleWithMode(CONFIG.SHUFFLE_MODE);
+        this.deck.burnCards(CONFIG.BURN_CARDS_AFTER_SHUFFLE);
     }
 
     /**
