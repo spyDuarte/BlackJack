@@ -193,6 +193,7 @@ export class GameManager {
             gameStarted: this.engine.gameStarted,
             updatedAt: Date.now()
         };
+        // Pass object directly to StorageManager to avoid double serialization
         StorageManager.set(this.getStorageKey('blackjack-premium-save'), gameState);
         this.saveStatsToSupabase();
     }
