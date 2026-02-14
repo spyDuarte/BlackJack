@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Deck } from '../../src/core/Deck.js';
 import { CONFIG } from '../../src/core/Constants.js';
 
+
 describe('Deck', () => {
     let deck;
 
@@ -72,7 +73,8 @@ describe('Deck', () => {
         const card = deck.draw();
 
         expect(card).toBeDefined();
-        expect(deck.cards.length).toBe(51); // 52 - 1
+        // After emergency reshuffle: 52 cards reset, burn CONFIG.BURN_CARDS_AFTER_SHUFFLE, draw 1
+        expect(deck.cards.length).toBe(52 - CONFIG.BURN_CARDS_AFTER_SHUFFLE - 1);
     });
 
     it('detects cut card logic', () => {

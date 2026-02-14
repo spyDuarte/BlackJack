@@ -14,7 +14,7 @@ export class Deck {
         this.cards = [];
         this.cutCardReached = false;
         this.reset();
-        this.shuffle();
+        this.shuffleWithMode(CONFIG.SHUFFLE_MODE);
     }
 
     /**
@@ -149,16 +149,24 @@ export class Deck {
 
         while (left.length || right.length) {
             if (!left.length) {
-                shuffled.push(right.shift());
+                // Drop remaining right cards in groups
+                const dropCount = Math.min(1 + this._getRandomInt(4), right.length);
+                for (let i = 0; i < dropCount; i++) shuffled.push(right.shift());
                 continue;
             }
             if (!right.length) {
-                shuffled.push(left.shift());
+                // Drop remaining left cards in groups
+                const dropCount = Math.min(1 + this._getRandomInt(4), left.length);
+                for (let i = 0; i < dropCount; i++) shuffled.push(left.shift());
                 continue;
             }
 
-            const takeLeft = this._getRandomInt(2) === 0;
-            shuffled.push(takeLeft ? left.shift() : right.shift());
+            // Weight by pile size: larger pile has proportionally higher chance to drop
+            const takeLeft = this._getRandomInt(left.length + right.length) < left.length;
+            const pile = takeLeft ? left : right;
+            // Drop 1-4 cards at once, simulating thumb releasing pressure
+            const dropCount = Math.min(1 + this._getRandomInt(4), pile.length);
+            for (let i = 0; i < dropCount; i++) shuffled.push(pile.shift());
         }
 
         this.cards = shuffled;
@@ -170,7 +178,12 @@ export class Deck {
         for (let i = 0; i < this.cards.length; i += stripSize) {
             strips.push(this.cards.slice(i, i + stripSize));
         }
-        this.cards = strips.reverse().flat();
+        // Randomly shuffle strips (Fisher-Yates) instead of just reversing
+        for (let i = strips.length - 1; i > 0; i--) {
+            const j = this._getRandomInt(i + 1);
+            [strips[i], strips[j]] = [strips[j], strips[i]];
+        }
+        this.cards = strips.flat();
     }
 
     _cutShuffle() {
@@ -221,7 +234,8 @@ export class Deck {
     draw() {
         if (this.cards.length === 0) {
             this.reset();
-            this.shuffle();
+            this.shuffleWithMode(CONFIG.SHUFFLE_MODE);
+            this.burnCards(CONFIG.BURN_CARDS_AFTER_SHUFFLE);
         }
 
         // Check if cut card was reached during play (including the card being drawn now)
