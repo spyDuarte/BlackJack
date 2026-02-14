@@ -1,5 +1,5 @@
 import { Deck } from './Deck.js';
-import { CONFIG, RULES } from './Constants.js';
+import { CONFIG, RULES, getActiveRuleProfile } from './Constants.js';
 import * as HandUtils from '../utils/HandUtils.js';
 
 /**
@@ -150,12 +150,13 @@ export class BlackjackEngine {
      * @returns {boolean} True when the hand can double.
      */
     canDouble(handIndex) {
+        const profile = getActiveRuleProfile();
         const hand = this.playerHands[handIndex];
         if (!hand || hand.status !== 'playing') return false;
         if (hand.cards.length !== 2) return false;
 
         const isSplitHand = this.playerHands.length > 1;
-        if (isSplitHand && !RULES.DOUBLE_AFTER_SPLIT) return false;
+        if (isSplitHand && !profile.doubleAfterSplit) return false;
 
         if (RULES.DOUBLE_TOTALS !== 'any') {
             const validTotals = Array.isArray(RULES.DOUBLE_TOTALS) ? RULES.DOUBLE_TOTALS : [];
@@ -172,6 +173,7 @@ export class BlackjackEngine {
      * @returns {Object|null} Result object containing split details or null if invalid.
      */
     split(handIndex) {
+        const profile = getActiveRuleProfile();
         const hand = this.playerHands[handIndex];
         if (!hand) return null;
 
@@ -180,7 +182,7 @@ export class BlackjackEngine {
         if (HandUtils.getCardNumericValue(hand.cards[0]) !== HandUtils.getCardNumericValue(hand.cards[1])) return null;
 
         // No re-splitting Aces
-        if (hand.splitFromAces) return null;
+        if (hand.splitFromAces && !profile.resplitAces) return null;
 
         const isSplittingAces = hand.cards[0].value === 'A';
 
@@ -221,8 +223,11 @@ export class BlackjackEngine {
      * @returns {Object|null} Updated hand object.
      */
     surrender(handIndex) {
+        const profile = getActiveRuleProfile();
         const hand = this.playerHands[handIndex];
         if (!hand) return null;
+
+        if (profile.surrenderType === 'none') return null;
 
         // Late Surrender only allowed on initial hand (no splits)
         if (this.playerHands.length > 1) return null;
@@ -237,9 +242,10 @@ export class BlackjackEngine {
      * @returns {boolean} True if dealer should hit.
      */
     dealerShouldHit() {
+        const profile = getActiveRuleProfile();
         const value = HandUtils.calculateHandValue(this.dealerHand);
         const isSoft = HandUtils.isSoftHand(this.dealerHand);
-        return (value < 17 || (value === 17 && isSoft));
+        return (value < 17 || (value === 17 && isSoft && profile.dealerHitsSoft17));
     }
 
     /**
@@ -279,6 +285,7 @@ export class BlackjackEngine {
      * @returns {Object} Result summary including payouts.
      */
     evaluateResults() {
+        const profile = getActiveRuleProfile();
         const dealerValue = HandUtils.calculateHandValue(this.dealerHand);
         const dealerBJ = HandUtils.isNaturalBlackjack(this.dealerHand, 1);
 
@@ -307,12 +314,12 @@ export class BlackjackEngine {
                  result = 'win';
                  winMultiplier = 2;
              } else if (dealerValue > 21) {
-                 result = 'win';
-                 winMultiplier = 2;
-                 if (playerBJ) winMultiplier = CONFIG.PAYOUT.BLACKJACK;
+                result = 'win';
+                winMultiplier = 2;
+                if (playerBJ) winMultiplier = profile.blackjackPayout;
              } else if (playerBJ) {
                  result = 'win';
-                 winMultiplier = CONFIG.PAYOUT.BLACKJACK;
+                 winMultiplier = profile.blackjackPayout;
              } else if (playerValue > dealerValue) {
                  result = 'win';
                  winMultiplier = 2;
