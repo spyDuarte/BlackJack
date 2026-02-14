@@ -19,6 +19,8 @@ describe('BlackjackEngine', () => {
         mockDeckInstance = {
             reset: vi.fn(),
             shuffle: vi.fn(),
+            shuffleWithMode: vi.fn(),
+            burnCards: vi.fn(),
             draw: vi.fn().mockReturnValue({ suit: '♠', value: '10' }), // Default card
             cards: [],
             needsReshuffle: false,
@@ -47,6 +49,16 @@ describe('BlackjackEngine', () => {
         expect(engine.playerHands[0].bet).toBe(100);
         expect(engine.dealerHand.length).toBe(2);
         expect(mockDeckInstance.draw).toHaveBeenCalledTimes(4);
+    });
+
+    it('applies configured shuffle mode and burn when reshuffling', () => {
+        mockDeckInstance.needsReshuffle = true;
+
+        engine.startGame(100);
+
+        expect(mockDeckInstance.reset).toHaveBeenCalledTimes(1);
+        expect(mockDeckInstance.shuffleWithMode).toHaveBeenCalledTimes(1);
+        expect(mockDeckInstance.burnCards).toHaveBeenCalledTimes(1);
     });
 
     it('hit adds a card', () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Deck } from '../../src/core/Deck.js';
 
 describe('Deck Randomness', () => {
@@ -9,23 +9,17 @@ describe('Deck Randomness', () => {
     });
 
     it('uses _getRandomInt for randomness', () => {
-        // Spy on _getRandomInt
         const spy = vi.spyOn(deck, '_getRandomInt');
 
-        // Shuffle calls _getRandomInt for each card
         deck.shuffle();
         expect(spy).toHaveBeenCalled();
-        // Loop runs from len-1 down to 1. i.e. 51 down to 1. That is 51 iterations.
         expect(spy).toHaveBeenCalledTimes(51);
     });
 
     it('uses crypto.getRandomValues when available', () => {
         if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
             const spy = vi.spyOn(crypto, 'getRandomValues');
-
-            // _getRandomInt is called during shuffle
             deck.shuffle();
-
             expect(spy).toHaveBeenCalled();
             spy.mockRestore();
         }
@@ -42,25 +36,21 @@ describe('Deck Randomness', () => {
     });
 
     it('does not use Math.random when crypto is available', () => {
-         if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-             const spy = vi.spyOn(Math, 'random');
+        if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+            const spy = vi.spyOn(Math, 'random');
+            const d = new Deck(1);
+            d.shuffle();
+            d.reset();
 
-             // Create a new deck to test reset() behavior which happens in constructor
-             const d = new Deck(1);
-             d.shuffle();
-             d.reset();
+            expect(spy).not.toHaveBeenCalled();
 
-             expect(spy).not.toHaveBeenCalled();
-
-             spy.mockRestore();
-         }
+            spy.mockRestore();
+        }
     });
 
     it('uses Math.random when crypto is NOT available', () => {
         const originalCrypto = global.crypto;
 
-        // We cannot easily delete global.crypto in some environments, but assuming JSDOM/Node it works.
-        // Or we can mock it to undefined.
         Object.defineProperty(global, 'crypto', {
             value: undefined,
             writable: true,
@@ -74,12 +64,51 @@ describe('Deck Randomness', () => {
 
         expect(spy).toHaveBeenCalled();
 
-        // Restore
         Object.defineProperty(global, 'crypto', {
             value: originalCrypto,
             writable: true,
             configurable: true
         });
         spy.mockRestore();
+    });
+
+    it('burnCards reduces deck size by requested amount', () => {
+        const initial = deck.remainingCards;
+        const burned = deck.burnCards(3);
+
+        expect(burned).toBe(3);
+        expect(deck.remainingCards).toBe(initial - 3);
+    });
+
+    it('preserves expected shoe total across casino shuffle and burn', () => {
+        const shoe = new Deck(6);
+        const expectedTotal = shoe.totalCards;
+
+        shoe.shuffleCasino(5);
+        expect(shoe.remainingCards).toBe(expectedTotal);
+
+        const burnCount = 4;
+        shoe.burnCards(burnCount);
+        expect(shoe.remainingCards).toBe(expectedTotal - burnCount);
+    });
+
+    it('triggers the selected shuffle mode', () => {
+        const fairDeck = new Deck(1);
+        const fairSpy = vi.spyOn(fairDeck, 'shuffle');
+        const fairCasinoSpy = vi.spyOn(fairDeck, 'shuffleCasino');
+
+        fairDeck.shuffleWithMode('fair');
+
+        expect(fairSpy).toHaveBeenCalled();
+        expect(fairCasinoSpy).not.toHaveBeenCalled();
+
+        const casinoDeck = new Deck(1);
+        const casinoSpy = vi.spyOn(casinoDeck, 'shuffleCasino');
+        const casinoFairSpy = vi.spyOn(casinoDeck, 'shuffle');
+
+        casinoDeck.shuffleWithMode('casino');
+
+        expect(casinoSpy).toHaveBeenCalled();
+        expect(casinoFairSpy).not.toHaveBeenCalled();
     });
 });

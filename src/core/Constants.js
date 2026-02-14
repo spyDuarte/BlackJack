@@ -1,6 +1,9 @@
 export const CONFIG = {
     DECKS: 6,
     PENETRATION_THRESHOLD: 0.2, // 20% remaining
+    SHUFFLE_MODE: 'fair', // 'fair' (Fisher-Yates) | 'casino' (riffle/strip/cut simulation)
+    CASINO_SHUFFLE_PASSES: 4,
+    BURN_CARDS_AFTER_SHUFFLE: 1,
     INITIAL_BALANCE: 1000,
     MIN_BET: 10,
     MAX_SPLITS: 3, // Maximum number of splits allowed (standard casino rule)
