@@ -80,6 +80,26 @@ export function isNaturalBlackjack(hand, handsCount) {
 }
 
 /**
+ * Classifies a hand for basic strategy lookup purposes.
+ * @param {Array<Object>} cards - Array of card objects.
+ * @returns {{ type: 'pair'|'soft'|'hard', total: number, pairValue: string|null }}
+ */
+export function classifyHand(cards) {
+    if (!cards || cards.length === 0) return { type: 'hard', total: 0, pairValue: null };
+
+    if (cards.length === 2) {
+        const v0 = getCardNumericValue(cards[0]);
+        const v1 = getCardNumericValue(cards[1]);
+        if (v0 === v1) {
+            return { type: 'pair', total: v0 + v1, pairValue: cards[0].value };
+        }
+    }
+
+    const { value, isSoft } = getHandStats(cards);
+    return { type: isSoft ? 'soft' : 'hard', total: value, pairValue: null };
+}
+
+/**
  * Returns the Hi-Lo counting value for a card.
  * 2-6: +1
  * 7-9: 0

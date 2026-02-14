@@ -1,3 +1,9 @@
+export const STORAGE_KEYS = {
+    GAME_SAVE: 'blackjack-premium-save',
+    SETTINGS: 'blackjack-premium-settings',
+    HAND_HISTORY: 'blackjack-premium-history',
+};
+
 export const CONFIG = {
     DECKS: 6,
     PENETRATION_THRESHOLD: 0.2, // 20% remaining
@@ -9,7 +15,9 @@ export const CONFIG = {
     MAX_SPLITS: 3, // Maximum number of splits allowed (standard casino rule)
     FIVE_CARD_CHARLIE: false, // Set to true to enable 5-Card Charlie rule
     ANIMATION_SPEED: 500,
-    STORAGE_VERSION: 2, // Data version for migration support
+    STORAGE_VERSION: 3, // Data version for migration support
+    HAND_HISTORY_MAX_ENTRIES: 50,
+    HAND_HISTORY_DISPLAY_COUNT: 10,
     PAYOUT: {
         BLACKJACK: 2.5, // 3:2 payout on original bet (1.5 + 1) -> 2.5x total return logic
         REGULAR: 2.0,
