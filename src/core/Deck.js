@@ -43,9 +43,29 @@ export class Deck {
 
         this.cutCardReached = false;
         // Place cut card leaving 20-40% of cards remaining (60-80% penetration)
-        const minCut = Math.floor(this.totalCards * CONFIG.PENETRATION_THRESHOLD);
-        const maxCut = Math.floor(this.totalCards * CONFIG.PENETRATION_THRESHOLD * 2);
-        this.cutCardPosition = minCut + this._getRandomInt(maxCut - minCut);
+        // If PENETRATION_THRESHOLD is 0.2 (20%), we reserve 20-40% of cards at the end.
+        // We place the cut card at 'total - reserved', so index is high.
+        // Wait, cutCardPosition is usually the index *from the start* where we stop.
+        // If threshold is 0.2, we want to stop when 20% remain.
+        // So cutCardPosition should be around 80% of totalCards.
+        // Logic below: minCut = 0.2 * total (e.g. 62 cards of 312).
+        // cutCardPosition = 62...124. This is very early in the deck!
+        // This implies we stop after dealing only ~20-40% of cards?
+        // That contradicts "60-80% penetration".
+
+        // CORRECTION: cutCardPosition should be the index where the cut card IS.
+        // When cards.length <= cutCardPosition + 1, we reshuffle.
+        // Deck is popped from end? No, draw() uses pop().
+        // cards = [0, 1, ..., 311]. pop() returns 311.
+        // remainingCards = length.
+        // We want to reshuffle when remainingCards <= X (e.g. 60).
+        // So cutCardPosition should be X.
+
+        const minReserved = Math.floor(this.totalCards * CONFIG.PENETRATION_THRESHOLD);
+        const maxReserved = Math.floor(this.totalCards * CONFIG.PENETRATION_THRESHOLD * 2);
+
+        // We want cutCardPosition to represent the number of cards *remaining* when we cut.
+        this.cutCardPosition = minReserved + this._getRandomInt(maxReserved - minReserved);
     }
 
     /**
