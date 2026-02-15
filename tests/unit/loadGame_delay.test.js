@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { mockSingle } = vi.hoisted(() => ({ mockSingle: vi.fn() }));
 
 // Mock Supabase
-vi.mock('../../src/supabaseClient.js', () => ({
+vi.mock('../../src/utils/supabaseClient.js', () => ({
     supabase: {
         from: vi.fn(() => ({
             select: vi.fn(() => ({

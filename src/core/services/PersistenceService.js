@@ -15,8 +15,6 @@ export class PersistenceService {
     }
 
     _saveGameImmediate() {
-        if (!this.game.userId) return;
-
         const gameState = {
             version: CONFIG.STORAGE_VERSION,
             balance: this.game.balance,
@@ -34,8 +32,11 @@ export class PersistenceService {
 
         StorageManager.set(this.game.getStorageKey(STORAGE_KEYS.GAME_SAVE), gameState);
         this.game.handHistory.saveToLocalStorage(this.game.getStorageKey(STORAGE_KEYS.HAND_HISTORY));
-        this.saveStatsToSupabase();
-        this.game.handHistory.saveToSupabase(this.supabase, this.game.userId).catch(console.error);
+
+        if (this.game.userId) {
+            this.saveStatsToSupabase();
+            this.game.handHistory.saveToSupabase(this.supabase, this.game.userId).catch(console.error);
+        }
     }
 
     async saveStatsToSupabase() {
@@ -67,8 +68,6 @@ export class PersistenceService {
     }
 
     async loadGame() {
-        if (!this.game.userId) return;
-
         let localTimestamp = 0;
         const savedGame = StorageManager.get(this.game.getStorageKey(STORAGE_KEYS.GAME_SAVE));
         if (savedGame) {
@@ -156,13 +155,10 @@ export class PersistenceService {
     }
 
     saveSettings() {
-        if (!this.game.userId) return;
         StorageManager.set(this.game.getStorageKey(STORAGE_KEYS.SETTINGS), this.game.settings);
     }
 
     loadSettings() {
-        if (!this.game.userId) return;
-
         const savedSettings = StorageManager.get(this.game.getStorageKey(STORAGE_KEYS.SETTINGS));
         if (savedSettings) {
             try {

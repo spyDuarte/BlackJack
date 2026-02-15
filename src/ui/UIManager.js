@@ -1,7 +1,7 @@
 import * as HandUtils from '../utils/HandUtils.js';
 import { ARCHITECTURE_FLAGS, CONFIG } from '../core/Constants.js';
 import { debounce } from '../utils/debounce.js';
-import { supabase } from '../supabaseClient.js';
+import { supabase } from '../utils/supabaseClient.js';
 import { Renderer } from './modules/Renderer.js';
 import { UIBindings } from './modules/UIBindings.js';
 import { Feedback } from './modules/Feedback.js';
