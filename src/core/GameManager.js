@@ -402,9 +402,9 @@ export class GameManager {
             }
         );
         this.handCounter = 0;
-        // Reset the shoe (deck)
-        if (this.engine && this.engine.deck) {
-            this.engine.deck.reset();
+        // Reset and shuffle the shoe (deck)
+        if (this.engine) {
+            this.engine.shuffleDeck();
         }
         this.newGame();
         if (this.ui) {
