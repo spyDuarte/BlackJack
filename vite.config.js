@@ -1,7 +1,36 @@
 import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   base: './',
+  plugins: [
+    VitePWA({
+      registerType: 'autoUpdate',
+      manifest: {
+        name: "Blackjack Premium",
+        short_name: "Blackjack",
+        description: "Blackjack Premium - O melhor jogo de 21 online",
+        start_url: "./index.html",
+        display: "standalone",
+        background_color: "#0a3d2e",
+        theme_color: "#FFD700",
+        orientation: "any",
+        icons: [
+            {
+                src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a3d2e'/><text x='50' y='68' text-anchor='middle' font-size='60'>♠️</text></svg>",
+                sizes: "any",
+                type: "image/svg+xml",
+                purpose: "any"
+            }
+        ],
+        categories: ["games", "entertainment"],
+        lang: "pt-BR"
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+      }
+    })
+  ],
   build: {
     outDir: 'dist',
     rollupOptions: {

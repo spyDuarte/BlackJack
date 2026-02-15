@@ -80,7 +80,7 @@ export class Shuffler {
      * @returns {Array} A new shuffled array.
      */
     static strip(cards) {
-        let temp = [...cards];
+        const temp = [...cards];
         let result = [];
 
         while (temp.length > 0) {

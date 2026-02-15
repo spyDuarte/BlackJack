@@ -9,7 +9,7 @@ const { storage, mockUpsert, mockSingle } = vi.hoisted(() => {
     };
 });
 
-vi.mock('../../src/supabaseClient.js', () => ({
+vi.mock('../../src/utils/supabaseClient.js', () => ({
     supabase: {
         from: vi.fn(() => ({
             select: vi.fn(() => ({
