@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BlackjackEngine } from '../../src/core/BlackjackEngine.js';
 import { Deck } from '../../src/core/Deck.js';
+import { RULES, getActiveRuleProfile } from '../../src/core/Constants.js';
 
 vi.mock('../../src/core/Deck.js', () => {
     return {
@@ -11,9 +12,11 @@ vi.mock('../../src/core/Deck.js', () => {
 describe('BlackjackEngine', () => {
     let engine;
     let mockDeckInstance;
+    const originalActiveProfile = RULES.ACTIVE_PROFILE;
 
     beforeEach(() => {
         vi.clearAllMocks();
+        RULES.ACTIVE_PROFILE = originalActiveProfile;
 
         // Setup mock deck behavior
         mockDeckInstance = {
@@ -177,5 +180,63 @@ describe('BlackjackEngine', () => {
         const result = engine.evaluateResults();
         expect(result.results[0].result).toBe('win');
         expect(result.results[0].winMultiplier).toBe(2.5); // CONFIG.PAYOUT.BLACKJACK
+    });
+
+    it('evaluateResults pays blackjack using profile payout when dealer does not have blackjack', () => {
+        RULES.ACTIVE_PROFILE = 'european_no_hole_card';
+        const profile = getActiveRuleProfile();
+
+        engine.startGame(100);
+        engine.playerHands[0].cards = [
+            { suit: '♠', value: 'A' },
+            { suit: '♣', value: 'K' }
+        ];
+        engine.dealerHand = [
+            { suit: '♥', value: '9' },
+            { suit: '♦', value: '8' }
+        ];
+
+        const result = engine.evaluateResults();
+
+        expect(result.results[0].result).toBe('win');
+        expect(result.results[0].winMultiplier).toBe(profile.blackjackPayout);
+    });
+
+    it('evaluateResults pays blackjack using profile payout even when dealer busts', () => {
+        RULES.ACTIVE_PROFILE = 'european_no_hole_card';
+        const profile = getActiveRuleProfile();
+
+        engine.startGame(100);
+        engine.playerHands[0].cards = [
+            { suit: '♠', value: 'A' },
+            { suit: '♣', value: 'K' }
+        ];
+        engine.dealerHand = [
+            { suit: '♥', value: 'K' },
+            { suit: '♦', value: '9' },
+            { suit: '♣', value: '5' }
+        ];
+
+        const result = engine.evaluateResults();
+
+        expect(result.results[0].result).toBe('win');
+        expect(result.results[0].winMultiplier).toBe(profile.blackjackPayout);
+    });
+
+    it('evaluateResults ties when both player and dealer have blackjack', () => {
+        engine.startGame(100);
+        engine.playerHands[0].cards = [
+            { suit: '♠', value: 'A' },
+            { suit: '♣', value: 'K' }
+        ];
+        engine.dealerHand = [
+            { suit: '♥', value: 'A' },
+            { suit: '♦', value: 'Q' }
+        ];
+
+        const result = engine.evaluateResults();
+
+        expect(result.results[0].result).toBe('tie');
+        expect(result.results[0].winMultiplier).toBe(1);
     });
 });

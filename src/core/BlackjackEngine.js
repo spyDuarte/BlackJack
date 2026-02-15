@@ -313,10 +313,9 @@ export class BlackjackEngine {
              } else if (CONFIG.FIVE_CARD_CHARLIE && hand.cards.length >= 5 && playerValue <= 21) {
                  result = 'win';
                  winMultiplier = 2;
-             } else if (dealerValue > 21) {
-                result = 'win';
-                winMultiplier = 2;
-                if (playerBJ) winMultiplier = profile.blackjackPayout;
+             } else if (dealerValue > 21 && !playerBJ) {
+                 result = 'win';
+                 winMultiplier = 2;
              } else if (playerBJ) {
                  result = 'win';
                  winMultiplier = profile.blackjackPayout;
