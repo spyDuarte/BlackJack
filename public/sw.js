@@ -1,9 +1,9 @@
-const CACHE_NAME = 'blackjack-premium-v3';
+const CACHE_NAME = 'blackjack-premium-v4';
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(['./', './index.html', './manifest.json']);
+            return cache.addAll(['./manifest.json']);
         })
     );
     self.skipWaiting();
@@ -27,6 +27,23 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     if (url.origin !== location.origin) return;
 
+    // Network-first for navigation requests (HTML) so deploys are always visible immediately
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    if (response.ok) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                    }
+                    return response;
+                })
+                .catch(() => caches.match(event.request))
+        );
+        return;
+    }
+
+    // Cache-first for static assets (JS/CSS have content-hash filenames — safe to cache)
     event.respondWith(
         caches.match(event.request).then((cached) => {
             const fetchPromise = fetch(event.request).then((response) => {
