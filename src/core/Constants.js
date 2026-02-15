@@ -70,3 +70,12 @@ export const RULES = {
 export function getActiveRuleProfile() {
     return RULES.PROFILES[RULES.ACTIVE_PROFILE] || RULES.PROFILES.vegas_strip;
 }
+
+export const ARCHITECTURE_FLAGS = {
+    enableAuthService: true,
+    enablePersistenceService: true,
+    enableRoundController: true,
+    enableRendererModule: true,
+    enableUIBindingsModule: true,
+    enableFeedbackModule: true,
+};
