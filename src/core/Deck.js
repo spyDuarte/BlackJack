@@ -65,10 +65,13 @@ export class Deck {
     }
 
     /**
-     * Whether the cut card has been reached/passed.
+     * Whether the cut card has been reached/passed, or if continuous shuffle is active.
      * @returns {boolean}
      */
     get needsReshuffle() {
+        if (CONFIG.SHUFFLE_MODE === 'continuous' && this.remainingCards < this.totalCards) {
+            return true;
+        }
         return this.cutCardReached;
     }
 
@@ -94,7 +97,7 @@ export class Deck {
 
     /**
      * Applies the configured shuffle mode.
-     * Falls back to Fisher-Yates for unknown modes.
+     * Falls back to Fisher-Yates for unknown or 'continuous' modes.
      * @param {string} mode
      */
     shuffleWithMode(mode = CONFIG.SHUFFLE_MODE) {
@@ -102,6 +105,7 @@ export class Deck {
             this.shuffleCasino();
             return;
         }
+        // 'continuous' mode uses the standard shuffle (Fisher-Yates)
         this.shuffle();
     }
 

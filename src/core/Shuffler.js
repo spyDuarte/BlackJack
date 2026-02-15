@@ -17,7 +17,7 @@ export class Shuffler {
 
     /**
      * Factory method to create a strategy based on mode.
-     * @param {string} mode - 'fair' or 'casino'.
+     * @param {string} mode - 'fair', 'casino', or 'continuous'.
      * @param {Object} [options] - Strategy options.
      * @returns {ShuffleStrategy}
      */
@@ -25,6 +25,7 @@ export class Shuffler {
         if (mode === 'casino') {
             return new CasinoStrategy(options.passes);
         }
+        // 'continuous' and 'fair' both use Fisher-Yates (perfect randomness)
         return new FisherYatesStrategy();
     }
 
