@@ -1336,7 +1336,7 @@ export class UIManager {
      * @param {Object} stats
      */
     _renderStatsCharts(stats) {
-        const style = getComputedStyle(document.body);
+        const style = window.getComputedStyle(document.body);
         const winColor = style.getPropertyValue('--win-color').trim() || '#2ecc71';
         const loseColor = style.getPropertyValue('--lose-color').trim() || '#e74c3c';
         const goldColor = style.getPropertyValue('--primary-gold').trim() || '#FFD700';

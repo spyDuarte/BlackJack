@@ -54,8 +54,8 @@ def test_reshuffle_when_cut_card_reached(logged_in_page):
     """)
 
     remaining_after = page.evaluate("window.__game.deck.remainingCards")
-    # Should have reshuffled (312 - 4 dealt cards)
-    assert remaining_after == 308, f"Expected 308 cards after reshuffle and deal, got {remaining_after}"
+    # Should have reshuffled (312 - 1 burn - 4 dealt cards)
+    assert remaining_after == 307, f"Expected 307 cards after reshuffle and deal, got {remaining_after}"
 
 
 def test_no_reshuffle_when_cut_card_not_reached(logged_in_page):
@@ -79,4 +79,4 @@ def test_no_reshuffle_when_cut_card_not_reached(logged_in_page):
     """)
 
     remaining_after = page.evaluate("window.__game.deck.remainingCards")
-    assert remaining_after == 304, f"Expected 304 cards (no reshuffle), got {remaining_after}"
+    assert remaining_after == 303, f"Expected 303 cards (no reshuffle), got {remaining_after}"
