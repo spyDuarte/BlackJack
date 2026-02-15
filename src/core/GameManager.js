@@ -114,8 +114,7 @@ export class GameManager {
     }
 
     getStorageKey(key) {
-        if (!this.userId) return null;
-        return `${key}-${this.userId}`;
+        return `${key}-${this.userId || 'guest'}`;
     }
 
     addTimeout(fn, delay) {
@@ -201,8 +200,6 @@ export class GameManager {
     }
 
     _saveGameImmediate() {
-        if (!this.userId) return;
-
         const gameState = {
             version: CONFIG.STORAGE_VERSION,
             balance: this.balance,
@@ -221,9 +218,11 @@ export class GameManager {
         StorageManager.set(this.getStorageKey(STORAGE_KEYS.GAME_SAVE), gameState);
         // Save hand history locally
         this.handHistory.saveToLocalStorage(this.getStorageKey(STORAGE_KEYS.HAND_HISTORY));
-        this.saveStatsToSupabase();
-        // Async fire-and-forget for history sync
-        this.handHistory.saveToSupabase(supabase, this.userId).catch(console.error);
+        if (this.userId) {
+            this.saveStatsToSupabase();
+            // Async fire-and-forget for history sync
+            this.handHistory.saveToSupabase(supabase, this.userId).catch(console.error);
+        }
     }
 
     async saveStatsToSupabase() {
@@ -262,8 +261,6 @@ export class GameManager {
     }
 
     async loadGame() {
-        if (!this.userId) return;
-
         let localTimestamp = 0;
         const savedGame = StorageManager.get(this.getStorageKey(STORAGE_KEYS.GAME_SAVE));
         if (savedGame) {
@@ -365,13 +362,10 @@ export class GameManager {
     }
 
     saveSettings() {
-        if (!this.userId) return;
         StorageManager.set(this.getStorageKey(STORAGE_KEYS.SETTINGS), this.settings);
     }
 
     loadSettings() {
-        if (!this.userId) return;
-
         const savedSettings = StorageManager.get(this.getStorageKey(STORAGE_KEYS.SETTINGS));
         if (savedSettings) {
             try {
