@@ -1,10 +1,13 @@
 import { BlackjackEngine } from './BlackjackEngine.js';
-import { CONFIG, RULES, getActiveRuleProfile } from './Constants.js';
+import { CONFIG, RULES, STORAGE_KEYS, getActiveRuleProfile } from './Constants.js';
 import { StorageManager } from '../utils/StorageManager.js';
 import { debounce } from '../utils/debounce.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
 import * as HandUtils from '../utils/HandUtils.js';
 import { supabase } from '../supabaseClient.js';
+import { HandHistory } from '../utils/HandHistory.js';
+import { getRecommendedAction, evaluatePlayerAction } from '../utils/BasicStrategy.js';
+import { computeAdvancedStats } from '../utils/AdvancedStats.js';
 
 export class GameManager {
     static instance = null;
@@ -134,6 +137,19 @@ export class GameManager {
         this.blackjacks = 0;
         this.totalWinnings = 0;
 
+        // Advanced stats tracking
+        this.totalAmountWagered = 0;
+        this.sessionBestBalance = CONFIG.INITIAL_BALANCE;
+        this.sessionWorstBalance = CONFIG.INITIAL_BALANCE;
+
+        // Hand history
+        this.handHistory = new HandHistory(CONFIG.HAND_HISTORY_MAX_ENTRIES);
+        this.handCounter = 0;
+
+        // Training mode state
+        this.trainingMode = false;
+        this.currentHandActions = [];
+
         this.engine.resetState();
         this.timeouts = [];
     }
@@ -145,7 +161,8 @@ export class GameManager {
             autoSave: true,
             showStats: false,
             volume: 0.5,
-            theme: 'dark'
+            theme: 'dark',
+            trainingMode: false,
         };
     }
 
@@ -165,7 +182,9 @@ export class GameManager {
             gameOver: engineState.gameOver,
             gameStarted: engineState.gameStarted,
             settings: this.settings,
-            activeRuleProfile: RULES.ACTIVE_PROFILE
+            activeRuleProfile: RULES.ACTIVE_PROFILE,
+            trainingMode: this.trainingMode,
+            handHistoryCount: this.handHistory.entries.length,
         };
     }
 
@@ -191,12 +210,20 @@ export class GameManager {
             losses: this.losses,
             blackjacks: this.blackjacks,
             totalWinnings: this.totalWinnings,
+            totalAmountWagered: this.totalAmountWagered,
+            sessionBestBalance: this.sessionBestBalance,
+            sessionWorstBalance: this.sessionWorstBalance,
+            handCounter: this.handCounter,
             gameStarted: this.engine.gameStarted,
             updatedAt: Date.now()
         };
         // Pass object directly to StorageManager to avoid double serialization
-        StorageManager.set(this.getStorageKey('blackjack-premium-save'), gameState);
+        StorageManager.set(this.getStorageKey(STORAGE_KEYS.GAME_SAVE), gameState);
+        // Save hand history locally
+        this.handHistory.saveToLocalStorage(this.getStorageKey(STORAGE_KEYS.HAND_HISTORY));
         this.saveStatsToSupabase();
+        // Async fire-and-forget for history sync
+        this.handHistory.saveToSupabase(supabase, this.userId).catch(console.error);
     }
 
     async saveStatsToSupabase() {
@@ -238,7 +265,7 @@ export class GameManager {
         if (!this.userId) return;
 
         let localTimestamp = 0;
-        const savedGame = StorageManager.get(this.getStorageKey('blackjack-premium-save'));
+        const savedGame = StorageManager.get(this.getStorageKey(STORAGE_KEYS.GAME_SAVE));
         if (savedGame) {
             try {
                 let gameState = typeof savedGame === 'object' ? savedGame : JSON.parse(savedGame);
@@ -248,6 +275,10 @@ export class GameManager {
                 this.losses = gameState.losses || 0;
                 this.blackjacks = gameState.blackjacks || 0;
                 this.totalWinnings = gameState.totalWinnings || 0;
+                this.totalAmountWagered = gameState.totalAmountWagered || 0;
+                this.sessionBestBalance = gameState.sessionBestBalance || this.balance;
+                this.sessionWorstBalance = gameState.sessionWorstBalance || this.balance;
+                this.handCounter = gameState.handCounter || 0;
                 localTimestamp = gameState.updatedAt || 0;
 
                 // Note: We don't restore round state fully yet, just stats/balance
@@ -260,12 +291,17 @@ export class GameManager {
             }
         }
 
+        // Load hand history from localStorage
+        this.handHistory.loadFromLocalStorage(this.getStorageKey(STORAGE_KEYS.HAND_HISTORY));
+
         this.loadSettings();
         this.updateUI();
 
         // Sync with Supabase
         if (this.userId) {
             this.loadStatsFromSupabase(localTimestamp).catch(console.error);
+            // Load hand history from Supabase asynchronously
+            this.handHistory.loadFromSupabase(supabase, this.userId).catch(console.error);
         }
     }
 
@@ -300,10 +336,14 @@ export class GameManager {
                         losses: this.losses,
                         blackjacks: this.blackjacks,
                         totalWinnings: this.totalWinnings,
+                        totalAmountWagered: this.totalAmountWagered,
+                        sessionBestBalance: this.sessionBestBalance,
+                        sessionWorstBalance: this.sessionWorstBalance,
+                        handCounter: this.handCounter,
                         gameStarted: this.engine.gameStarted,
                         updatedAt: Date.now()
                     };
-                    StorageManager.set(this.getStorageKey('blackjack-premium-save'), gameState);
+                    StorageManager.set(this.getStorageKey(STORAGE_KEYS.GAME_SAVE), gameState);
                 } else if (localTimestamp > remoteTimestamp) {
                     // Local is newer, push to remote
                     this.saveStatsToSupabase();
@@ -326,13 +366,13 @@ export class GameManager {
 
     saveSettings() {
         if (!this.userId) return;
-        StorageManager.set(this.getStorageKey('blackjack-premium-settings'), this.settings);
+        StorageManager.set(this.getStorageKey(STORAGE_KEYS.SETTINGS), this.settings);
     }
 
     loadSettings() {
         if (!this.userId) return;
 
-        const savedSettings = StorageManager.get(this.getStorageKey('blackjack-premium-settings'));
+        const savedSettings = StorageManager.get(this.getStorageKey(STORAGE_KEYS.SETTINGS));
         if (savedSettings) {
             try {
                 const parsed = typeof savedSettings === 'object' ? savedSettings : JSON.parse(savedSettings);
@@ -346,6 +386,9 @@ export class GameManager {
                     this.ui.setStatsVisibility(this.settings.showStats);
                     this.ui.setVolume(this.settings.volume);
                     if (this.settings.theme) this.ui.setTheme(this.settings.theme);
+                    if (this.settings.trainingMode !== undefined) {
+                        this.trainingMode = !!this.settings.trainingMode;
+                    }
                 }
             } catch {
                 console.warn('Could not parse settings');
@@ -397,6 +440,8 @@ export class GameManager {
             return;
         }
 
+        this.handCounter++;
+        this.currentHandActions = [];
         this.balance -= this.currentBet;
 
         if (this.engine.deck.needsReshuffle) {
@@ -497,6 +542,10 @@ export class GameManager {
     hit() {
         if (this.engine.gameOver) return;
 
+        // Training mode: evaluate this action before executing
+        if (this.trainingMode) this._evaluateTrainingAction('hit');
+        this.currentHandActions.push('hit');
+
         const result = this.engine.hit(this.engine.currentHandIndex);
         if (!result) {
             if (this.ui) this.ui.showToast('Não é possível pedir carta agora.', 'error', 2000);
@@ -520,6 +569,8 @@ export class GameManager {
 
     stand() {
         if (this.engine.gameOver) return;
+        if (this.trainingMode) this._evaluateTrainingAction('stand');
+        this.currentHandActions.push('stand');
         this.engine.stand(this.engine.currentHandIndex);
         this.events.emit('player:stand', { handIndex: this.engine.currentHandIndex });
         this.nextHand();
@@ -548,6 +599,8 @@ export class GameManager {
             return;
         }
 
+        if (this.trainingMode) this._evaluateTrainingAction('double');
+        this.currentHandActions.push('double');
         this.balance -= hand.bet;
 
         const result = this.engine.double(this.engine.currentHandIndex);
@@ -580,6 +633,8 @@ export class GameManager {
             return;
         }
 
+        if (this.trainingMode) this._evaluateTrainingAction('split');
+        this.currentHandActions.push('split');
         const initialBet = currentHand.bet;
         this.balance -= initialBet;
 
@@ -603,6 +658,8 @@ export class GameManager {
 
     surrender() {
         if (this.engine.gameOver) return;
+        if (this.trainingMode) this._evaluateTrainingAction('surrender');
+        this.currentHandActions.push('surrender');
 
         const result = this.engine.surrender(this.engine.currentHandIndex);
         if (!result) {
@@ -694,6 +751,34 @@ export class GameManager {
 
         const totalBetOnHands = this.engine.playerHands.reduce((sum, h) => sum + h.bet, 0);
         this.totalWinnings += (totalWin - totalBetOnHands);
+        this.totalAmountWagered += totalBetOnHands;
+
+        // Track session extremes
+        if (this.balance > this.sessionBestBalance) this.sessionBestBalance = this.balance;
+        if (this.balance < this.sessionWorstBalance) this.sessionWorstBalance = this.balance;
+
+        // Build and store hand history entry
+        const primaryResult = results.length === 1
+            ? results[0].result
+            : (anyWin ? 'win' : allLost ? 'lose' : 'tie');
+        const hadBlackjack = results.some(r =>
+            HandUtils.isNaturalBlackjack(r.hand.cards, this.engine.playerHands.length) && r.result === 'win'
+        );
+        const historyEntry = {
+            handNumber: this.handCounter,
+            timestamp: Date.now(),
+            playerCards: this.engine.playerHands.map(h => [...h.cards]),
+            dealerCards: [...this.engine.dealerHand],
+            dealerUpCard: this.engine.dealerHand[0] || null,
+            actions: [...this.currentHandActions],
+            result: primaryResult,
+            betAmount: this.currentBet,
+            netChange: totalWin - totalBetOnHands,
+            hadBlackjack,
+            wasStrategyOptimal: null,
+        };
+        this.handHistory.addHand(historyEntry);
+        this.events.emit('hand:completed', historyEntry);
 
         // Determine message
         let message = '';
@@ -755,6 +840,65 @@ export class GameManager {
 
         this.events.emit('game:over', { message, messageClass, totalWin, anyWin, allLost });
         if (this.settings.autoSave) this.saveGame();
+    }
+
+    // ---- New feature methods ----
+
+    /**
+     * Returns the recommended action for the current player hand.
+     * @returns {Object|null}
+     */
+    getHint() {
+        if (this.engine.gameOver || !this.engine.gameStarted) return null;
+        const hand = this.engine.playerHands[this.engine.currentHandIndex];
+        if (!hand || hand.status !== 'playing') return null;
+        const dealerUpCard = this.engine.dealerHand[0];
+        if (!dealerUpCard) return null;
+        const profile = getActiveRuleProfile();
+        const canSplit = this.engine.playerHands.length <= CONFIG.MAX_SPLITS && hand.cards.length === 2;
+        return getRecommendedAction(hand.cards, dealerUpCard, profile, canSplit);
+    }
+
+    /**
+     * Enables or disables training mode.
+     * @param {boolean} enabled
+     */
+    toggleTrainingMode(enabled) {
+        this.trainingMode = !!enabled;
+        this.settings.trainingMode = this.trainingMode;
+    }
+
+    /**
+     * Returns advanced statistics computed from hand history.
+     * @returns {Object}
+     */
+    getAdvancedStats() {
+        return computeAdvancedStats(this.handHistory.getHistory(), {
+            wins: this.wins,
+            losses: this.losses,
+            blackjacks: this.blackjacks,
+            totalWinnings: this.totalWinnings,
+            balance: this.balance,
+            totalAmountWagered: this.totalAmountWagered,
+            sessionBestBalance: this.sessionBestBalance,
+            sessionWorstBalance: this.sessionWorstBalance,
+        });
+    }
+
+    /**
+     * Evaluates the current player action against basic strategy and emits training:feedback.
+     * Called internally before executing each action in training mode.
+     * @param {string} action
+     */
+    _evaluateTrainingAction(action) {
+        const hand = this.engine.playerHands[this.engine.currentHandIndex];
+        if (!hand || hand.status !== 'playing') return;
+        const dealerUpCard = this.engine.dealerHand[0];
+        if (!dealerUpCard) return;
+        const profile = getActiveRuleProfile();
+        const canSplit = this.engine.playerHands.length <= CONFIG.MAX_SPLITS && hand.cards.length === 2;
+        const evaluation = evaluatePlayerAction(action, hand.cards, dealerUpCard, profile, canSplit);
+        this.events.emit('training:feedback', { evaluation, action });
     }
 
     // resetGame, newGame, exportData, importData, updateSetting match original structure but use engine
@@ -875,6 +1019,7 @@ export class GameManager {
                 if (key === 'showStats') this.ui.setStatsVisibility(value);
                 if (key === 'theme') this.ui.setTheme(value);
             }
+            if (key === 'trainingMode') this.trainingMode = !!value;
             this.saveSettings();
         }
     }

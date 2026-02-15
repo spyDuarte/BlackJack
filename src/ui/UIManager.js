@@ -116,7 +116,21 @@ export class UIManager {
             accountLoggedIn: document.getElementById('account-logged-in'),
             accountLoggedOut: document.getElementById('account-logged-out'),
             loginSection: document.getElementById('login-section'),
-            registerSection: document.getElementById('register-section')
+            registerSection: document.getElementById('register-section'),
+
+            // New feature elements
+            hintBtn: document.getElementById('hint-btn'),
+            trainingFeedback: document.getElementById('training-feedback'),
+            trainingModeToggle: document.getElementById('training-mode-toggle'),
+            historyPanel: document.getElementById('history-panel'),
+            historyToggle: document.getElementById('history-toggle'),
+            historyList: document.getElementById('history-list'),
+            statsModalBtn: document.getElementById('stats-modal-btn'),
+            statsModal: document.getElementById('stats-modal'),
+            statsAdvancedGrid: document.getElementById('stats-advanced-grid'),
+            statsChartWinrate: document.getElementById('stats-chart-winrate'),
+            statsChartStreak: document.getElementById('stats-chart-streak'),
+            statsModalClose: document.querySelector('.stats-modal-close'),
         };
     }
 
@@ -277,6 +291,34 @@ export class UIManager {
         }, 250));
 
         if (el.closeError) el.closeError.addEventListener('click', () => this.hideError());
+
+        // Hint button
+        if (el.hintBtn) el.hintBtn.addEventListener('click', () => this._showHint());
+
+        // Training mode toggle
+        if (el.trainingModeToggle) {
+            el.trainingModeToggle.addEventListener('change', (e) => {
+                if (this.game) this.game.toggleTrainingMode(e.target.checked);
+            });
+        }
+
+        // History panel toggle
+        if (el.historyToggle) {
+            el.historyToggle.addEventListener('click', () => this._toggleHistory());
+        }
+
+        // Advanced stats modal
+        if (el.statsModalBtn) {
+            el.statsModalBtn.addEventListener('click', () => this._openStatsModal());
+        }
+        if (el.statsModalClose) {
+            el.statsModalClose.addEventListener('click', () => this._closeStatsModal());
+        }
+        if (el.statsModal) {
+            el.statsModal.addEventListener('click', (e) => {
+                if (e.target === el.statsModal) this._closeStatsModal();
+            });
+        }
     }
 
     sanitizeUsername(raw) {
@@ -558,6 +600,12 @@ export class UIManager {
             return;
         }
 
+        // Hint shortcut: '?' during player turn
+        if (e.key === '?') {
+            this._showHint();
+            return;
+        }
+
         const keyMap = {
             'h': { action: () => this.game.hit(), btn: el.hitBtn },
             's': { action: () => this.game.stand(), btn: el.standBtn },
@@ -659,6 +707,19 @@ export class UIManager {
                 chip.classList.remove('selected');
             }
         });
+
+        // Hint button visibility (only during player's active turn)
+        const isPlayerTurn = state.gameStarted && !state.gameOver &&
+            state.playerHands && state.playerHands.length > 0 &&
+            state.playerHands[state.currentHandIndex]?.status === 'playing';
+        if (this.elements.hintBtn) {
+            this.elements.hintBtn.style.display = isPlayerTurn ? 'inline-block' : 'none';
+        }
+
+        // Sync training mode toggle with game state
+        if (this.elements.trainingModeToggle && state.trainingMode !== undefined) {
+            this.elements.trainingModeToggle.checked = state.trainingMode;
+        }
     }
 
     renderHand(container, hand, isDealer, revealDealer) {
@@ -1121,5 +1182,234 @@ export class UIManager {
         };
 
         element.dataset.animId = requestAnimationFrame(step);
+    }
+
+    // ── New feature methods ──
+
+    /**
+     * Shows the basic strategy hint for the current hand as a toast.
+     */
+    _showHint() {
+        if (!this.game) return;
+        const hint = this.game.getHint();
+        if (!hint) {
+            this.showToast('Dica indisponível agora.', 'info', 2000);
+            return;
+        }
+        const labels = {
+            hit: 'Pedir Carta',
+            stand: 'Parar',
+            double: 'Dobrar',
+            split: 'Dividir',
+            surrender: 'Desistir',
+        };
+        const action = labels[hint.action] || hint.action;
+        this.showToast(`💡 Dica: ${action} — ${hint.explanation}`, 'info', 4500);
+    }
+
+    /**
+     * Shows training mode feedback after a player action.
+     * @param {Object} evaluation - From BasicStrategy.evaluatePlayerAction().
+     */
+    showTrainingFeedback(evaluation) {
+        const el = this.elements.trainingFeedback;
+        if (!el) return;
+        el.className = 'training-feedback';
+        if (evaluation.isOptimal) {
+            el.classList.add('correct');
+            el.textContent = '✅ Correto! ' + evaluation.explanation;
+        } else if (evaluation.isSuboptimal) {
+            el.classList.add('suboptimal');
+            el.textContent = `⚠️ Quase: ${evaluation.recommendedLabel} seria melhor. ${evaluation.explanation}`;
+        } else {
+            el.classList.add('wrong');
+            el.textContent = `❌ Melhor: ${evaluation.recommendedLabel} — ${evaluation.explanation}`;
+        }
+        el.style.display = 'block';
+        clearTimeout(this._feedbackTimeout);
+        this._feedbackTimeout = setTimeout(() => {
+            el.style.display = 'none';
+        }, 3500);
+    }
+
+    /**
+     * Renders the hand history panel.
+     * @param {Array<Object>} hands - Recent hand history entries (newest first).
+     */
+    renderHistoryPanel(hands) {
+        const list = this.elements.historyList;
+        if (!list) return;
+
+        list.innerHTML = '';
+        if (!hands || hands.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'text-align:center; padding:12px; color:var(--text-secondary); font-size:0.85em;';
+            empty.textContent = 'Nenhuma mão jogada ainda.';
+            list.appendChild(empty);
+            return;
+        }
+
+        hands.forEach(entry => {
+            const item = document.createElement('div');
+            item.className = `history-item history-${entry.result}`;
+            item.setAttribute('role', 'listitem');
+
+            const cardsArr = entry.playerCards?.[0] || [];
+            const cardStr = cardsArr.map(c => `${c.value}${c.suit}`).join(' ');
+            const dealerStr = entry.dealerUpCard ? `${entry.dealerUpCard.value}${entry.dealerUpCard.suit}` : '?';
+            const net = entry.netChange;
+            const netStr = net >= 0 ? `+$${net}` : `-$${Math.abs(net)}`;
+            const resultLabels = { win: 'Vitória', lose: 'Derrota', tie: 'Empate', surrender: 'Desistiu' };
+
+            item.innerHTML = `
+                <span class="history-hand-num">#${entry.handNumber}</span>
+                <span class="history-cards">${cardStr} vs ${dealerStr}</span>
+                <span class="history-result">${resultLabels[entry.result] || entry.result}</span>
+                <span class="history-net ${net >= 0 ? 'positive' : 'negative'}">${netStr}</span>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    /**
+     * Toggles the history list visibility.
+     */
+    _toggleHistory() {
+        const list = this.elements.historyList;
+        const btn = this.elements.historyToggle;
+        if (!list) return;
+        const isHidden = list.style.display === 'none';
+        list.style.display = isHidden ? 'block' : 'none';
+        if (btn) {
+            btn.textContent = isHidden ? '▲' : '▼';
+            btn.setAttribute('aria-expanded', String(isHidden));
+        }
+    }
+
+    /**
+     * Opens the advanced statistics modal.
+     */
+    _openStatsModal() {
+        if (!this.game || !this.elements.statsModal) return;
+        const stats = this.game.getAdvancedStats();
+        this._renderAdvancedStatsGrid(stats);
+        this._renderStatsCharts(stats);
+        this.elements.statsModal.style.display = 'flex';
+    }
+
+    /** Closes the advanced statistics modal. */
+    _closeStatsModal() {
+        if (this.elements.statsModal) this.elements.statsModal.style.display = 'none';
+    }
+
+    /**
+     * Renders the stats grid inside the advanced stats modal.
+     * @param {Object} stats - Output of computeAdvancedStats().
+     */
+    _renderAdvancedStatsGrid(stats) {
+        const grid = this.elements.statsAdvancedGrid;
+        if (!grid) return;
+
+        const items = [
+            { label: 'Taxa de Vitória', value: stats.winRate != null ? `${stats.winRate}%` : 'N/A' },
+            { label: 'ROI Líquido', value: stats.netROI != null ? `${stats.netROI}%` : 'N/A' },
+            { label: 'Maior Sequência de Vitórias', value: stats.longestWinStreak ?? 0 },
+            { label: 'Maior Sequência de Derrotas', value: stats.longestLossStreak ?? 0 },
+            { label: 'Melhor Saldo', value: `$${stats.sessionBestBalance ?? 0}` },
+            { label: 'Pior Saldo', value: `$${stats.sessionWorstBalance ?? 0}` },
+            { label: 'Eficiência ao Dobrar', value: stats.doubleDownEfficiency != null ? `${stats.doubleDownEfficiency}%` : 'N/A' },
+            { label: 'Eficiência ao Dividir', value: stats.splitEfficiency != null ? `${stats.splitEfficiency}%` : 'N/A' },
+            { label: 'Conformidade Estratégica', value: stats.strategyComplianceRate != null ? `${stats.strategyComplianceRate}%` : 'Sem dados' },
+            { label: 'Total Apostado', value: `$${stats.totalAmountWagered ?? 0}` },
+        ];
+
+        grid.innerHTML = items.map(item => `
+            <div class="stats-adv-item">
+                <div class="stats-adv-value">${item.value}</div>
+                <div class="stats-adv-label">${item.label}</div>
+            </div>
+        `).join('');
+    }
+
+    /**
+     * Renders Canvas bar charts for the stats modal.
+     * @param {Object} stats
+     */
+    _renderStatsCharts(stats) {
+        const style = getComputedStyle(document.body);
+        const winColor = style.getPropertyValue('--win-color').trim() || '#2ecc71';
+        const loseColor = style.getPropertyValue('--lose-color').trim() || '#e74c3c';
+        const goldColor = style.getPropertyValue('--primary-gold').trim() || '#FFD700';
+        const textColor = style.getPropertyValue('--text-secondary').trim() || 'rgba(255,255,255,0.7)';
+
+        // Win rate bar chart
+        const winCanvas = this.elements.statsChartWinrate;
+        if (winCanvas) {
+            const ctx = winCanvas.getContext('2d');
+            const w = winCanvas.width;
+            const h = winCanvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const rate = Math.min(100, Math.max(0, stats.winRate || 0));
+            const barH = h * 0.5;
+            const barY = (h - barH) / 2;
+
+            // Background bar
+            ctx.fillStyle = loseColor + '44';
+            ctx.beginPath();
+            ctx.roundRect(10, barY, w - 20, barH, 6);
+            ctx.fill();
+
+            // Win fill
+            const fillW = ((w - 20) * rate) / 100;
+            if (fillW > 0) {
+                ctx.fillStyle = winColor;
+                ctx.beginPath();
+                ctx.roundRect(10, barY, fillW, barH, 6);
+                ctx.fill();
+            }
+
+            // Label
+            ctx.fillStyle = textColor;
+            ctx.font = '12px Poppins, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Taxa de vitória: ${rate}%`, w / 2, h - 4);
+        }
+
+        // Streak chart (win/loss streak bars)
+        const streakCanvas = this.elements.statsChartStreak;
+        if (streakCanvas) {
+            const ctx = streakCanvas.getContext('2d');
+            const w = streakCanvas.width;
+            const h = streakCanvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const maxStreak = Math.max(1, stats.longestWinStreak, stats.longestLossStreak);
+            const barW = (w - 30) / 2;
+            const maxBarH = h * 0.6;
+
+            const drawBar = (x, value, color, label) => {
+                const barH = (value / maxStreak) * maxBarH;
+                const y = h * 0.15 + maxBarH - barH;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.roundRect(x, y, barW, barH, 4);
+                ctx.fill();
+                ctx.fillStyle = textColor;
+                ctx.font = 'bold 13px Poppins, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(value, x + barW / 2, y - 4);
+                ctx.font = '10px Poppins, sans-serif';
+                ctx.fillText(label, x + barW / 2, h - 4);
+            };
+
+            drawBar(10, stats.longestWinStreak || 0, winColor, 'Vitórias');
+            drawBar(20 + barW, stats.longestLossStreak || 0, loseColor, 'Derrotas');
+
+            ctx.fillStyle = goldColor;
+            ctx.font = '10px Poppins, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Maiores Sequências', w / 2, 12);
+        }
     }
 }

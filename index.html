@@ -119,9 +119,12 @@
             <button id="double-btn" title="Dobrar aposta (D)" aria-label="Dobrar aposta (D)"><span class="btn-text">Dobrar</span><kbd class="kbd-hint">D</kbd></button>
             <button id="split-btn" style="display: none;" title="Dividir (P)" aria-label="Dividir mão (P)"><span class="btn-text">Dividir</span><kbd class="kbd-hint">P</kbd></button>
             <button id="surrender-btn" style="display: none;" title="Desistir (R)" aria-label="Desistir (R)"><span class="btn-text">Desistir</span><kbd class="kbd-hint">R</kbd></button>
+            <button id="hint-btn" style="display:none; background: linear-gradient(45deg, #3498db, #2980b9);" title="Mostrar dica de estratégia básica (?)" aria-label="Dica de estratégia (?)"><span class="btn-text">Dica</span><kbd class="kbd-hint">?</kbd></button>
             <button id="new-game-btn" style="display: none;" aria-label="Iniciar nova rodada">Nova Rodada<kbd class="kbd-hint">N</kbd></button>
             <button id="rebet-btn" style="display: none; background: linear-gradient(45deg, #f1c40f, #f39c12); color: #000;" aria-label="Reapostar e Jogar">🔄 Reapostar<kbd class="kbd-hint">↵</kbd></button>
         </nav>
+
+        <div id="training-feedback" class="training-feedback" style="display:none;" role="status" aria-live="polite"></div>
 
         <aside class="stats-container" id="stats-container" style="display: none;" aria-label="Estatísticas da sessão">
             <div class="stats-title">📈 Estatísticas da Sessão</div>
@@ -143,6 +146,16 @@
                     <div class="stat-label">Blackjacks</div>
                 </div>
             </div>
+            <button id="stats-modal-btn" style="margin-top: 12px; font-size: 0.85em; width: 100%;">📊 Ver Estatísticas Avançadas</button>
+        </aside>
+
+        <!-- Hand History Panel -->
+        <aside id="history-panel" class="history-panel" aria-label="Histórico de mãos">
+            <div class="history-header">
+                <h3>📋 Histórico de Mãos</h3>
+                <button id="history-toggle" class="history-toggle-btn" aria-expanded="false" aria-controls="history-list">▼</button>
+            </div>
+            <div id="history-list" class="history-list" style="display:none;" role="list" aria-label="Lista de mãos jogadas"></div>
         </aside>
     </main>
 
@@ -187,6 +200,11 @@
                 <div class="setting-item">
                     <label for="show-stats">📊 Mostrar Estatísticas</label>
                     <input type="checkbox" id="show-stats">
+                </div>
+
+                <div class="setting-item">
+                    <label for="training-mode-toggle">🎓 Modo Treinamento</label>
+                    <input type="checkbox" id="training-mode-toggle">
                 </div>
 
                 <div class="setting-item">
@@ -293,6 +311,19 @@
             <div style="margin-top: 25px; display: flex; justify-content: center; gap: 20px;">
                 <button id="insurance-yes-btn" class="start-btn" style="font-size: 1em; padding: 10px 30px; min-width: auto;">Sim</button>
                 <button id="insurance-no-btn" class="start-btn" style="font-size: 1em; padding: 10px 30px; min-width: auto; background: linear-gradient(45deg, #e74c3c, #c0392b); box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);">Não</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Statistics Modal -->
+    <div id="stats-modal" class="modal" role="dialog" aria-labelledby="stats-modal-title" aria-modal="true" style="display:none;">
+        <div class="modal-content stats-modal-content">
+            <span class="close stats-modal-close" role="button" aria-label="Fechar">&times;</span>
+            <h2 id="stats-modal-title" style="color: var(--primary-gold); margin-bottom: 16px;">📊 Estatísticas Avançadas</h2>
+            <div id="stats-advanced-grid" class="stats-advanced-grid"></div>
+            <div class="stats-charts-container">
+                <canvas id="stats-chart-winrate" width="280" height="100" aria-label="Gráfico de taxa de vitória"></canvas>
+                <canvas id="stats-chart-streak" width="280" height="100" aria-label="Gráfico de sequências"></canvas>
             </div>
         </div>
     </div>

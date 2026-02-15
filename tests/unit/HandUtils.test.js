@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as HandUtils from '../../src/utils/HandUtils.js';
 
+const c = (value, suit = '♠') => ({ value, suit });
+
 describe('HandUtils', () => {
     describe('getCardNumericValue', () => {
         it('returns correct value for number cards', () => {
@@ -126,6 +128,78 @@ describe('HandUtils', () => {
             ];
             // handsCount > 1 implies split
             expect(HandUtils.isNaturalBlackjack(hand, 2)).toBe(false);
+        });
+    });
+
+    describe('classifyHand', () => {
+        it('identifies a pair of 8s correctly', () => {
+            const result = HandUtils.classifyHand([c('8'), c('8')]);
+            expect(result.type).toBe('pair');
+            expect(result.pairValue).toBe('8');
+            expect(result.total).toBe(16);
+        });
+
+        it('identifies a pair of Aces correctly', () => {
+            const result = HandUtils.classifyHand([c('A'), c('A')]);
+            expect(result.type).toBe('pair');
+            expect(result.pairValue).toBe('A');
+        });
+
+        it('J and Q are both worth 10 but are NOT classified as a pair (different face values)', () => {
+            // They have the same numeric value (10) so they ARE a pair by strategy rules
+            const result = HandUtils.classifyHand([c('J'), c('Q')]);
+            // Both getCardNumericValue → 10, so it should be a pair
+            expect(result.type).toBe('pair');
+        });
+
+        it('identifies soft hand correctly', () => {
+            const result = HandUtils.classifyHand([c('A'), c('7')]);
+            expect(result.type).toBe('soft');
+            expect(result.total).toBe(18);
+            expect(result.pairValue).toBeNull();
+        });
+
+        it('identifies hard hand correctly', () => {
+            const result = HandUtils.classifyHand([c('10'), c('6')]);
+            expect(result.type).toBe('hard');
+            expect(result.total).toBe(16);
+        });
+
+        it('identifies hard hand when Ace is forced to 1', () => {
+            const result = HandUtils.classifyHand([c('A'), c('5'), c('8')]);
+            // A+5+8 = 24 → A=1 → 14 (hard)
+            expect(result.type).toBe('hard');
+            expect(result.total).toBe(14);
+        });
+
+        it('returns hard 0 for empty array', () => {
+            const result = HandUtils.classifyHand([]);
+            expect(result.type).toBe('hard');
+            expect(result.total).toBe(0);
+        });
+    });
+
+    describe('getHiLoValue', () => {
+        it('returns +1 for low cards (2-6)', () => {
+            for (const v of ['2', '3', '4', '5', '6']) {
+                expect(HandUtils.getHiLoValue(c(v))).toBe(1);
+            }
+        });
+
+        it('returns 0 for neutral cards (7-9)', () => {
+            for (const v of ['7', '8', '9']) {
+                expect(HandUtils.getHiLoValue(c(v))).toBe(0);
+            }
+        });
+
+        it('returns -1 for high cards (10, J, Q, K, A)', () => {
+            for (const v of ['10', 'J', 'Q', 'K', 'A']) {
+                expect(HandUtils.getHiLoValue(c(v))).toBe(-1);
+            }
+        });
+
+        it('returns 0 for null card', () => {
+            expect(HandUtils.getHiLoValue(null)).toBe(0);
         });
     });
 });

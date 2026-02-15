@@ -2,6 +2,7 @@ import { UIManager } from './ui/UIManager.js';
 import { GameManager } from './core/GameManager.js';
 import { SoundManager } from './utils/SoundManager.js';
 import * as HandUtils from './utils/HandUtils.js';
+import { CONFIG } from './core/Constants.js';
 
 let gameInstance = null;
 
@@ -18,6 +19,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Wire EventEmitter events to UI
         gameInstance.events.on('deck:shuffle', () => ui.showShuffleAnimation());
+
+        // Update history panel after each completed hand
+        gameInstance.events.on('hand:completed', () => {
+            ui.renderHistoryPanel(
+                gameInstance.handHistory.getRecentHands(CONFIG.HAND_HISTORY_DISPLAY_COUNT)
+            );
+        });
+
+        // Show training mode feedback when an action is evaluated
+        gameInstance.events.on('training:feedback', ({ evaluation }) => {
+            ui.showTrainingFeedback(evaluation);
+        });
 
         // Expose for E2E testing only in development (location.hostname check)
         if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
