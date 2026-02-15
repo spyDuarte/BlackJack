@@ -675,7 +675,7 @@ export class UIManager {
             const canSplit = currentHand.cards.length === 2 &&
                              HandUtils.getCardNumericValue(currentHand.cards[0]) === HandUtils.getCardNumericValue(currentHand.cards[1]) &&
                              state.balance >= currentHand.bet &&
-                             state.playerHands.length <= CONFIG.MAX_SPLITS;
+                             state.playerHands.length < CONFIG.MAX_SPLITS;
             if (this.elements.splitBtn) {
                  this.elements.splitBtn.style.display = canSplit ? 'inline-block' : 'none';
                  this.elements.splitBtn.disabled = !canSplit;

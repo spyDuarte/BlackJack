@@ -110,7 +110,7 @@ function getDealerColIndex(dealerUpCard) {
  * @returns {{ action: string, finalCode: string }}
  */
 function resolveCode(code, ruleProfile, canSplit) {
-    const canDouble = ruleProfile.doubleAfterSplit !== undefined; // doubleAfterSplit present means doubling exists
+    const canDouble = true; // basic doubling is always available; doubleAfterSplit only restricts post-split doubles
     const canSurrender = ruleProfile.surrenderType && ruleProfile.surrenderType !== 'none';
     const hasDAS = ruleProfile.doubleAfterSplit === true;
 
