@@ -5,6 +5,38 @@ import { supabase } from '../supabaseClient.js';
 import { Renderer } from './modules/Renderer.js';
 import { UIBindings } from './modules/UIBindings.js';
 import { Feedback } from './modules/Feedback.js';
+import { UI_TEXTS_PT_BR } from './i18n/pt-BR.js';
+
+const ACTION_CONTROL_MAP = {
+    hitBtn: {
+        visible: ({ gameControlsVisible }) => gameControlsVisible,
+        disabled: ({ isPlayerTurn }) => !isPlayerTurn,
+    },
+    standBtn: {
+        visible: ({ gameControlsVisible }) => gameControlsVisible,
+        disabled: ({ isPlayerTurn }) => !isPlayerTurn,
+    },
+    doubleBtn: {
+        visible: ({ gameControlsVisible }) => gameControlsVisible,
+        disabled: ({ canDouble }) => !canDouble,
+    },
+    splitBtn: {
+        visible: ({ gameControlsVisible, canSplit }) => gameControlsVisible && canSplit,
+        disabled: ({ canSplit }) => !canSplit,
+    },
+    surrenderBtn: {
+        visible: ({ gameControlsVisible, canSurrender }) => gameControlsVisible && canSurrender,
+        disabled: ({ canSurrender }) => !canSurrender,
+    },
+    newGameBtn: {
+        visible: ({ postRoundActionsVisible }) => postRoundActionsVisible,
+        disabled: () => false,
+    },
+    rebetBtn: {
+        visible: ({ postRoundActionsVisible, canRebet }) => postRoundActionsVisible && canRebet,
+        disabled: ({ canRebet }) => !canRebet,
+    },
+};
 
 export class UIManager {
     constructor() {
@@ -15,11 +47,13 @@ export class UIManager {
         this.renderer = new Renderer(this);
         this.uiBindings = new UIBindings(this);
         this.feedback = new Feedback(this);
+        this.postRoundActionsVisible = false;
     }
 
     initialize(game) {
         this.game = game;
         this.cacheElements();
+        this._applyLocalizedTexts();
         this.bindEvents();
         this.toggleLoading(false);
         this.updateAuthUI();
@@ -125,7 +159,6 @@ export class UIManager {
             registerSection: document.getElementById('register-section'),
 
             // New feature elements
-            hintBtn: document.getElementById('hint-btn'),
             trainingFeedback: document.getElementById('training-feedback'),
             trainingModeToggle: document.getElementById('training-mode-toggle'),
             historyPanel: document.getElementById('history-panel'),
@@ -138,6 +171,24 @@ export class UIManager {
             statsChartStreak: document.getElementById('stats-chart-streak'),
             statsModalClose: document.querySelector('.stats-modal-close'),
         };
+    }
+
+
+    _applyLocalizedTexts() {
+        const { buttons } = UI_TEXTS_PT_BR;
+        const mappings = [
+            ['splitBtn', buttons.split],
+            ['surrenderBtn', buttons.surrender],
+            ['newGameBtn', buttons.newGame],
+            ['rebetBtn', buttons.rebet],
+        ];
+
+        mappings.forEach(([elementKey, copy]) => {
+            const element = this.elements[elementKey];
+            if (!element || !copy) return;
+            if (copy.title) element.title = copy.title;
+            if (copy.ariaLabel) element.setAttribute('aria-label', copy.ariaLabel);
+        });
     }
 
     bindEvents() {
@@ -307,7 +358,6 @@ export class UIManager {
         if (el.closeError) el.closeError.addEventListener('click', () => this.hideError());
 
         // Hint button
-        if (el.hintBtn) el.hintBtn.addEventListener('click', () => this._showHint());
 
         // Training mode toggle
         if (el.trainingModeToggle) {
@@ -614,12 +664,6 @@ export class UIManager {
             return;
         }
 
-        // Hint shortcut: '?' during player turn
-        if (e.key === '?') {
-            this._showHint();
-            return;
-        }
-
         const keyMap = {
             'h': { action: () => this.game.hit(), btn: el.hitBtn },
             's': { action: () => this.game.stand(), btn: el.standBtn },
@@ -692,32 +736,7 @@ export class UIManager {
         this.updateStats(state.wins, state.losses, state.totalWinnings, state.blackjacks);
 
         // Update Buttons
-        if (state.playerHands.length > 0 && !state.gameOver) {
-            const currentHand = state.playerHands[state.currentHandIndex];
-            const canSplit = currentHand.cards.length === 2 &&
-                             HandUtils.getCardNumericValue(currentHand.cards[0]) === HandUtils.getCardNumericValue(currentHand.cards[1]) &&
-                             state.balance >= currentHand.bet &&
-                             state.playerHands.length < CONFIG.MAX_SPLITS;
-            if (this.elements.splitBtn) {
-                 this.elements.splitBtn.style.display = canSplit ? 'inline-block' : 'none';
-                 this.elements.splitBtn.disabled = !canSplit;
-            }
-
-            if (this.elements.surrenderBtn) {
-                const canSurrender = state.playerHands.length === 1 &&
-                    currentHand.cards.length === 2 &&
-                    currentHand.status === 'playing';
-                this.elements.surrenderBtn.style.display = canSurrender ? 'inline-block' : 'none';
-                this.elements.surrenderBtn.disabled = !canSurrender;
-            }
-
-            if (this.elements.doubleBtn) {
-                const canDouble = this.game ? this.game.canDouble(state.currentHandIndex) : false;
-                this.elements.doubleBtn.disabled = !canDouble;
-            }
-        } else {
-            if (this.elements.splitBtn) this.elements.splitBtn.style.display = 'none';
-        }
+        this._updateActionControls(state);
 
         // Highlight selected chip
         const chips = document.querySelectorAll('.chip');
@@ -729,14 +748,6 @@ export class UIManager {
                 chip.classList.remove('selected');
             }
         });
-
-        // Hint button visibility (only during player's active turn)
-        const isPlayerTurn = state.gameStarted && !state.gameOver &&
-            state.playerHands && state.playerHands.length > 0 &&
-            state.playerHands[state.currentHandIndex]?.status === 'playing';
-        if (this.elements.hintBtn) {
-            this.elements.hintBtn.style.display = isPlayerTurn ? 'inline-block' : 'none';
-        }
 
         // Sync training mode toggle with game state
         if (this.elements.trainingModeToggle && state.trainingMode !== undefined) {
@@ -901,19 +912,15 @@ export class UIManager {
     }
 
     toggleGameControls(show) {
+        this.postRoundActionsVisible = false;
         if (this.elements.betControls) this.elements.betControls.style.display = show ? 'none' : 'flex';
         if (this.elements.gameControls) this.elements.gameControls.style.display = show ? 'flex' : 'none';
-        if (this.elements.newGameBtn) this.elements.newGameBtn.style.display = 'none';
-        if (this.elements.rebetBtn) this.elements.rebetBtn.style.display = 'none';
+        this._updateActionControls(this.game?.getState?.() || null);
     }
 
     showNewGameButton() {
-        if (this.elements.newGameBtn) this.elements.newGameBtn.style.display = 'inline-block';
-
-        // Show rebet button if player has enough balance for current bet
-        if (this.elements.rebetBtn && this.game && this.game.balance >= this.game.currentBet) {
-             this.elements.rebetBtn.style.display = 'inline-block';
-        }
+        this.postRoundActionsVisible = true;
+        this._updateActionControls(this.game?.getState?.() || null);
     }
 
     showMessage(text, type) {
@@ -1241,27 +1248,6 @@ export class UIManager {
     // ── New feature methods ──
 
     /**
-     * Shows the basic strategy hint for the current hand as a toast.
-     */
-    _showHint() {
-        if (!this.game) return;
-        const hint = this.game.getHint();
-        if (!hint) {
-            this.showToast('Dica indisponível agora.', 'info', 2000);
-            return;
-        }
-        const labels = {
-            hit: 'Pedir Carta',
-            stand: 'Parar',
-            double: 'Dobrar',
-            split: 'Dividir',
-            surrender: 'Desistir',
-        };
-        const action = labels[hint.action] || hint.action;
-        this.showToast(`💡 Dica: ${action} — ${hint.explanation}`, 'info', 4500);
-    }
-
-    /**
      * Shows training mode feedback after a player action.
      * @param {Object} evaluation - From BasicStrategy.evaluatePlayerAction().
      */
@@ -1271,13 +1257,13 @@ export class UIManager {
         el.className = 'training-feedback';
         if (evaluation.isOptimal) {
             el.classList.add('correct');
-            el.textContent = '✅ Correto! ' + evaluation.explanation;
+            el.textContent = UI_TEXTS_PT_BR.training.correctPrefix + evaluation.explanation;
         } else if (evaluation.isSuboptimal) {
             el.classList.add('suboptimal');
-            el.textContent = `⚠️ Quase: ${evaluation.recommendedLabel} seria melhor. ${evaluation.explanation}`;
+            el.textContent = `${UI_TEXTS_PT_BR.training.suboptimalPrefix}${evaluation.recommendedLabel} ${UI_TEXTS_PT_BR.training.suboptimalBridge} ${evaluation.explanation}`;
         } else {
             el.classList.add('wrong');
-            el.textContent = `❌ Melhor: ${evaluation.recommendedLabel} — ${evaluation.explanation}`;
+            el.textContent = `${UI_TEXTS_PT_BR.training.wrongPrefix}${evaluation.recommendedLabel} — ${evaluation.explanation}`;
         }
         el.style.display = 'block';
         clearTimeout(this._feedbackTimeout);
@@ -1298,7 +1284,7 @@ export class UIManager {
         if (!hands || hands.length === 0) {
             const empty = document.createElement('div');
             empty.style.cssText = 'text-align:center; padding:12px; color:var(--text-secondary); font-size:0.85em;';
-            empty.textContent = 'Nenhuma mão jogada ainda.';
+            empty.textContent = UI_TEXTS_PT_BR.history.empty;
             list.appendChild(empty);
             return;
         }
@@ -1352,9 +1338,49 @@ export class UIManager {
         const isHidden = list.style.display === 'none';
         list.style.display = isHidden ? 'block' : 'none';
         if (btn) {
-            btn.textContent = isHidden ? '▲' : '▼';
+            btn.textContent = isHidden ? UI_TEXTS_PT_BR.history.expandedSymbol : UI_TEXTS_PT_BR.history.collapsedSymbol;
             btn.setAttribute('aria-expanded', String(isHidden));
         }
+    }
+
+    _computeActionControlState(state) {
+        const hasHand = !!(state?.playerHands?.length);
+        const currentHand = hasHand ? state.playerHands[state.currentHandIndex] : null;
+        const isPlayerTurn = !!(state?.gameStarted && !state?.gameOver && currentHand?.status === 'playing');
+        const canSplit = !!(isPlayerTurn &&
+            currentHand?.cards?.length === 2 &&
+            HandUtils.getCardNumericValue(currentHand.cards[0]) === HandUtils.getCardNumericValue(currentHand.cards[1]) &&
+            state.balance >= currentHand.bet &&
+            state.playerHands.length < CONFIG.MAX_SPLITS);
+        const canSurrender = !!(isPlayerTurn &&
+            state.playerHands.length === 1 &&
+            currentHand?.cards?.length === 2);
+        const canDouble = !!(isPlayerTurn && this.game?.canDouble?.(state.currentHandIndex));
+        const gameControlsVisible = this.elements.gameControls?.style.display === 'flex';
+        const canRebet = !!(this.game && this.game.balance >= this.game.currentBet);
+
+        return {
+            gameControlsVisible,
+            isPlayerTurn,
+            canSplit,
+            canSurrender,
+            canDouble,
+            canRebet,
+            postRoundActionsVisible: this.postRoundActionsVisible,
+        };
+    }
+
+    _updateActionControls(state) {
+        const controlState = this._computeActionControlState(state);
+
+        Object.entries(ACTION_CONTROL_MAP).forEach(([elementKey, config]) => {
+            const element = this.elements[elementKey];
+            if (!element) return;
+
+            const isVisible = config.visible(controlState);
+            element.style.display = isVisible ? 'inline-block' : 'none';
+            element.disabled = config.disabled(controlState);
+        });
     }
 
     /**
