@@ -31,7 +31,8 @@ export const CONFIG = {
         RESET: 2000,
         NEXT_HAND: 250,
         LOADING: 400,
-        INSURANCE_MODAL: 1000
+        INSURANCE_MODAL: 1000,
+        SHUFFLE: 1500
     }
 };
 

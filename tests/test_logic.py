@@ -53,6 +53,9 @@ def test_reshuffle_when_cut_card_reached(logged_in_page):
         window.__game.startGame();
     """)
 
+    # Wait for shuffle to complete (deck size resets to ~307)
+    page.wait_for_function("window.__game.deck.remainingCards > 100")
+
     remaining_after = page.evaluate("window.__game.deck.remainingCards")
     # Should have reshuffled (312 - 1 burn - 4 dealt cards)
     assert remaining_after == 307, f"Expected 307 cards after reshuffle and deal, got {remaining_after}"
@@ -70,6 +73,9 @@ def test_no_reshuffle_when_cut_card_not_reached(logged_in_page):
         document.getElementById('bet-input').value = 100;
         window.__game.startGame();
     """)
+
+    # Wait for shuffle to complete first (cutCardReached resets to false)
+    page.wait_for_function("window.__game.deck.cutCardReached === false")
 
     # Deck should now be ~308 cards. cutCardReached should be false after reset.
     # Start another game — no reshuffle expected.

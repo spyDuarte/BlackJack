@@ -22,9 +22,19 @@ export class RoundController {
             if (this.game.ui) {
                 this.game.ui.showMessage('Embaralhando...', '');
                 this.game.ui.showToast('Sapato reembaralhado', 'info', 2000);
+                if (typeof this.game.ui.showShuffleAnimation === 'function') {
+                    this.game.ui.showShuffleAnimation();
+                }
             }
+            // Wait for shuffle animation
+            this.game.addTimeout(() => this._proceedToDeal(), CONFIG.DELAYS.SHUFFLE);
+            return;
         }
 
+        this._proceedToDeal();
+    }
+
+    _proceedToDeal() {
         const { dealerHand } = this.game.engine.startGame(this.game.currentBet);
 
         this.game.updateUI();
