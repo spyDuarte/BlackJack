@@ -1,10 +1,11 @@
 import { BlackjackEngine } from './BlackjackEngine.js';
-import { CONFIG, RULES, STORAGE_KEYS, getActiveRuleProfile } from './Constants.js';
-import { StorageManager } from '../utils/StorageManager.js';
+import { ARCHITECTURE_FLAGS, CONFIG, RULES, getActiveRuleProfile } from './Constants.js';
 import { debounce } from '../utils/debounce.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
-import * as HandUtils from '../utils/HandUtils.js';
 import { supabase } from '../supabaseClient.js';
+import { AuthService } from './services/AuthService.js';
+import { PersistenceService } from './services/PersistenceService.js';
+import { RoundController } from './services/RoundController.js';
 import { HandHistory } from '../utils/HandHistory.js';
 import { getRecommendedAction, evaluatePlayerAction } from '../utils/BasicStrategy.js';
 import { computeAdvancedStats } from '../utils/AdvancedStats.js';
@@ -36,46 +37,24 @@ export class GameManager {
         // Timeouts management
         this.timeouts = [];
 
-        this.saveGame = debounce(this._saveGameImmediate.bind(this), 1000);
+        this.authService = new AuthService(this, supabase);
+        this.persistenceService = new PersistenceService(this, supabase);
+        this.roundController = new RoundController(this);
 
-        // Listen for auth state changes
-        supabase.auth.onAuthStateChange((event, session) => {
-            if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
-                this.onUserSignIn(session);
-            } else if (event === 'SIGNED_OUT') {
-                this.onUserSignOut();
-            }
-        });
+        this.saveGame = debounce(this._saveGameImmediate.bind(this), 1000);
+        this.authService.setupAuthListener();
     }
 
     onUserSignIn(session) {
-        if (!session || !session.user) return;
-
-        // User is signed in
-        const user = session.user;
-        this.userId = user.id;
-        this.username = user.user_metadata?.username || user.user_metadata?.full_name || user.email?.split('@')[0];
-        this.loadGame();
-        this.loadSettings();
-        this.updateUI();
-
-        if (this.ui) {
-            this.ui.onLoginSuccess();
-            this.ui.setAuthLoading(false);
+        if (ARCHITECTURE_FLAGS.enableAuthService) {
+            this.authService.onUserSignIn(session);
         }
     }
 
     onUserSignOut() {
-        this.userId = null;
-        this.username = null;
-        this.initializeGameState();
-
-        if (this.ui) {
-            this.ui.updateAuthUI();
-            this.ui.showToast('Você saiu da conta. Jogando como visitante.', 'info');
-            this.ui.showMessage('Escolha sua aposta!');
+        if (ARCHITECTURE_FLAGS.enableAuthService) {
+            this.authService.onUserSignOut();
         }
-        this.updateUI();
     }
 
     // Proxy properties to engine for backward compatibility and test support
@@ -104,12 +83,8 @@ export class GameManager {
     set deck(v) { this.engine.deck = v; }
 
     async logout() {
-        try {
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-            if (this.ui) this.ui.showMessage('Desconectado.', 'info');
-        } catch (error) {
-            console.error('Logout error', error);
+        if (ARCHITECTURE_FLAGS.enableAuthService) {
+            return this.authService.logout();
         }
     }
 
@@ -205,193 +180,45 @@ export class GameManager {
     }
 
     _saveGameImmediate() {
-        const gameState = {
-            version: CONFIG.STORAGE_VERSION,
-            balance: this.balance,
-            wins: this.wins,
-            losses: this.losses,
-            blackjacks: this.blackjacks,
-            totalWinnings: this.totalWinnings,
-            totalAmountWagered: this.totalAmountWagered,
-            sessionBestBalance: this.sessionBestBalance,
-            sessionWorstBalance: this.sessionWorstBalance,
-            handCounter: this.handCounter,
-            gameStarted: this.engine.gameStarted,
-            updatedAt: Date.now()
-        };
-        // Pass object directly to StorageManager to avoid double serialization
-        StorageManager.set(this.getStorageKey(STORAGE_KEYS.GAME_SAVE), gameState);
-        // Save hand history locally
-        this.handHistory.saveToLocalStorage(this.getStorageKey(STORAGE_KEYS.HAND_HISTORY));
-        if (this.userId) {
-            this.saveStatsToSupabase();
-            // Async fire-and-forget for history sync
-            this.handHistory.saveToSupabase(supabase, this.userId).catch(console.error);
+        if (ARCHITECTURE_FLAGS.enablePersistenceService) {
+            return this.persistenceService._saveGameImmediate();
         }
     }
 
     async saveStatsToSupabase() {
-        if (!this.userId) return;
-
-        try {
-            const stats = {
-                user_id: this.userId,
-                balance: this.balance,
-                wins: this.wins,
-                losses: this.losses,
-                blackjacks: this.blackjacks,
-                total_winnings: this.totalWinnings,
-                updated_at: new Date().toISOString()
-            };
-
-            const { error } = await supabase
-                .from('statistics')
-                .upsert(stats, { onConflict: 'user_id' });
-
-            if (error) {
-                console.error('Error saving stats to Supabase:', error);
-                if (this.ui) this.ui.showToast('Erro ao salvar progresso na nuvem.', 'error');
-            }
-        } catch (err) {
-            console.error('Unexpected error saving stats:', err);
-            if (this.ui) this.ui.showToast('Erro de conexão ao salvar.', 'error');
+        if (ARCHITECTURE_FLAGS.enablePersistenceService) {
+            return this.persistenceService.saveStatsToSupabase();
         }
     }
 
     migrateData(gameState) {
-        if (!gameState.version || gameState.version < CONFIG.STORAGE_VERSION) {
-            gameState.version = CONFIG.STORAGE_VERSION;
+        if (ARCHITECTURE_FLAGS.enablePersistenceService) {
+            return this.persistenceService.migrateData(gameState);
         }
         return gameState;
     }
 
     async loadGame() {
-        let localTimestamp = 0;
-        const savedGame = StorageManager.get(this.getStorageKey(STORAGE_KEYS.GAME_SAVE));
-        if (savedGame) {
-            try {
-                let gameState = typeof savedGame === 'object' ? savedGame : JSON.parse(savedGame);
-                gameState = this.migrateData(gameState);
-                this.balance = gameState.balance || 1000;
-                this.wins = gameState.wins || 0;
-                this.losses = gameState.losses || 0;
-                this.blackjacks = gameState.blackjacks || 0;
-                this.totalWinnings = gameState.totalWinnings || 0;
-                this.totalAmountWagered = gameState.totalAmountWagered || 0;
-                this.sessionBestBalance = gameState.sessionBestBalance || this.balance;
-                this.sessionWorstBalance = gameState.sessionWorstBalance || this.balance;
-                this.handCounter = gameState.handCounter || 0;
-                localTimestamp = gameState.updatedAt || 0;
-
-                // Note: We don't restore round state fully yet, just stats/balance
-                if (gameState.gameStarted) {
-                     // If game was interrupted, ideally we should restore it.
-                     // But for now, we just reset the round state (as Engine resets on init)
-                }
-            } catch {
-                console.warn('Could not parse game state');
-            }
-        }
-
-        // Load hand history from localStorage
-        this.handHistory.loadFromLocalStorage(this.getStorageKey(STORAGE_KEYS.HAND_HISTORY));
-
-        this.loadSettings();
-        this.updateUI();
-
-        // Sync with Supabase
-        if (this.userId) {
-            this.loadStatsFromSupabase(localTimestamp).catch(console.error);
-            // Load hand history from Supabase asynchronously
-            this.handHistory.loadFromSupabase(supabase, this.userId).catch(console.error);
+        if (ARCHITECTURE_FLAGS.enablePersistenceService) {
+            return this.persistenceService.loadGame();
         }
     }
 
     async loadStatsFromSupabase(localTimestamp) {
-        if (!this.userId) return;
-
-        try {
-            const { data, error } = await supabase
-                .from('statistics')
-                .select('*')
-                .eq('user_id', this.userId)
-                .single();
-
-            if (data) {
-                const remoteTimestamp = new Date(data.updated_at).getTime();
-
-                // If remote is newer or we have no local timestamp (fresh login/device), use remote
-                if (remoteTimestamp > localTimestamp || localTimestamp === 0) {
-                    this.balance = Number(data.balance);
-                    this.wins = data.wins;
-                    this.losses = data.losses;
-                    this.blackjacks = data.blackjacks;
-                    this.totalWinnings = Number(data.total_winnings);
-
-                    this.updateUI();
-
-                    // Update local storage to match remote without triggering another network save
-                    const gameState = {
-                        version: CONFIG.STORAGE_VERSION,
-                        balance: this.balance,
-                        wins: this.wins,
-                        losses: this.losses,
-                        blackjacks: this.blackjacks,
-                        totalWinnings: this.totalWinnings,
-                        totalAmountWagered: this.totalAmountWagered,
-                        sessionBestBalance: this.sessionBestBalance,
-                        sessionWorstBalance: this.sessionWorstBalance,
-                        handCounter: this.handCounter,
-                        gameStarted: this.engine.gameStarted,
-                        updatedAt: Date.now()
-                    };
-                    StorageManager.set(this.getStorageKey(STORAGE_KEYS.GAME_SAVE), gameState);
-                } else if (localTimestamp > remoteTimestamp) {
-                    // Local is newer, push to remote
-                    this.saveStatsToSupabase();
-                }
-
-                if (this.ui) this.ui.showToast('Progresso sincronizado!', 'success');
-            } else if (error && error.code === 'PGRST116') {
-                 // No remote stats found, create them from local state
-                 this.saveStatsToSupabase();
-                 if (this.ui) this.ui.showToast('Novo perfil criado na nuvem.', 'info');
-            } else if (error) {
-                console.error('Error fetching stats:', error);
-                if (this.ui) this.ui.showToast('Erro ao baixar dados da nuvem.', 'error');
-            }
-        } catch (err) {
-            console.error('Unexpected error loading stats:', err);
-            if (this.ui) this.ui.showToast('Erro de conexão ao sincronizar.', 'error');
+        if (ARCHITECTURE_FLAGS.enablePersistenceService) {
+            return this.persistenceService.loadStatsFromSupabase(localTimestamp);
         }
     }
 
     saveSettings() {
-        StorageManager.set(this.getStorageKey(STORAGE_KEYS.SETTINGS), this.settings);
+        if (ARCHITECTURE_FLAGS.enablePersistenceService) {
+            return this.persistenceService.saveSettings();
+        }
     }
 
     loadSettings() {
-        const savedSettings = StorageManager.get(this.getStorageKey(STORAGE_KEYS.SETTINGS));
-        if (savedSettings) {
-            try {
-                const parsed = typeof savedSettings === 'object' ? savedSettings : JSON.parse(savedSettings);
-                this.settings = { ...this.settings, ...parsed };
-                if (this.soundManager) {
-                    this.soundManager.setEnabled(this.settings.soundEnabled);
-                    this.soundManager.setVolume(this.settings.volume);
-                }
-                if (this.ui) {
-                    this.ui.setAnimationsEnabled(this.settings.animationsEnabled);
-                    this.ui.setStatsVisibility(this.settings.showStats);
-                    this.ui.setVolume(this.settings.volume);
-                    if (this.settings.theme) this.ui.setTheme(this.settings.theme);
-                    if (this.settings.trainingMode !== undefined) {
-                        this.trainingMode = !!this.settings.trainingMode;
-                    }
-                }
-            } catch {
-                console.warn('Could not parse settings');
-            }
+        if (ARCHITECTURE_FLAGS.enablePersistenceService) {
+            return this.persistenceService.loadSettings();
         }
     }
 
@@ -433,412 +260,82 @@ export class GameManager {
     }
 
     startGame() {
-        if (this.currentBet < CONFIG.MIN_BET || this.currentBet > this.balance) {
-            if (this.ui) this.ui.showMessage('Aposta inválida!', 'lose');
-            if (this.soundManager) this.soundManager.play('lose');
-            return;
-        }
-
-        this.handCounter++;
-        this.currentHandActions = [];
-        this.balance -= this.currentBet;
-
-        if (this.engine.deck.needsReshuffle) {
-             this.events.emit('deck:shuffle');
-             if (this.ui) {
-                 this.ui.showMessage('Embaralhando...', '');
-                 this.ui.showToast('Sapato reembaralhado', 'info', 2000);
-             }
-             // Engine handles shuffle in startGame
-        }
-
-        const { dealerHand } = this.engine.startGame(this.currentBet);
-
-        this.updateUI();
-        if (this.soundManager) this.soundManager.play('card');
-        this.events.emit('game:started', this.getState());
-
-        if (this.ui) {
-            this.ui.toggleGameControls(false);
-            this.ui.showMessage('Boa sorte!');
-        }
-
-        const profile = getActiveRuleProfile();
-        const dealerUpCard = dealerHand[0];
-        const dealerUpVal = HandUtils.getCardNumericValue(dealerUpCard);
-
-        if (profile.holeCardPolicy === 'peek') {
-            if (dealerUpCard.value === 'A') {
-                 this.addTimeout(() => {
-                     if (this.ui) this.ui.toggleInsuranceModal(true);
-                 }, CONFIG.DELAYS.INSURANCE_MODAL);
-            } else if (dealerUpVal === 10) {
-                 this.addTimeout(() => this.checkDealerBlackjack(), CONFIG.DELAYS.DEAL);
-            } else {
-                 this.addTimeout(() => this.startPlayerTurn(), CONFIG.DELAYS.DEAL);
-            }
-        } else {
-            this.addTimeout(() => this.startPlayerTurn(), CONFIG.DELAYS.DEAL);
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.startGame();
         }
     }
 
     startPlayerTurn() {
-        if (this.ui) {
-            this.ui.toggleGameControls(true);
-            this.ui.showMessage('Sua vez!');
-        }
-        this.updateUI();
-
-        const pVal = HandUtils.calculateHandValue(this.engine.playerHands[0].cards);
-        if (pVal === 21) {
-             this.addTimeout(() => this.endGame(), CONFIG.DELAYS.TURN);
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.startPlayerTurn();
         }
     }
 
     checkDealerBlackjack() {
-        const val = HandUtils.calculateHandValue(this.engine.dealerHand);
-        if (val === 21 && this.engine.dealerHand.length === 2) {
-             this.engine.dealerRevealed = true;
-             this.updateUI();
-             if (this.ui) this.ui.showMessage('Dealer tem Blackjack!', 'lose');
-             this.addTimeout(() => this.endGame(), CONFIG.DELAYS.GAME_OVER);
-        } else {
-             if (this.ui) this.ui.showMessage('Dealer não tem Blackjack.', '');
-             this.addTimeout(() => this.startPlayerTurn(), CONFIG.DELAYS.TURN);
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.checkDealerBlackjack();
         }
     }
 
     respondToInsurance(accept) {
-        if (this.ui) this.ui.toggleInsuranceModal(false);
-
-        const profile = getActiveRuleProfile();
-
-        if (profile.holeCardPolicy !== 'peek') {
-            if (this.ui) this.ui.showMessage('Seguro indisponível neste perfil.', '');
-            this.updateUI();
-            this.addTimeout(() => this.startPlayerTurn(), CONFIG.DELAYS.TURN);
-            return;
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.respondToInsurance(accept);
         }
-
-        if (accept) {
-            const insuranceCost = Math.floor(this.currentBet / 2);
-            if (this.balance >= insuranceCost) {
-                this.balance -= insuranceCost;
-                this.engine.insuranceTaken = true;
-                if (this.ui) this.ui.showMessage('Seguro apostado.', '');
-                if (this.soundManager) this.soundManager.play('chip');
-            } else {
-                if (this.ui) this.ui.showMessage('Saldo insuficiente para seguro.', 'lose');
-            }
-        } else {
-            if (this.ui) this.ui.showMessage('Seguro recusado.', '');
-        }
-
-        this.updateUI();
-        this.addTimeout(() => this.checkDealerBlackjack(), CONFIG.DELAYS.TURN);
     }
 
     hit() {
-        if (this.engine.gameOver) return;
-
-        // Training mode: evaluate this action before executing
-        if (this.trainingMode) this._evaluateTrainingAction('hit');
-        this.currentHandActions.push('hit');
-
-        const result = this.engine.hit(this.engine.currentHandIndex);
-        if (!result) {
-            if (this.ui) this.ui.showToast('Não é possível pedir carta agora.', 'error', 2000);
-            return;
-        }
-        const { hand } = result;
-
-        if (this.soundManager) this.soundManager.play('card');
-        this.events.emit('player:hit', { handIndex: this.engine.currentHandIndex, hand });
-        this.updateUI();
-
-        if (hand.status === 'busted') {
-            this.events.emit('hand:bust', { handIndex: this.engine.currentHandIndex });
-            if (this.ui) {
-                this.ui.showMessage('Estourou!', 'lose');
-                this.ui.showBustAnimation();
-            }
-            this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.hit();
         }
     }
 
     stand() {
-        if (this.engine.gameOver) return;
-        if (this.trainingMode) this._evaluateTrainingAction('stand');
-        this.currentHandActions.push('stand');
-        this.engine.stand(this.engine.currentHandIndex);
-        this.events.emit('player:stand', { handIndex: this.engine.currentHandIndex });
-        this.nextHand();
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.stand();
+        }
     }
 
     canDouble(handIndex = this.engine.currentHandIndex) {
-        if (this.engine.gameOver) return false;
-
-        const hand = this.engine.playerHands[handIndex];
-        if (!hand) return false;
-
-        return this.engine.canDouble(handIndex) && this.balance >= hand.bet;
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.canDouble(handIndex);
+        }
+        return false;
     }
 
     double() {
-        if (this.engine.gameOver) return;
-        const hand = this.engine.playerHands[this.engine.currentHandIndex];
-
-        if (!this.canDouble(this.engine.currentHandIndex)) {
-            if (this.ui) {
-                const reason = hand && this.balance < hand.bet
-                    ? 'Saldo insuficiente para dobrar.'
-                    : 'Não é possível dobrar agora.';
-                this.ui.showToast(reason, 'error', 2000);
-            }
-            return;
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.double();
         }
-
-        if (this.trainingMode) this._evaluateTrainingAction('double');
-        this.currentHandActions.push('double');
-        this.balance -= hand.bet;
-
-        const result = this.engine.double(this.engine.currentHandIndex);
-        if (!result) {
-            this.balance += hand.bet;
-            if (this.ui) this.ui.showToast('Não é possível dobrar agora.', 'error', 2000);
-            return;
-        }
-
-        if (this.soundManager) this.soundManager.play('card');
-
-        if (result.hand.status === 'busted') {
-            if (this.ui) this.ui.showMessage('Estourou!', 'lose');
-        }
-
-        this.updateUI();
-        this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
     }
 
     split() {
-        if (this.engine.playerHands.length === 0) return;
-        const currentHand = this.engine.playerHands[this.engine.currentHandIndex];
-
-        if (this.balance < currentHand.bet) {
-            if (this.ui) this.ui.showToast('Saldo insuficiente para dividir.', 'error', 2000);
-            return;
-        }
-        if (this.engine.playerHands.length > CONFIG.MAX_SPLITS) {
-            if (this.ui) this.ui.showToast('Limite de divisões atingido.', 'error', 2000);
-            return;
-        }
-
-        if (this.trainingMode) this._evaluateTrainingAction('split');
-        this.currentHandActions.push('split');
-        const initialBet = currentHand.bet;
-        this.balance -= initialBet;
-
-        const result = this.engine.split(this.engine.currentHandIndex);
-        if (!result) {
-            this.balance += initialBet;
-            if (this.ui) this.ui.showToast('Não é possível dividir esta mão.', 'error', 2000);
-            return;
-        }
-
-        if (this.soundManager) this.soundManager.play('card');
-        this.events.emit('player:split', { handIndex: this.engine.currentHandIndex, isSplittingAces: result.isSplittingAces });
-
-        if (result.isSplittingAces) {
-            this.updateUI();
-            this.addTimeout(() => this.nextHand(), CONFIG.DELAYS.NEXT_HAND);
-        } else {
-            this.updateUI();
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.split();
         }
     }
 
     surrender() {
-        if (this.engine.gameOver) return;
-        if (this.trainingMode) this._evaluateTrainingAction('surrender');
-        this.currentHandActions.push('surrender');
-
-        const result = this.engine.surrender(this.engine.currentHandIndex);
-        if (!result) {
-            if (this.ui) this.ui.showToast('Não é possível desistir agora.', 'error', 2000);
-            return;
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.surrender();
         }
-
-        if (this.soundManager) this.soundManager.play('lose');
-        this.events.emit('player:surrender', { handIndex: this.engine.currentHandIndex });
-        this.updateUI();
-        this.addTimeout(() => this.endGame(), CONFIG.DELAYS.NEXT_HAND);
     }
 
     nextHand() {
-        if (this.engine.currentHandIndex < this.engine.playerHands.length - 1) {
-            this.engine.currentHandIndex++;
-            this.updateUI();
-        } else {
-            this.playDealer();
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.nextHand();
         }
     }
 
     playDealer() {
-        const allBusted = this.engine.playerHands.every(h => h.status === 'busted');
-        if (allBusted) {
-             this.endGame();
-             return;
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.playDealer();
         }
-
-        this.engine.dealerRevealed = true;
-        this.events.emit('dealer:turn');
-        this.updateUI();
-
-        const dealerTurnStep = () => {
-             if (this.engine.dealerShouldHit()) {
-                 this.engine.dealerHit();
-                 if (this.soundManager) this.soundManager.play('card');
-                 this.updateUI();
-                 this.addTimeout(dealerTurnStep, CONFIG.DELAYS.DEALER_TURN);
-             } else {
-                 this.addTimeout(() => this.endGame(), CONFIG.DELAYS.NEXT_HAND);
-             }
-        };
-
-        this.addTimeout(dealerTurnStep, CONFIG.DELAYS.DEALER_TURN);
     }
 
     endGame() {
-        this.engine.gameOver = true;
-        this.engine.dealerRevealed = true;
-        this.events.emit('game:ending');
-
-        const { dealerValue, dealerBJ, results } = this.engine.evaluateResults();
-
-        if (this.engine.insuranceTaken) {
-            const insuranceCost = Math.floor(this.currentBet / 2);
-            if (dealerBJ) {
-                const insuranceWin = insuranceCost * CONFIG.PAYOUT.INSURANCE;
-                this.balance += insuranceWin;
-                this.totalWinnings += (insuranceWin - insuranceCost);
-                if (this.ui) this.ui.showMessage('Seguro paga 2:1!', 'win');
-            } else {
-                this.totalWinnings -= insuranceCost;
-            }
+        if (ARCHITECTURE_FLAGS.enableRoundController) {
+            return this.roundController.endGame();
         }
-
-        let totalWin = 0;
-        let anyWin = false;
-        let allLost = true;
-
-        results.forEach(({ hand, result, payout }) => {
-            if (HandUtils.isNaturalBlackjack(hand.cards, this.engine.playerHands.length) && result === 'win') {
-                 this.blackjacks++;
-            }
-
-            if (result === 'win') {
-                this.wins++;
-                anyWin = true;
-            } else if (result === 'lose' || result === 'surrender') {
-                this.losses++;
-            }
-
-            totalWin += payout;
-
-            if (result !== 'lose') allLost = false;
-        });
-
-        this.balance += totalWin;
-
-        const totalBetOnHands = this.engine.playerHands.reduce((sum, h) => sum + h.bet, 0);
-        this.totalWinnings += (totalWin - totalBetOnHands);
-        this.totalAmountWagered += totalBetOnHands;
-
-        // Track session extremes
-        if (this.balance > this.sessionBestBalance) this.sessionBestBalance = this.balance;
-        if (this.balance < this.sessionWorstBalance) this.sessionWorstBalance = this.balance;
-
-        // Build and store hand history entry
-        const primaryResult = results.length === 1
-            ? results[0].result
-            : (anyWin ? 'win' : allLost ? 'lose' : 'tie');
-        const hadBlackjack = results.some(r =>
-            HandUtils.isNaturalBlackjack(r.hand.cards, this.engine.playerHands.length) && r.result === 'win'
-        );
-        const historyEntry = {
-            handNumber: this.handCounter,
-            timestamp: Date.now(),
-            playerCards: this.engine.playerHands.map(h => [...h.cards]),
-            dealerCards: [...this.engine.dealerHand],
-            dealerUpCard: this.engine.dealerHand[0] || null,
-            actions: [...this.currentHandActions],
-            result: primaryResult,
-            betAmount: this.currentBet,
-            netChange: totalWin - totalBetOnHands,
-            hadBlackjack,
-            wasStrategyOptimal: null,
-        };
-        this.handHistory.addHand(historyEntry);
-        this.events.emit('hand:completed', historyEntry);
-
-        // Determine message
-        let message = '';
-        let messageClass = '';
-        if (this.engine.playerHands.length === 1) {
-             const hand = this.engine.playerHands[0];
-             const pVal = HandUtils.calculateHandValue(hand.cards);
-             if (hand.status === 'surrender') { message = 'Você desistiu.'; messageClass = 'tie'; }
-             else if (hand.status === 'busted') { message = 'Você estourou! Dealer vence!'; messageClass = 'lose'; }
-             else if (dealerValue > 21) { message = 'Dealer estourou! Você venceu!'; messageClass = 'win'; }
-             else if (pVal > dealerValue) {
-                 if (totalWin > hand.bet * 2) message = 'BLACKJACK! Você venceu!';
-                 else message = 'Você venceu!';
-                 messageClass = 'win';
-             }
-             else if (dealerValue > pVal) { message = 'Dealer vence!'; messageClass = 'lose'; }
-             else { message = 'Empate!'; messageClass = 'tie'; }
-        } else {
-             // Multi-hand: compare profit, not just total returned
-             const totalBetReturn = this.engine.playerHands.reduce((sum, h) => sum + h.bet, 0);
-             const profit = totalWin - totalBetReturn;
-             if (profit > 0) {
-                 message = `Ganhou $${profit}!`;
-                 messageClass = 'win';
-             } else if (profit === 0 && totalWin > 0) {
-                 message = 'Empate!';
-                 messageClass = 'tie';
-             } else {
-                 message = 'Dealer venceu!';
-                 messageClass = 'lose';
-             }
-        }
-
-        const anyPush = results.some(r => r.result === 'tie');
-        if (anyWin) {
-            if (this.soundManager) this.soundManager.play('win');
-            if (this.ui) this.ui.showWinAnimation(totalWin);
-        } else if (allLost) {
-            if (this.soundManager) this.soundManager.play('lose');
-        } else if (anyPush) {
-            if (this.soundManager) this.soundManager.play('push');
-        }
-
-        if (this.ui) {
-            this.ui.annotateHandResults(results);
-            this.ui.showMessage(message, messageClass);
-            this.ui.showNewGameButton();
-            this.ui.toggleGameControls(false);
-        }
-
-        this.updateUI();
-
-        if (this.balance < CONFIG.MIN_BET) {
-            if (this.ui) this.ui.showToast('Saldo insuficiente! Reiniciando em 2 segundos...', 'lose', 2000);
-            this.addTimeout(() => {
-                this.resetGame();
-            }, CONFIG.DELAYS.RESET);
-        }
-
-        this.events.emit('game:over', { message, messageClass, totalWin, anyWin, allLost });
-        if (this.settings.autoSave) this.saveGame();
     }
 
     // ---- New feature methods ----

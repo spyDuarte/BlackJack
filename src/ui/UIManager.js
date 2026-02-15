@@ -1,7 +1,10 @@
 import * as HandUtils from '../utils/HandUtils.js';
-import { CONFIG } from '../core/Constants.js';
+import { ARCHITECTURE_FLAGS, CONFIG } from '../core/Constants.js';
 import { debounce } from '../utils/debounce.js';
 import { supabase } from '../supabaseClient.js';
+import { Renderer } from './modules/Renderer.js';
+import { UIBindings } from './modules/UIBindings.js';
+import { Feedback } from './modules/Feedback.js';
 
 export class UIManager {
     constructor() {
@@ -9,6 +12,9 @@ export class UIManager {
         this.animationsEnabled = true;
         this.game = null;
         this.isRegisterMode = false;
+        this.renderer = new Renderer(this);
+        this.uiBindings = new UIBindings(this);
+        this.feedback = new Feedback(this);
     }
 
     initialize(game) {
@@ -135,6 +141,14 @@ export class UIManager {
     }
 
     bindEvents() {
+        if (ARCHITECTURE_FLAGS.enableUIBindingsModule) {
+            this.uiBindings.bindEvents();
+            return;
+        }
+        this._bindEventsCore();
+    }
+
+    _bindEventsCore() {
         const el = this.elements;
         const game = this.game;
 
@@ -625,6 +639,14 @@ export class UIManager {
     }
 
     render(state) {
+        if (ARCHITECTURE_FLAGS.enableRendererModule) {
+            this.renderer.render(state);
+            return;
+        }
+        this._renderCore(state);
+    }
+
+    _renderCore(state) {
         if (!state) return;
 
         if (this.elements.balance) this.animateValue(this.elements.balance, state.balance, '$');
@@ -895,6 +917,14 @@ export class UIManager {
     }
 
     showMessage(text, type) {
+        if (ARCHITECTURE_FLAGS.enableFeedbackModule) {
+            this.feedback.showMessage(text, type);
+            return;
+        }
+        this._showMessageCore(text, type);
+    }
+
+    _showMessageCore(text, type) {
         if (this.elements.message) {
             this.elements.message.textContent = text;
             this.elements.message.className = `message ${type}`;
@@ -1059,16 +1089,40 @@ export class UIManager {
     // ─────────────────────────────────────────────────────────────────
 
     showError(msg) {
+        if (ARCHITECTURE_FLAGS.enableFeedbackModule) {
+            this.feedback.showError(msg);
+            return;
+        }
+        this._showErrorCore(msg);
+    }
+
+    _showErrorCore(msg) {
         if (this.elements.errorMessage) this.elements.errorMessage.textContent = msg;
         if (this.elements.errorNotification) this.elements.errorNotification.classList.add('show');
         setTimeout(() => this.hideError(), 5000);
     }
 
     hideError() {
+        if (ARCHITECTURE_FLAGS.enableFeedbackModule) {
+            this.feedback.hideError();
+            return;
+        }
+        this._hideErrorCore();
+    }
+
+    _hideErrorCore() {
         if (this.elements.errorNotification) this.elements.errorNotification.classList.remove('show');
     }
 
     showToast(message, type = 'info', duration = 3000) {
+        if (ARCHITECTURE_FLAGS.enableFeedbackModule) {
+            this.feedback.showToast(message, type, duration);
+            return;
+        }
+        this._showToastCore(message, type, duration);
+    }
+
+    _showToastCore(message, type = 'info', duration = 3000) {
         const container = this.elements.toastContainer;
         if (!container) return;
 
