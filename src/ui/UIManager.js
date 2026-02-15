@@ -124,7 +124,7 @@ export class UIManager {
             loginSection: document.getElementById('login-section'),
             registerSection: document.getElementById('register-section'),
 
-            // New feature elements
+            // Training/stats feature elements
             trainingFeedback: document.getElementById('training-feedback'),
             trainingModeToggle: document.getElementById('training-mode-toggle'),
             historyPanel: document.getElementById('history-panel'),
@@ -1220,7 +1220,7 @@ export class UIManager {
         element.dataset.animId = requestAnimationFrame(step);
     }
 
-    // ── New feature methods ──
+    // ── Training/stats feature methods ──
 
     /**
      * Shows training mode feedback after a player action.

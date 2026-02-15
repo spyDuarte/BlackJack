@@ -7,7 +7,7 @@ import { AuthService } from './services/AuthService.js';
 import { PersistenceService } from './services/PersistenceService.js';
 import { RoundController } from './services/RoundController.js';
 import { HandHistory } from '../utils/HandHistory.js';
-import { getRecommendedAction, evaluatePlayerAction } from '../utils/BasicStrategy.js';
+import { evaluatePlayerAction } from '../utils/BasicStrategy.js';
 import { computeAdvancedStats } from '../utils/AdvancedStats.js';
 import { validateImportedGameData, mapImportErrorToUiMessage } from '../utils/importValidation.js';
 
@@ -339,22 +339,7 @@ export class GameManager {
         }
     }
 
-    // ---- New feature methods ----
-
-    /**
-     * Returns the recommended action for the current player hand.
-     * @returns {Object|null}
-     */
-    getHint() {
-        if (this.engine.gameOver || !this.engine.gameStarted) return null;
-        const hand = this.engine.playerHands[this.engine.currentHandIndex];
-        if (!hand || hand.status !== 'playing') return null;
-        const dealerUpCard = this.engine.dealerHand[0];
-        if (!dealerUpCard) return null;
-        const profile = getActiveRuleProfile();
-        const canSplit = this.engine.playerHands.length <= CONFIG.MAX_SPLITS && hand.cards.length === 2;
-        return getRecommendedAction(hand.cards, dealerUpCard, profile, canSplit);
-    }
+    // ---- Training and advanced stats methods ----
 
     /**
      * Enables or disables training mode.
