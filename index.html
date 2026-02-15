@@ -113,14 +113,14 @@
             <button id="bet-btn">Apostar</button>
         </nav>
 
-        <nav class="controls" id="game-controls" style="display: none;" role="toolbar" aria-label="Ações do jogo">
+        <nav class="controls is-hidden" id="game-controls" role="toolbar" aria-label="Ações do jogo">
             <button id="hit-btn" title="Pedir carta (H)" aria-label="Pedir Carta (H)"><span class="btn-text">Pedir Carta</span><kbd class="kbd-hint">H</kbd></button>
             <button id="stand-btn" title="Parar (S)" aria-label="Parar (S)"><span class="btn-text">Parar</span><kbd class="kbd-hint">S</kbd></button>
             <button id="double-btn" title="Dobrar aposta (D)" aria-label="Dobrar aposta (D)"><span class="btn-text">Dobrar</span><kbd class="kbd-hint">D</kbd></button>
-            <button id="split-btn" style="display: none;" title="Dividir (P)" aria-label="Dividir mão (P)"><span class="btn-text">Dividir</span><kbd class="kbd-hint">P</kbd></button>
-            <button id="surrender-btn" style="display: none;" title="Desistir (R)" aria-label="Desistir (R)"><span class="btn-text">Desistir</span><kbd class="kbd-hint">R</kbd></button>
-            <button id="new-game-btn" style="display: none;" aria-label="Iniciar nova rodada">Nova Rodada<kbd class="kbd-hint">N</kbd></button>
-            <button id="rebet-btn" style="display: none; background: linear-gradient(45deg, #f1c40f, #f39c12); color: #000;" aria-label="Reapostar e Jogar">🔄 Reapostar<kbd class="kbd-hint">↵</kbd></button>
+            <button id="split-btn" class="action-control is-hidden" title="Dividir (P)" aria-label="Dividir mão (P)"><span class="btn-text">Dividir</span><kbd class="kbd-hint">P</kbd></button>
+            <button id="surrender-btn" class="action-control is-hidden" title="Desistir (R)" aria-label="Desistir (R)"><span class="btn-text">Desistir</span><kbd class="kbd-hint">R</kbd></button>
+            <button id="new-game-btn" class="action-control is-hidden" aria-label="Iniciar nova rodada">Nova Rodada<kbd class="kbd-hint">N</kbd></button>
+            <button id="rebet-btn" class="action-control action-control-rebet is-hidden" aria-label="Reapostar e Jogar">🔄 Reapostar<kbd class="kbd-hint">↵</kbd></button>
         </nav>
 
         <div id="training-feedback" class="training-feedback" style="display:none;" role="status" aria-live="polite"></div>

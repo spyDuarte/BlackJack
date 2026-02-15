@@ -1164,6 +1164,20 @@ button:disabled {
     align-items: flex-start;
 }
 
+
+.is-hidden {
+    display: none;
+}
+
+.action-control {
+    display: none;
+}
+
+.action-control-rebet {
+    background: linear-gradient(45deg, #f1c40f, #f39c12);
+    color: #000;
+}
+
 /* Surrender Button */
 #surrender-btn {
     background: var(--btn-surrender);
@@ -1702,7 +1716,7 @@ body.theme-transition *::after {
     }
 
     .confetti {
-        display: none !important;
+        display: none;
     }
 }
 
