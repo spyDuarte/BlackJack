@@ -125,7 +125,6 @@ export class UIManager {
             registerSection: document.getElementById('register-section'),
 
             // New feature elements
-            hintBtn: document.getElementById('hint-btn'),
             trainingFeedback: document.getElementById('training-feedback'),
             trainingModeToggle: document.getElementById('training-mode-toggle'),
             historyPanel: document.getElementById('history-panel'),
@@ -305,9 +304,6 @@ export class UIManager {
         }, 250));
 
         if (el.closeError) el.closeError.addEventListener('click', () => this.hideError());
-
-        // Hint button
-        if (el.hintBtn) el.hintBtn.addEventListener('click', () => this._showHint());
 
         // Training mode toggle
         if (el.trainingModeToggle) {
@@ -614,12 +610,6 @@ export class UIManager {
             return;
         }
 
-        // Hint shortcut: '?' during player turn
-        if (e.key === '?') {
-            this._showHint();
-            return;
-        }
-
         const keyMap = {
             'h': { action: () => this.game.hit(), btn: el.hitBtn },
             's': { action: () => this.game.stand(), btn: el.standBtn },
@@ -729,14 +719,6 @@ export class UIManager {
                 chip.classList.remove('selected');
             }
         });
-
-        // Hint button visibility (only during player's active turn)
-        const isPlayerTurn = state.gameStarted && !state.gameOver &&
-            state.playerHands && state.playerHands.length > 0 &&
-            state.playerHands[state.currentHandIndex]?.status === 'playing';
-        if (this.elements.hintBtn) {
-            this.elements.hintBtn.style.display = isPlayerTurn ? 'inline-block' : 'none';
-        }
 
         // Sync training mode toggle with game state
         if (this.elements.trainingModeToggle && state.trainingMode !== undefined) {
@@ -1239,27 +1221,6 @@ export class UIManager {
     }
 
     // ── New feature methods ──
-
-    /**
-     * Shows the basic strategy hint for the current hand as a toast.
-     */
-    _showHint() {
-        if (!this.game) return;
-        const hint = this.game.getHint();
-        if (!hint) {
-            this.showToast('Dica indisponível agora.', 'info', 2000);
-            return;
-        }
-        const labels = {
-            hit: 'Pedir Carta',
-            stand: 'Parar',
-            double: 'Dobrar',
-            split: 'Dividir',
-            surrender: 'Desistir',
-        };
-        const action = labels[hint.action] || hint.action;
-        this.showToast(`💡 Dica: ${action} — ${hint.explanation}`, 'info', 4500);
-    }
 
     /**
      * Shows training mode feedback after a player action.
