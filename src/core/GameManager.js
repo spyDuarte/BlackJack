@@ -2,7 +2,7 @@ import { BlackjackEngine } from './BlackjackEngine.js';
 import { ARCHITECTURE_FLAGS, CONFIG, RULES, getActiveRuleProfile } from './Constants.js';
 import { debounce } from '../utils/debounce.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
-import { supabase } from '../supabaseClient.js';
+import { supabase } from '../utils/supabaseClient.js';
 import { AuthService } from './services/AuthService.js';
 import { PersistenceService } from './services/PersistenceService.js';
 import { RoundController } from './services/RoundController.js';
