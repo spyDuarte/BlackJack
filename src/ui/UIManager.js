@@ -1305,7 +1305,13 @@ export class UIManager {
 
         hands.forEach(entry => {
             const item = document.createElement('div');
-            item.className = `history-item history-${entry.result}`;
+            const resultClassMap = {
+                win: 'history-win',
+                lose: 'history-lose',
+                tie: 'history-tie',
+                surrender: 'history-surrender',
+            };
+            item.className = `history-item ${resultClassMap[entry.result] || ''}`.trim();
             item.setAttribute('role', 'listitem');
 
             const cardsArr = entry.playerCards?.[0] || [];
@@ -1315,12 +1321,23 @@ export class UIManager {
             const netStr = net >= 0 ? `+$${net}` : `-$${Math.abs(net)}`;
             const resultLabels = { win: 'Vitória', lose: 'Derrota', tie: 'Empate', surrender: 'Desistiu' };
 
-            item.innerHTML = `
-                <span class="history-hand-num">#${entry.handNumber}</span>
-                <span class="history-cards">${cardStr} vs ${dealerStr}</span>
-                <span class="history-result">${resultLabels[entry.result] || entry.result}</span>
-                <span class="history-net ${net >= 0 ? 'positive' : 'negative'}">${netStr}</span>
-            `;
+            const handNumEl = document.createElement('span');
+            handNumEl.className = 'history-hand-num';
+            handNumEl.textContent = `#${entry.handNumber}`;
+
+            const cardsEl = document.createElement('span');
+            cardsEl.className = 'history-cards';
+            cardsEl.textContent = `${cardStr} vs ${dealerStr}`;
+
+            const resultEl = document.createElement('span');
+            resultEl.className = 'history-result';
+            resultEl.textContent = resultLabels[entry.result] || String(entry.result ?? '');
+
+            const netEl = document.createElement('span');
+            netEl.className = `history-net ${net >= 0 ? 'positive' : 'negative'}`;
+            netEl.textContent = netStr;
+
+            item.append(handNumEl, cardsEl, resultEl, netEl);
             list.appendChild(item);
         });
     }
@@ -1377,12 +1394,22 @@ export class UIManager {
             { label: 'Total Apostado', value: `$${stats.totalAmountWagered ?? 0}` },
         ];
 
-        grid.innerHTML = items.map(item => `
-            <div class="stats-adv-item">
-                <div class="stats-adv-value">${item.value}</div>
-                <div class="stats-adv-label">${item.label}</div>
-            </div>
-        `).join('');
+        grid.innerHTML = '';
+        items.forEach(item => {
+            const statItem = document.createElement('div');
+            statItem.className = 'stats-adv-item';
+
+            const value = document.createElement('div');
+            value.className = 'stats-adv-value';
+            value.textContent = String(item.value);
+
+            const label = document.createElement('div');
+            label.className = 'stats-adv-label';
+            label.textContent = item.label;
+
+            statItem.append(value, label);
+            grid.appendChild(statItem);
+        });
     }
 
     /**

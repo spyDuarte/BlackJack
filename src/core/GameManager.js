@@ -89,8 +89,7 @@ export class GameManager {
     }
 
     getStorageKey(key) {
-        if (!this.userId) return null;
-        return `${key}-${this.userId}`;
+        return `${key}-${this.userId || 'guest'}`;
     }
 
     addTimeout(fn, delay) {
@@ -118,7 +117,12 @@ export class GameManager {
         this.sessionWorstBalance = CONFIG.INITIAL_BALANCE;
 
         // Hand history
-        this.handHistory = new HandHistory(CONFIG.HAND_HISTORY_MAX_ENTRIES);
+        this.handHistory = new HandHistory(
+            CONFIG.HAND_HISTORY_MAX_ENTRIES,
+            (message, level = 'error') => {
+                if (this.ui) this.ui.showToast(message, level);
+            }
+        );
         this.handCounter = 0;
 
         // Training mode state
@@ -405,7 +409,12 @@ export class GameManager {
         this.totalAmountWagered = 0;
         this.sessionBestBalance = CONFIG.INITIAL_BALANCE;
         this.sessionWorstBalance = CONFIG.INITIAL_BALANCE;
-        this.handHistory = new HandHistory(CONFIG.HAND_HISTORY_MAX_ENTRIES);
+        this.handHistory = new HandHistory(
+            CONFIG.HAND_HISTORY_MAX_ENTRIES,
+            (message, level = 'error') => {
+                if (this.ui) this.ui.showToast(message, level);
+            }
+        );
         this.handCounter = 0;
         // Reset the shoe (deck)
         if (this.engine && this.engine.deck) {
