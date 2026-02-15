@@ -114,24 +114,30 @@ def logged_in_page(page, game_url):
         }
     """)
 
-    # Wait for Welcome Screen and click Start
-    # The login success transition shows Welcome Screen.
-    try:
-        page.wait_for_selector("#welcome-screen", timeout=3000)
-        # Check if welcome screen is visible
-        if page.is_visible("#welcome-screen"):
-             page.click("#start-game-btn")
-             # Wait for welcome screen to disappear
-             page.wait_for_selector("#welcome-screen", state="hidden", timeout=5000)
-    except Exception as e:
-        print(f"Welcome screen handling warning: {e}")
-        # Force hide welcome screen if needed
-        page.evaluate("if(document.getElementById('welcome-screen')) document.getElementById('welcome-screen').style.display = 'none'")
+    # Dismiss the welcome screen by calling startApp() directly.
+    # Using evaluate is more reliable than clicking the button, which can
+    # fail under reduced-motion due to CSS animation timing issues.
+    page.evaluate("""
+        () => {
+            const game = window.__game;
+            game.startApp();
+            // Force immediate welcome screen removal to avoid animation timing issues
+            const ws = document.getElementById('welcome-screen');
+            if (ws) ws.style.display = 'none';
+        }
+    """)
+
+    # Wait for startApp()'s loading sequence to complete (400ms loading delay
+    # + UI render). The loading overlay is hidden when the game is fully ready.
+    page.wait_for_function(
+        "document.querySelector('.loading').style.display === 'none'",
+        timeout=5000
+    )
 
     # Wait for game UI (balance) to ensure loaded
     page.wait_for_selector("#balance", timeout=5000)
 
-    # Ensure no overlays
+    # Ensure no overlays are blocking interaction
     page.evaluate("""
         () => {
             document.querySelectorAll('.modal, .overlay').forEach(el => el.style.display = 'none');

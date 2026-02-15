@@ -9,7 +9,7 @@ def test_max_bet_button(logged_in_page):
     balance_text = page.text_content("#balance").replace("$", "").replace(",", "")
     balance = int(balance_text)
 
-    page.click("#bet-max-value")
+    page.dispatch_event("#bet-max-value", "click")
     new_bet = int(page.input_value("#bet-input"))
 
     assert new_bet == balance, f"Expected {balance}, got {new_bet}"

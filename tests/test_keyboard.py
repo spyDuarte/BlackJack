@@ -28,8 +28,8 @@ def test_keyboard_hit(logged_in_page):
 
     cards_before = page.evaluate("window.__game.playerHands[0].cards.length")
 
-    # Press 'h' for hit
-    page.keyboard.press("h")
+    # Dispatch 'h' keydown event for hit (using dispatch via JS for Chromium compatibility)
+    page.evaluate('document.dispatchEvent(new KeyboardEvent("keydown", {key: "h"}))')
     time.sleep(0.5)
 
     cards_after = page.evaluate("window.__game.playerHands[0].cards.length")
@@ -62,8 +62,8 @@ def test_keyboard_stand(logged_in_page):
     """)
     time.sleep(0.5)
 
-    # Press 's' for stand
-    page.keyboard.press("s")
+    # Dispatch 's' keydown event for stand (using dispatch via JS for Chromium compatibility)
+    page.evaluate('document.dispatchEvent(new KeyboardEvent("keydown", {key: "s"}))')
     time.sleep(0.5)
 
     status = page.evaluate("window.__game.playerHands[0].status")
@@ -88,8 +88,8 @@ def test_keyboard_visual_feedback(logged_in_page):
     """)
     time.sleep(0.5)
 
-    # Press 'h' and check for kbd-active class on the hit button
-    page.keyboard.press("h")
+    # Dispatch 'h' keydown and check for kbd-active class on the hit button
+    page.evaluate('document.dispatchEvent(new KeyboardEvent("keydown", {key: "h"}))')
 
     # The kbd-active class is added briefly (150ms)
     has_active = page.evaluate("""

@@ -15,8 +15,10 @@ def test_insurance_insufficient_balance(logged_in_page):
         window.__game.insuranceTaken = false;
         document.getElementById('bet-input').value = 100;
         window.__game.startGame();
+        // Freeze game state after deal to prevent round from auto-completing
+        window.__game.clearTimeouts();
     """)
-    time.sleep(1)
+    time.sleep(0.5)
 
     # Player balance should be 0 after betting 100
     balance_after_bet = page.evaluate("window.__game.balance")
