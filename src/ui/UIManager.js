@@ -144,7 +144,6 @@ export class UIManager {
             toastContainer: document.getElementById('toast-container'),
             shoeBar: document.getElementById('shoe-bar'),
             shoeLabel: document.getElementById('shoe-label'),
-            activeRuleProfile: document.getElementById('active-rule-profile'),
 
             // Modal tabs
             tabBtnSettings: document.getElementById('tab-btn-settings'),
@@ -698,9 +697,6 @@ export class UIManager {
         if (this.elements.wins) this.animateValue(this.elements.wins, state.wins);
         if (this.elements.losses) this.animateValue(this.elements.losses, state.losses);
         if (this.elements.betInput) this.elements.betInput.value = state.currentBet;
-        if (this.elements.activeRuleProfile && state.activeRuleProfile) {
-            this.elements.activeRuleProfile.textContent = `Perfil de regras: ${state.activeRuleProfile}`;
-        }
 
         this.renderHand(this.elements.dealerCards, state.dealerHand, true, state.dealerRevealed);
         this.renderPlayerHands(state.playerHands, state.currentHandIndex);
