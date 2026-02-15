@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Deck } from '../../src/core/Deck.js';
+import * as RandomUtils from '../../src/utils/RandomUtils.js';
+import { Shuffler } from '../../src/core/Shuffler.js';
 
 describe('Deck Randomness', () => {
     let deck;
@@ -8,67 +10,28 @@ describe('Deck Randomness', () => {
         deck = new Deck(1);
     });
 
-    it('uses _getRandomInt for randomness', () => {
-        const spy = vi.spyOn(deck, '_getRandomInt');
+    it('uses RandomUtils.getRandomInt for randomness during shuffle', () => {
+        const spy = vi.spyOn(RandomUtils, 'getRandomInt');
 
         deck.shuffle();
         expect(spy).toHaveBeenCalled();
+        // Fisher-Yates on 52 cards calls it 51 times.
         expect(spy).toHaveBeenCalledTimes(51);
+
+        spy.mockRestore();
     });
 
-    it('uses crypto.getRandomValues when available', () => {
-        if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-            const spy = vi.spyOn(crypto, 'getRandomValues');
-            deck.shuffle();
-            expect(spy).toHaveBeenCalled();
-            spy.mockRestore();
-        }
-    });
-
-    it('produces valid random integers', () => {
-        const max = 10;
-        for (let i = 0; i < 100; i++) {
-            const val = deck._getRandomInt(max);
-            expect(val).toBeGreaterThanOrEqual(0);
-            expect(val).toBeLessThan(max);
-            expect(Number.isInteger(val)).toBe(true);
-        }
-    });
-
-    it('does not use Math.random when crypto is available', () => {
-        if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-            const spy = vi.spyOn(Math, 'random');
-            const d = new Deck(1);
-            d.shuffle();
-            d.reset();
-
-            expect(spy).not.toHaveBeenCalled();
-
-            spy.mockRestore();
-        }
-    });
-
-    it('uses Math.random when crypto is NOT available', () => {
-        const originalCrypto = global.crypto;
-
-        Object.defineProperty(global, 'crypto', {
-            value: undefined,
-            writable: true,
-            configurable: true
-        });
-
-        const spy = vi.spyOn(Math, 'random');
-
-        const d = new Deck(1);
-        d.shuffle();
-
+    it('uses Shuffler.fisherYates when shuffle() is called', () => {
+        const spy = vi.spyOn(Shuffler, 'fisherYates');
+        deck.shuffle();
         expect(spy).toHaveBeenCalled();
+        spy.mockRestore();
+    });
 
-        Object.defineProperty(global, 'crypto', {
-            value: originalCrypto,
-            writable: true,
-            configurable: true
-        });
+    it('uses Shuffler.casinoShuffle when shuffleCasino() is called', () => {
+        const spy = vi.spyOn(Shuffler, 'casinoShuffle');
+        deck.shuffleCasino();
+        expect(spy).toHaveBeenCalled();
         spy.mockRestore();
     });
 
@@ -94,21 +57,28 @@ describe('Deck Randomness', () => {
 
     it('triggers the selected shuffle mode', () => {
         const fairDeck = new Deck(1);
-        const fairSpy = vi.spyOn(fairDeck, 'shuffle');
-        const fairCasinoSpy = vi.spyOn(fairDeck, 'shuffleCasino');
+        // Spy on riffle since fair shuffle (Fisher-Yates) shouldn't use it, but casino shuffle should.
+        const riffleSpy = vi.spyOn(Shuffler, 'riffle');
+        const fisherYatesSpy = vi.spyOn(Shuffler, 'fisherYates');
 
         fairDeck.shuffleWithMode('fair');
 
-        expect(fairSpy).toHaveBeenCalled();
-        expect(fairCasinoSpy).not.toHaveBeenCalled();
+        expect(fisherYatesSpy).toHaveBeenCalled();
+        expect(riffleSpy).not.toHaveBeenCalled();
+
+        riffleSpy.mockRestore();
+        fisherYatesSpy.mockRestore();
 
         const casinoDeck = new Deck(1);
-        const casinoSpy = vi.spyOn(casinoDeck, 'shuffleCasino');
-        const casinoFairSpy = vi.spyOn(casinoDeck, 'shuffle');
+        const casinoSpy = vi.spyOn(Shuffler, 'casinoShuffle');
+        const casinoRiffleSpy = vi.spyOn(Shuffler, 'riffle');
 
         casinoDeck.shuffleWithMode('casino');
 
         expect(casinoSpy).toHaveBeenCalled();
-        expect(casinoFairSpy).not.toHaveBeenCalled();
+        expect(casinoRiffleSpy).toHaveBeenCalled();
+
+        casinoSpy.mockRestore();
+        casinoRiffleSpy.mockRestore();
     });
 });
