@@ -130,6 +130,60 @@ describe('HandHistory', () => {
         });
     });
 
+
+    describe('Supabase sync', () => {
+        it('ignores PGRST116 on load without showing sync notice', async () => {
+            const onSyncNotice = vi.fn();
+            const supabase = {
+                from: vi.fn(() => ({
+                    select: vi.fn(() => ({
+                        eq: vi.fn(() => ({
+                            single: vi.fn(async () => ({ data: null, error: { code: 'PGRST116' } })),
+                        })),
+                    })),
+                })),
+            };
+
+            const cloudHistory = new HandHistory(5, onSyncNotice);
+            await cloudHistory.loadFromSupabase(supabase, 'user-id');
+
+            expect(onSyncNotice).not.toHaveBeenCalled();
+        });
+
+        it('shows friendly warning for schema errors when saving', async () => {
+            const onSyncNotice = vi.fn();
+            const supabase = {
+                from: vi.fn(() => ({
+                    upsert: vi.fn(async () => ({ error: { code: '42P01' } })),
+                })),
+            };
+
+            const cloudHistory = new HandHistory(5, onSyncNotice);
+            cloudHistory.addHand(makeEntry(1));
+            await cloudHistory.saveToSupabase(supabase, 'user-id');
+
+            expect(onSyncNotice).toHaveBeenCalledWith(
+                'Histórico na nuvem indisponível. Atualize as migrations do Supabase.',
+                'warning'
+            );
+        });
+
+        it('shows friendly error for generic save failure', async () => {
+            const onSyncNotice = vi.fn();
+            const supabase = {
+                from: vi.fn(() => ({
+                    upsert: vi.fn(async () => ({ error: { code: 'XX000', message: 'boom' } })),
+                })),
+            };
+
+            const cloudHistory = new HandHistory(5, onSyncNotice);
+            await cloudHistory.saveToSupabase(supabase, 'user-id');
+
+            expect(onSyncNotice).toHaveBeenCalledWith('Erro ao salvar histórico na nuvem.', 'error');
+        });
+    });
+
+
     describe('maxEntries enforcement', () => {
         it('constructor defaults to 50 entries', () => {
             const h = new HandHistory();
