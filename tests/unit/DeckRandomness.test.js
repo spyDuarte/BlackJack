@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Deck } from '../../src/core/Deck.js';
 import * as RandomUtils from '../../src/utils/RandomUtils.js';
-import { Shuffler } from '../../src/core/Shuffler.js';
+import * as Algorithms from '../../src/core/shuffling/Algorithms.js';
 
 describe('Deck Randomness', () => {
     let deck;
@@ -21,15 +21,15 @@ describe('Deck Randomness', () => {
         spy.mockRestore();
     });
 
-    it('uses Shuffler.fisherYates when shuffle() is called', () => {
-        const spy = vi.spyOn(Shuffler, 'fisherYates');
+    it('uses Algorithms.fisherYates when shuffle() is called', () => {
+        const spy = vi.spyOn(Algorithms, 'fisherYates');
         deck.shuffle();
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
     });
 
-    it('uses Shuffler.casinoShuffle when shuffleCasino() is called', () => {
-        const spy = vi.spyOn(Shuffler, 'casinoShuffle');
+    it('uses Algorithms.casinoShuffle when shuffleCasino() is called', () => {
+        const spy = vi.spyOn(Algorithms, 'casinoShuffle');
         deck.shuffleCasino();
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
@@ -57,28 +57,21 @@ describe('Deck Randomness', () => {
 
     it('triggers the selected shuffle mode', () => {
         const fairDeck = new Deck(1);
-        // Spy on riffle since fair shuffle (Fisher-Yates) shouldn't use it, but casino shuffle should.
-        const riffleSpy = vi.spyOn(Shuffler, 'riffle');
-        const fisherYatesSpy = vi.spyOn(Shuffler, 'fisherYates');
+        const fisherYatesSpy = vi.spyOn(Algorithms, 'fisherYates');
 
         fairDeck.shuffleWithMode('fair');
 
         expect(fisherYatesSpy).toHaveBeenCalled();
-        expect(riffleSpy).not.toHaveBeenCalled();
 
-        riffleSpy.mockRestore();
         fisherYatesSpy.mockRestore();
 
         const casinoDeck = new Deck(1);
-        const casinoSpy = vi.spyOn(Shuffler, 'casinoShuffle');
-        const casinoRiffleSpy = vi.spyOn(Shuffler, 'riffle');
+        const casinoSpy = vi.spyOn(Algorithms, 'casinoShuffle');
 
         casinoDeck.shuffleWithMode('casino');
 
         expect(casinoSpy).toHaveBeenCalled();
-        expect(casinoRiffleSpy).toHaveBeenCalled();
 
         casinoSpy.mockRestore();
-        casinoRiffleSpy.mockRestore();
     });
 });

@@ -15,6 +15,10 @@ export class Deck {
         this.numberOfDecks = numberOfDecks;
         this.cards = [];
         this.cutCardReached = false;
+
+        // Initialize Shuffler with default strategy based on config
+        this.shuffler = new Shuffler();
+
         this.reset();
         this.shuffleWithMode(CONFIG.SHUFFLE_MODE);
     }
@@ -73,7 +77,9 @@ export class Deck {
      * Uses `crypto.getRandomValues` if available for better randomness.
      */
     shuffle() {
-        this.cards = Shuffler.fisherYates(this.cards);
+        // Enforce fair shuffle (Fisher-Yates)
+        this.shuffler.setStrategy(Shuffler.createStrategy('fair'));
+        this.cards = this.shuffler.shuffle(this.cards);
     }
 
     /**
@@ -82,7 +88,8 @@ export class Deck {
      * @param {number} passes - Number of riffle passes.
      */
     shuffleCasino(passes = CONFIG.CASINO_SHUFFLE_PASSES) {
-        this.cards = Shuffler.casinoShuffle(this.cards, passes);
+        this.shuffler.setStrategy(Shuffler.createStrategy('casino', { passes }));
+        this.cards = this.shuffler.shuffle(this.cards);
     }
 
     /**
