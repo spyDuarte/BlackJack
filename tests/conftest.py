@@ -57,8 +57,6 @@ def page():
             "args": [
                 "--no-sandbox",
                 "--disable-gpu",
-                "--single-process",
-                "--no-zygote",
                 "--disable-setuid-sandbox",
             ],
         }
