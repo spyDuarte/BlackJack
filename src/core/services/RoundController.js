@@ -122,39 +122,49 @@ export class RoundController {
     }
 
     hit() {
-        if (this.game.engine.gameOver) return;
+        try {
+            if (this.game.engine.gameOver) return;
 
-        if (this.game.trainingMode) this.game._evaluateTrainingAction('hit');
-        this.game.currentHandActions.push('hit');
+            if (this.game.trainingMode) this.game._evaluateTrainingAction('hit');
+            this.game.currentHandActions.push('hit');
 
-        const result = this.game.engine.hit(this.game.engine.currentHandIndex);
-        if (!result) {
-            if (this.game.ui) this.game.ui.showToast('Não é possível pedir carta agora.', 'error', 2000);
-            return;
-        }
-        const { hand } = result;
-
-        if (this.game.soundManager) this.game.soundManager.play('card');
-        this.game.events.emit('player:hit', { handIndex: this.game.engine.currentHandIndex, hand });
-        this.game.updateUI();
-
-        if (hand.status === 'busted') {
-            this.game.events.emit('hand:bust', { handIndex: this.game.engine.currentHandIndex });
-            if (this.game.ui) {
-                this.game.ui.showMessage('Estourou!', 'lose');
-                this.game.ui.showBustAnimation();
+            const result = this.game.engine.hit(this.game.engine.currentHandIndex);
+            if (!result) {
+                if (this.game.ui) this.game.ui.showToast('Não é possível pedir carta agora.', 'error', 2000);
+                return;
             }
-            this.game.addTimeout(() => this.game.nextHand(), CONFIG.DELAYS.NEXT_HAND);
+            const { hand } = result;
+
+            if (this.game.soundManager) this.game.soundManager.play('card');
+            this.game.events.emit('player:hit', { handIndex: this.game.engine.currentHandIndex, hand });
+            this.game.updateUI();
+
+            if (hand.status === 'busted') {
+                this.game.events.emit('hand:bust', { handIndex: this.game.engine.currentHandIndex });
+                if (this.game.ui) {
+                    this.game.ui.showMessage('Estourou!', 'lose');
+                    this.game.ui.showBustAnimation();
+                }
+                this.game.addTimeout(() => this.game.nextHand(), CONFIG.DELAYS.NEXT_HAND);
+            }
+        } catch (e) {
+            console.error('Error in hit:', e);
+            if (this.game.ui) this.game.ui.showToast('Ocorreu um erro ao pedir carta.', 'error');
         }
     }
 
     stand() {
-        if (this.game.engine.gameOver) return;
-        if (this.game.trainingMode) this.game._evaluateTrainingAction('stand');
-        this.game.currentHandActions.push('stand');
-        this.game.engine.stand(this.game.engine.currentHandIndex);
-        this.game.events.emit('player:stand', { handIndex: this.game.engine.currentHandIndex });
-        this.game.nextHand();
+        try {
+            if (this.game.engine.gameOver) return;
+            if (this.game.trainingMode) this.game._evaluateTrainingAction('stand');
+            this.game.currentHandActions.push('stand');
+            this.game.engine.stand(this.game.engine.currentHandIndex);
+            this.game.events.emit('player:stand', { handIndex: this.game.engine.currentHandIndex });
+            this.game.nextHand();
+        } catch (e) {
+            console.error('Error in stand:', e);
+            if (this.game.ui) this.game.ui.showToast('Ocorreu um erro ao parar.', 'error');
+        }
     }
 
     canDouble(handIndex = this.game.engine.currentHandIndex) {
@@ -163,96 +173,119 @@ export class RoundController {
         const hand = this.game.engine.playerHands[handIndex];
         if (!hand) return false;
 
-        return this.game.engine.canDouble(handIndex) && this.game.balance >= hand.bet;
+        const balance = Number(this.game.balance) || 0;
+        const bet = Number(hand.bet) || 0;
+
+        return this.game.engine.canDouble(handIndex) && balance >= bet;
     }
 
     double() {
-        if (this.game.engine.gameOver) return;
-        const hand = this.game.engine.playerHands[this.game.engine.currentHandIndex];
+        try {
+            if (this.game.engine.gameOver) return;
+            const hand = this.game.engine.playerHands[this.game.engine.currentHandIndex];
 
-        if (!this.canDouble(this.game.engine.currentHandIndex)) {
-            if (this.game.ui) {
-                const reason = hand && this.game.balance < hand.bet
-                    ? 'Saldo insuficiente para dobrar.'
-                    : 'Não é possível dobrar agora.';
-                this.game.ui.showToast(reason, 'error', 2000);
+            if (!this.canDouble(this.game.engine.currentHandIndex)) {
+                if (this.game.ui) {
+                    const balance = Number(this.game.balance) || 0;
+                    const bet = hand ? (Number(hand.bet) || 0) : 0;
+                    const reason = hand && balance < bet
+                        ? 'Saldo insuficiente para dobrar.'
+                        : 'Não é possível dobrar agora.';
+                    this.game.ui.showToast(reason, 'error', 2000);
+                }
+                return;
             }
-            return;
+
+            if (this.game.trainingMode) this.game._evaluateTrainingAction('double');
+            this.game.currentHandActions.push('double');
+            this.game.balance -= hand.bet;
+
+            const result = this.game.engine.double(this.game.engine.currentHandIndex);
+            if (!result) {
+                this.game.balance += hand.bet;
+                if (this.game.ui) this.game.ui.showToast('Não é possível dobrar agora.', 'error', 2000);
+                return;
+            }
+
+            if (this.game.soundManager) this.game.soundManager.play('card');
+
+            if (result.hand.status === 'busted' && this.game.ui) {
+                this.game.ui.showMessage('Estourou!', 'lose');
+            }
+
+            this.game.updateUI();
+            this.game.addTimeout(() => this.game.nextHand(), CONFIG.DELAYS.NEXT_HAND);
+        } catch (e) {
+            console.error('Error in double:', e);
+            if (this.game.ui) this.game.ui.showToast('Ocorreu um erro ao dobrar.', 'error');
         }
-
-        if (this.game.trainingMode) this.game._evaluateTrainingAction('double');
-        this.game.currentHandActions.push('double');
-        this.game.balance -= hand.bet;
-
-        const result = this.game.engine.double(this.game.engine.currentHandIndex);
-        if (!result) {
-            this.game.balance += hand.bet;
-            if (this.game.ui) this.game.ui.showToast('Não é possível dobrar agora.', 'error', 2000);
-            return;
-        }
-
-        if (this.game.soundManager) this.game.soundManager.play('card');
-
-        if (result.hand.status === 'busted' && this.game.ui) {
-            this.game.ui.showMessage('Estourou!', 'lose');
-        }
-
-        this.game.updateUI();
-        this.game.addTimeout(() => this.game.nextHand(), CONFIG.DELAYS.NEXT_HAND);
     }
 
     split() {
-        if (this.game.engine.playerHands.length === 0) return;
-        const currentHand = this.game.engine.playerHands[this.game.engine.currentHandIndex];
+        try {
+            if (this.game.engine.playerHands.length === 0) return;
+            const currentHand = this.game.engine.playerHands[this.game.engine.currentHandIndex];
 
-        if (this.game.balance < currentHand.bet) {
-            if (this.game.ui) this.game.ui.showToast('Saldo insuficiente para dividir.', 'error', 2000);
-            return;
-        }
-        if (this.game.engine.playerHands.length > CONFIG.MAX_SPLITS) {
-            if (this.game.ui) this.game.ui.showToast('Limite de divisões atingido.', 'error', 2000);
-            return;
-        }
+            const balance = Number(this.game.balance) || 0;
+            const bet = Number(currentHand.bet) || 0;
 
-        if (this.game.trainingMode) this.game._evaluateTrainingAction('split');
-        this.game.currentHandActions.push('split');
-        const initialBet = currentHand.bet;
-        this.game.balance -= initialBet;
+            if (balance < bet) {
+                if (this.game.ui) this.game.ui.showToast('Saldo insuficiente para dividir.', 'error', 2000);
+                return;
+            }
+            if (this.game.engine.playerHands.length > CONFIG.MAX_SPLITS) {
+                if (this.game.ui) this.game.ui.showToast('Limite de divisões atingido.', 'error', 2000);
+                return;
+            }
 
-        const result = this.game.engine.split(this.game.engine.currentHandIndex);
-        if (!result) {
-            this.game.balance += initialBet;
-            if (this.game.ui) this.game.ui.showToast('Não é possível dividir esta mão.', 'error', 2000);
-            return;
-        }
+            if (this.game.trainingMode) this.game._evaluateTrainingAction('split');
+            this.game.currentHandActions.push('split');
+            const initialBet = currentHand.bet;
+            this.game.balance -= initialBet;
 
-        if (this.game.soundManager) this.game.soundManager.play('card');
-        this.game.events.emit('player:split', {
-            handIndex: this.game.engine.currentHandIndex,
-            isSplittingAces: result.isSplittingAces
-        });
+            const result = this.game.engine.split(this.game.engine.currentHandIndex);
+            if (!result) {
+                this.game.balance += initialBet;
+                if (this.game.ui) this.game.ui.showToast('Não é possível dividir esta mão.', 'error', 2000);
+                return;
+            }
 
-        this.game.updateUI();
-        if (result.isSplittingAces) {
-            this.game.addTimeout(() => this.game.nextHand(), CONFIG.DELAYS.NEXT_HAND);
+            if (this.game.soundManager) this.game.soundManager.play('card');
+            this.game.events.emit('player:split', {
+                handIndex: this.game.engine.currentHandIndex,
+                isSplittingAces: result.isSplittingAces
+            });
+
+            this.game.updateUI();
+            if (result.isSplittingAces) {
+                this.game.addTimeout(() => this.game.nextHand(), CONFIG.DELAYS.NEXT_HAND);
+            }
+        } catch (e) {
+            console.error('Error in split:', e);
+            if (this.game.ui) this.game.ui.showToast('Ocorreu um erro ao dividir.', 'error');
         }
     }
 
     surrender() {
-        if (this.game.engine.gameOver) return;
-        if (this.game.trainingMode) this.game._evaluateTrainingAction('surrender');
-        this.game.currentHandActions.push('surrender');
+        try {
+            if (this.game.engine.gameOver) return;
+            if (this.game.trainingMode) this.game._evaluateTrainingAction('surrender');
+            this.game.currentHandActions.push('surrender');
 
-        const result = this.game.engine.surrender(this.game.engine.currentHandIndex);
-        if (!result) {
-            if (this.game.ui) this.game.ui.showToast('Não é possível desistir agora.', 'error', 2000);
-            return;
+            const result = this.game.engine.surrender(this.game.engine.currentHandIndex);
+            if (!result) {
+                if (this.game.ui) this.game.ui.showToast('Não é possível desistir agora.', 'error', 2000);
+                return;
+            }
+
+            if (this.game.soundManager) this.game.soundManager.play('lose');
+            this.game.events.emit('player:surrender', { handIndex: this.game.engine.currentHandIndex });
+            this.game.updateUI();
+            this.game.addTimeout(() => this.game.endGame(), CONFIG.DELAYS.NEXT_HAND);
+        } catch (e) {
+            console.error('Error in surrender:', e);
+            if (this.game.ui) this.game.ui.showToast('Ocorreu um erro ao desistir.', 'error');
         }
-
-        if (this.game.soundManager) this.game.soundManager.play('lose');
-        this.game.events.emit('player:surrender', { handIndex: this.game.engine.currentHandIndex });
-        this.game.updateUI();
-        this.game.addTimeout(() => this.game.endGame(), CONFIG.DELAYS.NEXT_HAND);
     }
 
     nextHand() {

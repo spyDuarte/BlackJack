@@ -1343,15 +1343,37 @@ export class UIManager {
         const hasHand = !!(state?.playerHands?.length);
         const currentHand = hasHand ? state.playerHands[state.currentHandIndex] : null;
         const isPlayerTurn = !!(state?.gameStarted && !state?.gameOver && currentHand?.status === 'playing');
-        const canSplit = !!(isPlayerTurn &&
-            currentHand?.cards?.length === 2 &&
-            HandUtils.getCardNumericValue(currentHand.cards[0]) === HandUtils.getCardNumericValue(currentHand.cards[1]) &&
-            state.balance >= currentHand.bet &&
-            state.playerHands.length < CONFIG.MAX_SPLITS);
-        const canSurrender = !!(isPlayerTurn &&
-            state.playerHands.length === 1 &&
-            currentHand?.cards?.length === 2);
-        const canDouble = !!(isPlayerTurn && this.game?.canDouble?.(state.currentHandIndex));
+
+        let canSplit = false;
+        try {
+            canSplit = !!(isPlayerTurn &&
+                currentHand?.cards?.length === 2 &&
+                HandUtils.getCardNumericValue(currentHand.cards[0]) === HandUtils.getCardNumericValue(currentHand.cards[1]) &&
+                state.balance >= currentHand.bet &&
+                state.playerHands.length < CONFIG.MAX_SPLITS);
+        } catch (e) {
+            console.warn('Error checking canSplit state:', e);
+            canSplit = false;
+        }
+
+        let canSurrender = false;
+        try {
+            canSurrender = !!(isPlayerTurn &&
+                state.playerHands.length === 1 &&
+                currentHand?.cards?.length === 2);
+        } catch (e) {
+            console.warn('Error checking canSurrender state:', e);
+            canSurrender = false;
+        }
+
+        let canDouble = false;
+        try {
+            canDouble = !!(isPlayerTurn && this.game?.canDouble?.(state.currentHandIndex));
+        } catch (e) {
+            console.warn('Error checking canDouble state:', e);
+            canDouble = false;
+        }
+
         const gameControlsVisible = this.elements.gameControls?.style.display === 'flex';
         const canRebet = !!(this.game && this.game.balance >= this.game.currentBet);
 
