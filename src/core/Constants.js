@@ -7,7 +7,7 @@ export const STORAGE_KEYS = {
 export const CONFIG = {
     DECKS: 6,
     PENETRATION_THRESHOLD: 0.2, // 20% remaining
-    SHUFFLE_MODE: 'continuous', // 'fair' (Fisher-Yates) | 'casino' (riffle/strip/cut simulation) | 'continuous' (reshuffle every round)
+    SHUFFLE_MODE: 'casino', // 'fair' (Fisher-Yates) | 'casino' (riffle/strip/cut simulation) | 'continuous' (reshuffle every round)
     CASINO_SHUFFLE_PASSES: 4,
     BURN_CARDS_AFTER_SHUFFLE: 1,
     INITIAL_BALANCE: 1000,
