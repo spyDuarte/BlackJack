@@ -910,6 +910,11 @@ export class GameManager {
         this.losses = 0;
         this.blackjacks = 0;
         this.totalWinnings = 0;
+        this.totalAmountWagered = 0;
+        this.sessionBestBalance = CONFIG.INITIAL_BALANCE;
+        this.sessionWorstBalance = CONFIG.INITIAL_BALANCE;
+        this.handHistory = new HandHistory(CONFIG.HAND_HISTORY_MAX_ENTRIES);
+        this.handCounter = 0;
         // Reset the shoe (deck)
         if (this.engine && this.engine.deck) {
             this.engine.deck.reset();
