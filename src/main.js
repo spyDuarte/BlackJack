@@ -39,6 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     } catch (e) {
         console.error('Critical initialization error:', e);
+        const errEl = document.getElementById('error-notification');
+        const msgEl = document.getElementById('error-message');
+        if (errEl && msgEl) {
+            msgEl.textContent = 'Erro ao iniciar o jogo. Verifique o console para detalhes.';
+            errEl.style.display = 'block';
+        }
     }
 });
 
