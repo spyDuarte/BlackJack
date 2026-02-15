@@ -8,6 +8,7 @@ import { supabase } from '../supabaseClient.js';
 import { HandHistory } from '../utils/HandHistory.js';
 import { getRecommendedAction, evaluatePlayerAction } from '../utils/BasicStrategy.js';
 import { computeAdvancedStats } from '../utils/AdvancedStats.js';
+import { validateImportedGameData, mapImportErrorToUiMessage } from '../utils/importValidation.js';
 
 export class GameManager {
     static instance = null;
@@ -985,26 +986,38 @@ export class GameManager {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                const data = JSON.parse(e.target.result);
-                if (!data.gameState || !data.version) {
-                    if (this.ui) this.ui.showError('Arquivo inválido.');
-                    return;
-                }
+                const parsedData = JSON.parse(e.target.result);
+                const data = validateImportedGameData(parsedData);
                 const gs = data.gameState;
-                this.balance = gs.balance || CONFIG.INITIAL_BALANCE;
-                this.wins = gs.wins || 0;
-                this.losses = gs.losses || 0;
-                this.blackjacks = gs.blackjacks || 0;
-                this.totalWinnings = gs.totalWinnings || 0;
-                if (data.settings) {
-                    this.settings = { ...this.settings, ...data.settings };
-                    this.loadSettings();
+
+                this.balance = gs.balance;
+                this.wins = gs.wins ?? 0;
+                this.losses = gs.losses ?? 0;
+                this.blackjacks = gs.blackjacks ?? 0;
+                this.totalWinnings = gs.totalWinnings ?? 0;
+                this.totalAmountWagered = gs.totalAmountWagered ?? 0;
+                this.sessionBestBalance = gs.sessionBestBalance ?? this.balance;
+                this.sessionWorstBalance = gs.sessionWorstBalance ?? this.balance;
+                this.handCounter = gs.handCounter ?? 0;
+
+                this.settings = { ...this.settings, ...data.settings };
+                if (this.soundManager) {
+                    this.soundManager.setEnabled(this.settings.soundEnabled);
+                    this.soundManager.setVolume(this.settings.volume);
                 }
+                if (this.ui) {
+                    this.ui.setAnimationsEnabled(this.settings.animationsEnabled);
+                    this.ui.setStatsVisibility(this.settings.showStats);
+                    this.ui.setVolume(this.settings.volume);
+                    this.ui.setTheme(this.settings.theme);
+                }
+                this.trainingMode = !!this.settings.trainingMode;
+
                 this.newGame();
                 this.saveGame();
                 if (this.ui) this.ui.showMessage('Dados importados!', 'win');
-            } catch {
-                if (this.ui) this.ui.showError('Erro ao importar dados.');
+            } catch (error) {
+                if (this.ui) this.ui.showError(mapImportErrorToUiMessage(error));
             }
         };
         reader.readAsText(file);
