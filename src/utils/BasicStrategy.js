@@ -13,7 +13,7 @@
  *   US  = Surrender (if allowed, else Stand)
  */
 
-import { classifyHand, getCardNumericValue } from './HandUtils.js';
+import { classifyHand } from './HandUtils.js';
 
 // Dealer upcard column index: 2,3,4,5,6,7,8,9,10,A
 const DEALER_COLS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
@@ -167,7 +167,7 @@ export function getRecommendedAction(playerCards, dealerUpCard, ruleProfile, can
         handType = 'hard';
     }
 
-    const { action, finalCode } = resolveCode(rawCode, ruleProfile, canSplit && type === 'pair');
+    const { action } = resolveCode(rawCode, ruleProfile, canSplit && type === 'pair');
 
     return {
         action,
