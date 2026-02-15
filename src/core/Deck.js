@@ -81,8 +81,7 @@ export class Deck {
      */
     shuffle() {
         // Enforce fair shuffle (Fisher-Yates)
-        this.shuffler.setStrategy(Shuffler.createStrategy('fair'));
-        this.cards = this.shuffler.shuffle(this.cards);
+        this.cards = this.shuffler.shuffle(this.cards, 'fair');
     }
 
     /**
@@ -91,8 +90,7 @@ export class Deck {
      * @param {number} passes - Number of riffle passes.
      */
     shuffleCasino(passes = CONFIG.CASINO_SHUFFLE_PASSES) {
-        this.shuffler.setStrategy(Shuffler.createStrategy('casino', { passes }));
-        this.cards = this.shuffler.shuffle(this.cards);
+        this.cards = this.shuffler.shuffle(this.cards, 'casino', { passes });
     }
 
     /**

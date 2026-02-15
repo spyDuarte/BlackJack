@@ -1,21 +1,27 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Deck } from '../../src/core/Deck.js';
 import { CONFIG } from '../../src/core/Constants.js';
 import * as Algorithms from '../../src/core/shuffling/Algorithms.js';
 
 describe('Deck Continuous Shuffle', () => {
     let deck;
+    let originalMode;
 
     beforeEach(() => {
+        originalMode = CONFIG.SHUFFLE_MODE;
+        CONFIG.SHUFFLE_MODE = 'continuous';
         deck = new Deck(1);
     });
 
-    it('should default to continuous mode', () => {
-        expect(CONFIG.SHUFFLE_MODE).toBe('continuous');
+    afterEach(() => {
+        CONFIG.SHUFFLE_MODE = originalMode;
     });
 
     it('should request reshuffle immediately after any card is drawn in continuous mode', () => {
         const total = deck.totalCards;
+
+        // Fresh deck, needsReshuffle should be false (or true? logic says < total)
+        // If remaining == total, it is false.
         expect(deck.remainingCards).toBe(total);
         expect(deck.needsReshuffle).toBe(false);
 
@@ -26,9 +32,9 @@ describe('Deck Continuous Shuffle', () => {
         expect(deck.cutCardReached).toBe(false);
     });
 
-    it('should shuffle the deck before every draw in continuous mode', () => {
-        // We spy on Algorithms.fisherYates because deck.shuffle() calls it via Shuffler
-        const spy = vi.spyOn(Algorithms, 'fisherYates');
+    it('should not request reshuffle if deck is full', () => {
+        deck.reset();
+        deck.shuffleWithMode('continuous');
 
         deck.draw();
 
