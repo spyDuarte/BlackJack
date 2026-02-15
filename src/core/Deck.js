@@ -135,6 +135,11 @@ export class Deck {
             this.burnCards(CONFIG.BURN_CARDS_AFTER_SHUFFLE);
         }
 
+        // In continuous mode, shuffle the remaining deck before every draw
+        if (CONFIG.SHUFFLE_MODE === 'continuous') {
+            this.shuffle();
+        }
+
         // Check if cut card was reached during play (including the card being drawn now)
         if (this.cards.length <= this.cutCardPosition + 1) {
             this.cutCardReached = true;
