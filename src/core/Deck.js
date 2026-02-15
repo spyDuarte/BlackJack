@@ -173,10 +173,12 @@ export class Deck {
     }
 
     _stripShuffle() {
-        const stripSize = 4 + this._getRandomInt(5); // 4..8
         const strips = [];
-        for (let i = 0; i < this.cards.length; i += stripSize) {
+        let i = 0;
+        while (i < this.cards.length) {
+            const stripSize = 4 + this._getRandomInt(5); // 4..8, varies per strip
             strips.push(this.cards.slice(i, i + stripSize));
+            i += stripSize;
         }
         // Randomly shuffle strips (Fisher-Yates) instead of just reversing
         for (let i = strips.length - 1; i > 0; i--) {
