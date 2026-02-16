@@ -68,7 +68,7 @@
         <section class="game-area" role="region" aria-label="Mesa de jogo">
             <!-- Deck Shoe Indicator -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <div class="shoe-indicator" id="shoe-indicator" title="Cartas restantes no sapato" aria-label="Indicador do sapato" style="margin-bottom: 0; flex-grow: 1;">
+                <div class="shoe-indicator" id="shoe-indicator" title="Cartas restantes no sapato" aria-label="Indicador do sapato" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" style="margin-bottom: 0; flex-grow: 1;">
                     <div class="shoe-bar" id="shoe-bar"></div>
                     <span class="shoe-label" id="shoe-label">100%</span>
                 </div>
@@ -95,18 +95,18 @@
 
         <nav class="bet-controls" id="bet-controls" role="region" aria-label="Controles de aposta">
             <div class="chips-container">
-                <div class="chip chip-10" data-value="10" role="button" tabindex="0" aria-label="Apostar $10">$10</div>
-                <div class="chip chip-25" data-value="25" role="button" tabindex="0" aria-label="Apostar $25">$25</div>
-                <div class="chip chip-50" data-value="50" role="button" tabindex="0" aria-label="Apostar $50">$50</div>
-                <div class="chip chip-100" data-value="100" role="button" tabindex="0" aria-label="Apostar $100">$100</div>
-                <div class="chip chip-500" data-value="500" role="button" tabindex="0" aria-label="Apostar $500">$500</div>
+                <div class="chip chip-10" data-value="10" role="button" tabindex="0" aria-pressed="false" aria-label="Apostar $10">$10</div>
+                <div class="chip chip-25" data-value="25" role="button" tabindex="0" aria-pressed="false" aria-label="Apostar $25">$25</div>
+                <div class="chip chip-50" data-value="50" role="button" tabindex="0" aria-pressed="false" aria-label="Apostar $50">$50</div>
+                <div class="chip chip-100" data-value="100" role="button" tabindex="0" aria-pressed="false" aria-label="Apostar $100">$100</div>
+                <div class="chip chip-500" data-value="500" role="button" tabindex="0" aria-pressed="false" aria-label="Apostar $500">$500</div>
             </div>
             <div class="bet-amount-container">
-                <button class="bet-btn-adjust" id="bet-decrease" title="Diminuir aposta">-</button>
+                <button class="bet-btn-adjust" id="bet-decrease" title="Diminuir aposta" aria-label="Diminuir aposta">-</button>
                 <input type="number" id="bet-input" min="10" step="10" value="50" readonly>
-                <button class="bet-btn-adjust" id="bet-increase" title="Aumentar aposta">+</button>
-                <button class="bet-btn-adjust" id="bet-double-value" title="Dobrar aposta">2x</button>
-                <button class="bet-btn-adjust" id="bet-max-value" title="Apostar tudo">Max</button>
+                <button class="bet-btn-adjust" id="bet-increase" title="Aumentar aposta" aria-label="Aumentar aposta">+</button>
+                <button class="bet-btn-adjust" id="bet-double-value" title="Dobrar aposta" aria-label="Dobrar aposta">2x</button>
+                <button class="bet-btn-adjust" id="bet-max-value" title="Apostar tudo" aria-label="Apostar tudo">Max</button>
             </div>
             <button id="bet-btn">Apostar</button>
         </nav>
