@@ -142,6 +142,7 @@ export class UIManager {
             exportBtn: document.getElementById('btn-export-data'),
             importInput: document.getElementById('btn-import-data'),
             toastContainer: document.getElementById('toast-container'),
+            shoeIndicator: document.getElementById('shoe-indicator'),
             shoeBar: document.getElementById('shoe-bar'),
             shoeLabel: document.getElementById('shoe-label'),
 
@@ -740,8 +741,10 @@ export class UIManager {
             const val = parseInt(chip.dataset.value);
             if (val === state.currentBet) {
                 chip.classList.add('selected');
+                chip.setAttribute('aria-pressed', 'true');
             } else {
                 chip.classList.remove('selected');
+                chip.setAttribute('aria-pressed', 'false');
             }
         });
 
@@ -1173,6 +1176,10 @@ export class UIManager {
         const pct = totalCards > 0 ? Math.round((remainingCards / totalCards) * 100) : 100;
         this.elements.shoeBar.style.setProperty('--shoe-pct', `${pct}%`);
         this.elements.shoeLabel.textContent = `${pct}%`;
+
+        if (this.elements.shoeIndicator) {
+            this.elements.shoeIndicator.setAttribute('aria-valuenow', pct);
+        }
 
         this.elements.shoeBar.classList.remove('high', 'medium', 'low');
         if (pct > 50) {
