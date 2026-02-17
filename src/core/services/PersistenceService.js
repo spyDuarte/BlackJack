@@ -50,6 +50,8 @@ export class PersistenceService {
                 losses: this.game.losses,
                 blackjacks: this.game.blackjacks,
                 total_winnings: this.game.totalWinnings,
+                session_best_balance: this.game.sessionBestBalance,
+                session_worst_balance: this.game.sessionWorstBalance,
                 updated_at: new Date().toISOString()
             };
 
@@ -118,6 +120,12 @@ export class PersistenceService {
                     this.game.losses = data.losses;
                     this.game.blackjacks = data.blackjacks;
                     this.game.totalWinnings = Number(data.total_winnings);
+                    if (data.session_best_balance != null) {
+                        this.game.sessionBestBalance = Number(data.session_best_balance);
+                    }
+                    if (data.session_worst_balance != null) {
+                        this.game.sessionWorstBalance = Number(data.session_worst_balance);
+                    }
 
                     this.game.updateUI();
 

@@ -132,13 +132,9 @@ export class SoundManager {
     }
 
     cleanupSources() {
-        this.activeSources = this.activeSources.filter(s => {
-            try {
-                return s.playbackState !== 'finished';
-            } catch {
-                return false;
-            }
-        });
+        // Use the _ended flag set by onended, since AudioBufferSourceNode.playbackState
+        // is a deprecated non-standard property not available in modern browsers.
+        this.activeSources = this.activeSources.filter(s => !s._ended);
     }
 
     playSample(buffers) {
@@ -146,6 +142,7 @@ export class SoundManager {
             const buffer = buffers[Math.floor(Math.random() * buffers.length)];
             const source = this.context.createBufferSource();
             source.buffer = buffer;
+            source._ended = false;
 
             const gainNode = this.context.createGain();
             gainNode.gain.value = this.volume;
@@ -154,6 +151,7 @@ export class SoundManager {
             gainNode.connect(this.context.destination);
 
             source.onended = () => {
+                source._ended = true;
                 const idx = this.activeSources.indexOf(source);
                 if (idx > -1) this.activeSources.splice(idx, 1);
             };

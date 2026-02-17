@@ -14,14 +14,15 @@ export class AuthService {
         });
     }
 
-    onUserSignIn(session) {
+    async onUserSignIn(session) {
         if (!session || !session.user) return;
 
         const user = session.user;
         this.game.userId = user.id;
         this.game.username = user.user_metadata?.username || user.user_metadata?.full_name || user.email?.split('@')[0];
 
-        this.game.loadGame();
+        // Await loadGame so that data is fully loaded before updating the UI.
+        await this.game.loadGame();
         this.game.loadSettings();
         this.game.updateUI();
 
