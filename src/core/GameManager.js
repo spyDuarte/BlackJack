@@ -129,6 +129,9 @@ export class GameManager {
         // Training mode state
         this.trainingMode = false;
         this.currentHandActions = [];
+        // Stores each strategy evaluation for the current round so wasStrategyOptimal
+        // can be computed before the hand is saved to history.
+        this.currentHandStrategyEvaluations = [];
 
         this.engine.resetState();
         this.timeouts = [];
@@ -380,6 +383,8 @@ export class GameManager {
         const profile = getActiveRuleProfile();
         const canSplit = this.engine.playerHands.length <= CONFIG.MAX_SPLITS && hand.cards.length === 2;
         const evaluation = evaluatePlayerAction(action, hand.cards, dealerUpCard, profile, canSplit);
+        // Accumulate so endGame() can set wasStrategyOptimal on the history entry.
+        this.currentHandStrategyEvaluations.push(evaluation);
         this.events.emit('training:feedback', { evaluation, action });
     }
 

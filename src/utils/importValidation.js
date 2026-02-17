@@ -94,6 +94,21 @@ export function validateImportedGameData(data) {
 
     normalizedGameState.balance = Math.max(0, normalizedGameState.balance);
 
+    // Clamp non-negative monetary/counter fields that must be >= 0.
+    // totalAmountWagered and session extremes are validated only as finite numbers above,
+    // so a tampered file could import negative amounts and corrupt ROI/streak stats.
+    if (Object.hasOwn(normalizedGameState, 'totalAmountWagered')) {
+        if (normalizedGameState.totalAmountWagered < 0) {
+            throw new ImportValidationError('INVALID_FIELD', 'Campo inválido: "gameState.totalAmountWagered" não pode ser negativo.');
+        }
+    }
+    if (Object.hasOwn(normalizedGameState, 'sessionBestBalance')) {
+        normalizedGameState.sessionBestBalance = Math.max(0, normalizedGameState.sessionBestBalance);
+    }
+    if (Object.hasOwn(normalizedGameState, 'sessionWorstBalance')) {
+        normalizedGameState.sessionWorstBalance = Math.max(0, normalizedGameState.sessionWorstBalance);
+    }
+
     for (const field of INTEGER_COUNTER_FIELDS) {
         if (Object.hasOwn(normalizedGameState, field)) {
             normalizedGameState[field] = Math.floor(normalizedGameState[field]);
