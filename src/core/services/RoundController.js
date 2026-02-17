@@ -15,6 +15,7 @@ export class RoundController {
 
         this.game.handCounter++;
         this.game.currentHandActions = [];
+        this.game.currentHandStrategyEvaluations = [];
         this.game.balance -= this.game.currentBet;
 
         if (this.game.engine.deck.needsReshuffle) {
@@ -147,6 +148,12 @@ export class RoundController {
                     this.game.ui.showMessage('Estourou!', 'lose');
                     this.game.ui.showBustAnimation();
                 }
+                this.game.addTimeout(() => this.game.nextHand(), CONFIG.DELAYS.NEXT_HAND);
+            } else if (hand.status === 'stand') {
+                // Engine auto-stands when hit reaches exactly 21. Without this branch,
+                // isPlayerTurn becomes false (status != 'playing'), all action buttons
+                // are hidden, and no one calls nextHand() — the game freezes.
+                if (this.game.ui) this.game.ui.showMessage('21!', 'win');
                 this.game.addTimeout(() => this.game.nextHand(), CONFIG.DELAYS.NEXT_HAND);
             }
         } catch (e) {
@@ -397,7 +404,11 @@ export class RoundController {
             betAmount: this.game.currentBet,
             netChange: totalWin - totalBetOnHands,
             hadBlackjack,
-            wasStrategyOptimal: null,
+            // null when training mode was off (no evaluations collected).
+            // true when every evaluated action was optimal; false if any was suboptimal/wrong.
+            wasStrategyOptimal: this.game.currentHandStrategyEvaluations?.length > 0
+                ? this.game.currentHandStrategyEvaluations.every(e => e.isOptimal)
+                : null,
         };
         this.game.handHistory.addHand(historyEntry);
         this.game.events.emit('hand:completed', historyEntry);

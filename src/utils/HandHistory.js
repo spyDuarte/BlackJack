@@ -37,8 +37,10 @@ export class HandHistory {
      */
     addHand(entry) {
         this.entries.unshift(entry);
+        // pop() removes the oldest entry (last element) in O(1).
+        // The previous slice(0, maxEntries) allocated a new array copy on every call — O(n).
         if (this.entries.length > this.maxEntries) {
-            this.entries = this.entries.slice(0, this.maxEntries);
+            this.entries.pop();
         }
     }
 
