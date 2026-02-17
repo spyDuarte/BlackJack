@@ -76,16 +76,18 @@ export class PersistenceService {
             try {
                 let gameState = typeof savedGame === 'object' ? savedGame : JSON.parse(savedGame);
                 gameState = this.migrateData(gameState);
-                this.game.balance = gameState.balance || 1000;
-                this.game.wins = gameState.wins || 0;
-                this.game.losses = gameState.losses || 0;
-                this.game.blackjacks = gameState.blackjacks || 0;
-                this.game.totalWinnings = gameState.totalWinnings || 0;
-                this.game.totalAmountWagered = gameState.totalAmountWagered || 0;
-                this.game.sessionBestBalance = gameState.sessionBestBalance || this.game.balance;
-                this.game.sessionWorstBalance = gameState.sessionWorstBalance || this.game.balance;
-                this.game.handCounter = gameState.handCounter || 0;
-                localTimestamp = gameState.updatedAt || 0;
+                // Use ?? (nullish coalescing) to preserve legitimate zero values (e.g. balance=0,
+                // wins=0). The || operator would incorrectly substitute the default for falsy values.
+                this.game.balance = gameState.balance ?? CONFIG.INITIAL_BALANCE;
+                this.game.wins = gameState.wins ?? 0;
+                this.game.losses = gameState.losses ?? 0;
+                this.game.blackjacks = gameState.blackjacks ?? 0;
+                this.game.totalWinnings = gameState.totalWinnings ?? 0;
+                this.game.totalAmountWagered = gameState.totalAmountWagered ?? 0;
+                this.game.sessionBestBalance = gameState.sessionBestBalance ?? this.game.balance;
+                this.game.sessionWorstBalance = gameState.sessionWorstBalance ?? this.game.balance;
+                this.game.handCounter = gameState.handCounter ?? 0;
+                localTimestamp = gameState.updatedAt ?? 0;
             } catch {
                 console.warn('Could not parse game state');
             }

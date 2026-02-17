@@ -434,6 +434,7 @@ export class RoundController {
         }
 
         const anyPush = results.some(r => r.result === 'tie');
+        const anySurrender = results.some(r => r.result === 'surrender');
         if (anyWin) {
             if (this.game.soundManager) this.game.soundManager.play('win');
             if (this.game.ui) this.game.ui.showWinAnimation(totalWin);
@@ -441,6 +442,9 @@ export class RoundController {
             if (this.game.soundManager) this.game.soundManager.play('lose');
         } else if (anyPush) {
             if (this.game.soundManager) this.game.soundManager.play('push');
+        } else if (anySurrender) {
+            // Surrender is neither win nor push; play lose sound as feedback.
+            if (this.game.soundManager) this.game.soundManager.play('lose');
         }
 
         if (this.game.ui) {

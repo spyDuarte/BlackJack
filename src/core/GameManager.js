@@ -429,6 +429,8 @@ export class GameManager {
     }
 
     rebetAndDeal() {
+        // Guard: only allow re-bet after a round has ended to prevent mid-hand state corruption.
+        if (this.engine.gameStarted && !this.engine.gameOver) return;
         this.clearTimeouts();
         this.engine.resetState();
         if (this.currentBet > this.balance) {

@@ -291,7 +291,8 @@ export class UIManager {
 
         const chips = document.querySelectorAll('.chip');
         const handleChip = (e) => {
-            const value = parseInt(e.target.dataset.value);
+            const value = parseInt(e.target.dataset.value, 10);
+            if (isNaN(value)) return;
             game.setBet(value);
             e.target.style.transform = 'scale(1.3)';
             setTimeout(() => { e.target.style.transform = ''; }, 200);
@@ -328,7 +329,8 @@ export class UIManager {
         this.bindCheckbox('show-stats', (checked) => game.updateSetting('showStats', checked));
         if (el.volumeSlider) {
             el.volumeSlider.addEventListener('input', (e) => {
-                const value = parseInt(e.target.value);
+                const value = parseInt(e.target.value, 10);
+                if (isNaN(value)) return;
                 if (el.volumeValue) el.volumeValue.textContent = `${value}%`;
                 game.updateSetting('volume', value / 100);
             });

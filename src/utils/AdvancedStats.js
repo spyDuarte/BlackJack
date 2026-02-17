@@ -27,8 +27,11 @@ export function computeAdvancedStats(history, baseStats) {
         sessionWorstBalance = 0,
     } = baseStats || {};
 
-    const handsPlayed = wins + losses + (baseStats.ties || 0);
-    const winRate = handsPlayed > 0 ? (wins / handsPlayed) * 100 : 0;
+    // Use cumulative counters for winRate so it is consistent with the returned
+    // wins/losses values (all-time counters, not limited by the 50-entry history buffer).
+    // Ties/pushes are not tracked as a separate counter; handsPlayed = wins + losses.
+    const totalHandsPlayed = wins + losses;
+    const winRate = totalHandsPlayed > 0 ? (wins / totalHandsPlayed) * 100 : 0;
     const netROI = totalAmountWagered > 0 ? (totalWinnings / totalAmountWagered) * 100 : 0;
 
     // Work through history oldest→newest for streak calculations
@@ -116,7 +119,8 @@ export function computeAdvancedStats(history, baseStats) {
             ? Math.round((strategyOptimalCount / strategyTotalCount) * 1000) / 10
             : null,
         totalAmountWagered,
-        handsPlayed: history.length,
+        handsPlayed: totalHandsPlayed,
+        recentHandsInBuffer: history.length,
         wins,
         losses,
     };
