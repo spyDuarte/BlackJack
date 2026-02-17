@@ -85,28 +85,31 @@ export class Shuffler {
         // Ensure splitPoint is valid
         const validSplit = Math.max(1, Math.min(len - 1, splitPoint));
 
-        const left = cards.slice(0, validSplit);
-        const right = cards.slice(validSplit);
+        // Interleave (GSR model) using indices instead of Array.shift().
+        // Array.shift() is O(n) per call (shifts all remaining elements), making the
+        // original loop O(n²). Index-based reads are O(1), giving O(n) total.
+        let leftIdx = 0;
+        let rightIdx = validSplit;
         const shuffled = [];
 
-        // Interleave (GSR model)
-        // Probability of taking next card from left pile is size(Left) / (size(Left) + size(Right)).
-        while (left.length > 0 || right.length > 0) {
-            if (left.length === 0) {
-                shuffled.push(right.shift());
-            } else if (right.length === 0) {
-                shuffled.push(left.shift());
+        while (leftIdx < validSplit || rightIdx < len) {
+            const leftRemaining = validSplit - leftIdx;
+            const rightRemaining = len - rightIdx;
+            const total = leftRemaining + rightRemaining;
+
+            let pickLeft;
+            if (leftRemaining === 0) {
+                pickLeft = false;
+            } else if (rightRemaining === 0) {
+                pickLeft = true;
             } else {
-                const total = left.length + right.length;
-                // If random integer [0, total-1] is < left.length, pick left.
-                // This corresponds to probability P = left.length / total.
-                if (getRandomInt(total) < left.length) {
-                    shuffled.push(left.shift());
-                } else {
-                    shuffled.push(right.shift());
-                }
+                // P(pick left) = leftRemaining / total — matches the GSR model.
+                pickLeft = getRandomInt(total) < leftRemaining;
             }
+
+            shuffled.push(pickLeft ? cards[leftIdx++] : cards[rightIdx++]);
         }
+
         return shuffled;
     }
 
@@ -121,7 +124,8 @@ export class Shuffler {
         // onto the table, creating a new stack.
 
         const deckInHand = [...cards];
-        let deckOnTable = [];
+        // Pre-allocate to the full deck size to avoid repeated reallocation.
+        const deckOnTable = [];
 
         while (deckInHand.length > 0) {
             // Take a packet of 2-5 cards from the top (end of array)
@@ -131,10 +135,9 @@ export class Shuffler {
             const packet = deckInHand.splice(deckInHand.length - packetSize, packetSize);
 
             // Place on top of the deck on table.
-            // Since deckOnTable builds up from bottom to top, and we place packets
-            // sequentially, the first packet from top of hand becomes bottom of table stack.
-            // So we append the packet to the end of deckOnTable.
-            deckOnTable = deckOnTable.concat(packet);
+            // Use push(...packet) instead of concat to mutate in place — O(packet) instead
+            // of O(n) array copy per iteration, reducing overall complexity from O(n²) to O(n).
+            deckOnTable.push(...packet);
         }
 
         return deckOnTable;

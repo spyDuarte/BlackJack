@@ -295,6 +295,14 @@ export class RoundController {
         if (this.game.engine.currentHandIndex < this.game.engine.playerHands.length - 1) {
             this.game.engine.currentHandIndex++;
             this.game.updateUI();
+
+            // When the newly active hand is already resolved (e.g. both hands auto-stood
+            // after splitting aces), advance past it automatically instead of waiting for
+            // player input that will never come — otherwise the game deadlocks.
+            const activeHand = this.game.engine.playerHands[this.game.engine.currentHandIndex];
+            if (activeHand && activeHand.status !== 'playing') {
+                this.game.addTimeout(() => this.game.nextHand(), CONFIG.DELAYS.NEXT_HAND);
+            }
         } else {
             this.playDealer();
         }

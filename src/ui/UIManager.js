@@ -336,9 +336,10 @@ export class UIManager {
             });
         }
 
-        // Theme toggle
-        if (el.themeDark) el.themeDark.addEventListener('click', () => this.setTheme('dark'));
-        if (el.themeLight) el.themeLight.addEventListener('click', () => this.setTheme('light'));
+        // Theme toggle — route through updateSetting so the choice is persisted.
+        // setTheme() applies visuals only; it must NOT call updateSetting to avoid recursion.
+        if (el.themeDark) el.themeDark.addEventListener('click', () => game.updateSetting('theme', 'dark'));
+        if (el.themeLight) el.themeLight.addEventListener('click', () => game.updateSetting('theme', 'light'));
 
         // Export/Import
         if (el.exportBtn) el.exportBtn.addEventListener('click', () => game.exportData());
@@ -976,7 +977,9 @@ export class UIManager {
         }
         if (this.elements.themeDark) this.elements.themeDark.classList.toggle('active', theme !== 'light');
         if (this.elements.themeLight) this.elements.themeLight.classList.toggle('active', theme === 'light');
-        if (this.game) this.game.updateSetting('theme', theme);
+        // NOTE: do NOT call game.updateSetting here. Persistence is the caller's responsibility.
+        // Calling updateSetting from here creates an infinite mutual recursion:
+        // button → setTheme → updateSetting → setTheme → updateSetting → … → stack overflow.
         setTimeout(() => document.body.classList.remove('theme-transition'), 350);
     }
 
