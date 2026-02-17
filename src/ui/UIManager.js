@@ -999,10 +999,18 @@ export class UIManager {
             canvas.style.zIndex = '9999';
             document.body.appendChild(canvas);
 
-            window.addEventListener('resize', () => {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-            });
+            // Register the resize handler once, stored on the instance to allow removal if needed.
+            // Using a named method avoids registering a new closure on each call.
+            if (!this._confettiResizeHandler) {
+                this._confettiResizeHandler = () => {
+                    const c = document.getElementById('confetti-canvas');
+                    if (c) {
+                        c.width = window.innerWidth;
+                        c.height = window.innerHeight;
+                    }
+                };
+                window.addEventListener('resize', this._confettiResizeHandler);
+            }
         }
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -1218,7 +1226,7 @@ export class UIManager {
         }
 
         const currentText = element.textContent.replace(/[^0-9.-]/g, '');
-        let start = parseInt(currentText);
+        let start = parseInt(currentText, 10);
         if (isNaN(start)) start = 0;
 
         if (start === target) {
@@ -1355,11 +1363,13 @@ export class UIManager {
 
         let canSplit = false;
         try {
+            // Engine blocks split when playerHands.length > MAX_SPLITS (i.e. allows up to MAX_SPLITS+1 hands).
+            // UI must mirror that: allow split while hands count is <= MAX_SPLITS (not strictly <).
             canSplit = !!(isPlayerTurn &&
                 currentHand?.cards?.length === 2 &&
                 HandUtils.getCardNumericValue(currentHand.cards[0]) === HandUtils.getCardNumericValue(currentHand.cards[1]) &&
                 state.balance >= currentHand.bet &&
-                state.playerHands.length < CONFIG.MAX_SPLITS);
+                state.playerHands.length <= CONFIG.MAX_SPLITS);
         } catch (e) {
             console.warn('Error checking canSplit state:', e);
             canSplit = false;
@@ -1435,6 +1445,7 @@ export class UIManager {
         if (!grid) return;
 
         const items = [
+            { label: 'Mãos Jogadas', value: stats.handsPlayed ?? 0 },
             { label: 'Taxa de Vitória', value: stats.winRate != null ? `${stats.winRate}%` : 'N/A' },
             { label: 'ROI Líquido', value: stats.netROI != null ? `${stats.netROI}%` : 'N/A' },
             { label: 'Maior Sequência de Vitórias', value: stats.longestWinStreak ?? 0 },
