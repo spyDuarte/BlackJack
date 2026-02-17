@@ -460,7 +460,8 @@ export class GameManager {
         a.href = url;
         a.download = `blackjack-${this.username}-${new Date().toISOString().slice(0, 10)}.json`;
         a.click();
-        URL.revokeObjectURL(url);
+        // Defer revocation to allow the browser to initiate the download first.
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     importData(file) {

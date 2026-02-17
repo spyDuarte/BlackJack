@@ -72,7 +72,9 @@ export class RoundController {
         }
         this.game.updateUI();
 
-        const pVal = HandUtils.calculateHandValue(this.game.engine.playerHands[0].cards);
+        const firstHand = this.game.engine.playerHands[0];
+        if (!firstHand) return;
+        const pVal = HandUtils.calculateHandValue(firstHand.cards);
         if (pVal === 21) {
             this.game.addTimeout(() => this.game.endGame(), CONFIG.DELAYS.TURN);
         }
@@ -225,6 +227,7 @@ export class RoundController {
         try {
             if (this.game.engine.playerHands.length === 0) return;
             const currentHand = this.game.engine.playerHands[this.game.engine.currentHandIndex];
+            if (!currentHand) return;
 
             const balance = Number(this.game.balance) || 0;
             const bet = Number(currentHand.bet) || 0;

@@ -62,7 +62,7 @@ export class StorageManager {
             const json = decodeURIComponent(escape(atob(encoded)));
             const { d, c } = JSON.parse(json);
             if (StorageManager.checksum(d) !== c) {
-                console.warn('Storage data checksum mismatch - data may have been tampered');
+                console.warn('Storage data checksum mismatch - data may be corrupted or was modified externally');
                 return d; // Return anyway but warn
             }
             return d;
