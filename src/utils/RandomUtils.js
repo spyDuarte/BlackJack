@@ -5,6 +5,8 @@
  * @returns {number} Random integer in [0, max-1].
  */
 export function getRandomInt(max) {
+    if (max <= 0 || !Number.isInteger(max)) return 0;
+
     if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
         // Rejection sampling to avoid modulo bias
         // We want a number in [0, max-1]
