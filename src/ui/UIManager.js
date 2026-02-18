@@ -922,6 +922,11 @@ export class UIManager {
 
     showNewGameButton() {
         this.postRoundActionsVisible = true;
+        // Ensure the game-controls container is visible (newGameBtn/rebetBtn live
+        // inside it) and the bet controls are hidden until the player starts a new
+        // round explicitly via those buttons.
+        if (this.elements.gameControls) this.elements.gameControls.style.display = 'flex';
+        if (this.elements.betControls) this.elements.betControls.style.display = 'none';
         this._updateActionControls(this.game?.getState?.() || null);
     }
 

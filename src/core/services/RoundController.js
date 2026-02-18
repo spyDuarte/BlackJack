@@ -67,18 +67,27 @@ export class RoundController {
     }
 
     startPlayerTurn() {
+        const firstHand = this.game.engine.playerHands[0];
+        if (!firstHand) return;
+
+        const pVal = HandUtils.calculateHandValue(firstHand.cards);
+        if (pVal === 21) {
+            // Natural blackjack — hide controls immediately so the player cannot
+            // take any action during the auto-end delay (prevents state corruption).
+            if (this.game.ui) {
+                this.game.ui.toggleGameControls(false);
+                this.game.ui.showMessage('BLACKJACK!', 'win');
+            }
+            this.game.updateUI();
+            this.game.addTimeout(() => this.game.endGame(), CONFIG.DELAYS.TURN);
+            return;
+        }
+
         if (this.game.ui) {
             this.game.ui.toggleGameControls(true);
             this.game.ui.showMessage('Sua vez!');
         }
         this.game.updateUI();
-
-        const firstHand = this.game.engine.playerHands[0];
-        if (!firstHand) return;
-        const pVal = HandUtils.calculateHandValue(firstHand.cards);
-        if (pVal === 21) {
-            this.game.addTimeout(() => this.game.endGame(), CONFIG.DELAYS.TURN);
-        }
     }
 
     checkDealerBlackjack() {
@@ -341,6 +350,10 @@ export class RoundController {
     }
 
     endGame() {
+        // Guard against double-invocation (e.g. player clicks a button during the
+        // auto-end delay that startPlayerTurn() schedules for natural 21).
+        if (this.game.engine.gameOver) return;
+
         this.game.engine.gameOver = true;
         this.game.engine.dealerRevealed = true;
         this.game.events.emit('game:ending');
@@ -469,8 +482,10 @@ export class RoundController {
         if (this.game.ui) {
             this.game.ui.annotateHandResults(results);
             this.game.ui.showMessage(message, messageClass);
+            // showNewGameButton() makes the game-controls container visible so
+            // newGameBtn/rebetBtn appear. Do NOT call toggleGameControls(false)
+            // after this — it would reset postRoundActionsVisible and hide them.
             this.game.ui.showNewGameButton();
-            this.game.ui.toggleGameControls(false);
         }
 
         this.game.updateUI();
