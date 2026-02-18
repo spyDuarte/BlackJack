@@ -17,6 +17,8 @@ import { classifyHand } from './HandUtils.js';
 
 // Dealer upcard column index: 2,3,4,5,6,7,8,9,10,A
 const DEALER_COLS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
+// J, Q, K all map to the same column as '10' (index 8).
+const FACE_CARDS = new Set(['J', 'Q', 'K']);
 
 // Hard totals: rows keyed by player total (5–21)
 // Each row: [d2, d3, d4, d5, d6, d7, d8, d9, d10, dA]
@@ -97,7 +99,7 @@ function getDealerColIndex(dealerUpCard) {
     if (!dealerUpCard) return -1;
     const val = dealerUpCard.value;
     // 10-value cards (10, J, Q, K) all map to column index 8
-    if (['J', 'Q', 'K'].includes(val)) return 8;
+    if (FACE_CARDS.has(val)) return 8;
     const idx = DEALER_COLS.indexOf(val);
     return idx === -1 ? 8 : idx;
 }

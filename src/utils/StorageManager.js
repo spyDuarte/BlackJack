@@ -1,7 +1,12 @@
 export class StorageManager {
+    /** Returns true when the localStorage API is available in this environment. */
+    static get isAvailable() {
+        return typeof Storage !== 'undefined';
+    }
+
     static set(key, value) {
         try {
-            if (typeof Storage !== 'undefined') {
+            if (StorageManager.isAvailable) {
                 const encoded = StorageManager.encode(value);
                 localStorage.setItem(key, encoded);
                 return true;
@@ -18,7 +23,7 @@ export class StorageManager {
 
     static get(key) {
         try {
-            if (typeof Storage !== 'undefined') {
+            if (StorageManager.isAvailable) {
                 const raw = localStorage.getItem(key);
                 if (raw === null) return null;
                 return StorageManager.decode(raw);
@@ -31,7 +36,7 @@ export class StorageManager {
 
     static remove(key) {
         try {
-            if (typeof Storage !== 'undefined') {
+            if (StorageManager.isAvailable) {
                 localStorage.removeItem(key);
                 return true;
             }
