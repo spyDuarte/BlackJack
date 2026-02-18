@@ -67,18 +67,25 @@ export class RoundController {
     }
 
     startPlayerTurn() {
+        const firstHand = this.game.engine.playerHands[0];
+        if (!firstHand) return;
+        const pVal = HandUtils.calculateHandValue(firstHand.cards);
+
+        // When the player starts with 21 (natural blackjack) do NOT show the
+        // action buttons — the round ends automatically. Showing them with a
+        // zero balance creates a confusing frozen-UI state.
+        if (pVal === 21) {
+            if (this.game.ui) this.game.ui.showMessage('Blackjack!', 'win');
+            this.game.updateUI();
+            this.game.addTimeout(() => this.game.endGame(), CONFIG.DELAYS.TURN);
+            return;
+        }
+
         if (this.game.ui) {
             this.game.ui.toggleGameControls(true);
             this.game.ui.showMessage('Sua vez!');
         }
         this.game.updateUI();
-
-        const firstHand = this.game.engine.playerHands[0];
-        if (!firstHand) return;
-        const pVal = HandUtils.calculateHandValue(firstHand.cards);
-        if (pVal === 21) {
-            this.game.addTimeout(() => this.game.endGame(), CONFIG.DELAYS.TURN);
-        }
     }
 
     checkDealerBlackjack() {
@@ -469,8 +476,11 @@ export class RoundController {
         if (this.game.ui) {
             this.game.ui.annotateHandResults(results);
             this.game.ui.showMessage(message, messageClass);
-            this.game.ui.showNewGameButton();
+            // toggleGameControls(false) always resets postRoundActionsVisible to
+            // false, so it must be called BEFORE showNewGameButton() — otherwise
+            // the New Game / Rebet buttons are immediately hidden again.
             this.game.ui.toggleGameControls(false);
+            this.game.ui.showNewGameButton();
         }
 
         this.game.updateUI();
