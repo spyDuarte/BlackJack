@@ -27,10 +27,10 @@ export function computeAdvancedStats(history, baseStats) {
         sessionWorstBalance = 0,
     } = baseStats || {};
 
-    // Use cumulative counters for winRate so it is consistent with the returned
-    // wins/losses values (all-time counters, not limited by the 50-entry history buffer).
-    // Ties/pushes are not tracked as a separate counter; handsPlayed = wins + losses.
-    const totalHandsPlayed = wins + losses;
+    // Prefer cumulative counters (all-time, not capped by the ring buffer) for win rate
+    // and handsPlayed. When they are unavailable (e.g. in unit tests that only pass history),
+    // fall back to the history length so the value is never misleadingly 0.
+    const totalHandsPlayed = (wins + losses) || history.length;
     const winRate = totalHandsPlayed > 0 ? (wins / totalHandsPlayed) * 100 : 0;
     const netROI = totalAmountWagered > 0 ? (totalWinnings / totalAmountWagered) * 100 : 0;
 

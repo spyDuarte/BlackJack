@@ -178,6 +178,8 @@ export class BlackjackEngine {
         if (!hand) return null;
 
         if (hand.cards.length !== 2) return null;
+        // Enforce maximum number of splits (defense-in-depth; RoundController also checks this).
+        if (this.playerHands.length > CONFIG.MAX_SPLITS) return null;
         // Allow splitting any two cards with the same point value (e.g. 10-J, Q-K)
         if (HandUtils.getCardNumericValue(hand.cards[0]) !== HandUtils.getCardNumericValue(hand.cards[1])) return null;
 
@@ -290,8 +292,8 @@ export class BlackjackEngine {
         const dealerBJ = HandUtils.isNaturalBlackjack(this.dealerHand, 1);
 
         const results = this.playerHands.map(hand => {
-             const playerValue = HandUtils.calculateHandValue(hand.cards);
-             const playerBJ = HandUtils.isNaturalBlackjack(hand.cards, this.playerHands.length);
+            const playerValue = HandUtils.calculateHandValue(hand.cards);
+            const playerBJ = HandUtils.isNaturalBlackjack(hand.cards, this.playerHands.length);
 
              let result = 'lose';
              let winMultiplier = 0;

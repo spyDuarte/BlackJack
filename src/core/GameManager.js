@@ -391,23 +391,12 @@ export class GameManager {
     // resetGame, newGame, exportData, importData, updateSetting match original structure but use engine
 
     resetGame() {
+        // Clear pending timeouts before wiping state so no stale callback fires mid-reset.
         this.clearTimeouts();
-        this.balance = CONFIG.INITIAL_BALANCE;
-        this.wins = 0;
-        this.losses = 0;
-        this.blackjacks = 0;
-        this.totalWinnings = 0;
-        this.totalAmountWagered = 0;
-        this.sessionBestBalance = CONFIG.INITIAL_BALANCE;
-        this.sessionWorstBalance = CONFIG.INITIAL_BALANCE;
-        this.handHistory = new HandHistory(
-            CONFIG.HAND_HISTORY_MAX_ENTRIES,
-            (message, level = 'error') => {
-                if (this.ui) this.ui.showToast(message, level);
-            }
-        );
-        this.handCounter = 0;
-        // Reset and shuffle the shoe (deck)
+        // Re-use initializeGameState() to avoid duplicating the list of fields that need
+        // resetting — a single source of truth prevents state drift between the two paths.
+        this.initializeGameState();
+        // Shuffle the shoe so the new session starts with a fresh, randomly ordered deck.
         if (this.engine) {
             this.engine.shuffleDeck();
         }
