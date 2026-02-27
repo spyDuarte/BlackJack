@@ -5,9 +5,17 @@ export class AuthService {
     }
 
     setupAuthListener() {
-        this.supabase.auth.onAuthStateChange((event, session) => {
+        this.supabase.auth.onAuthStateChange(async (event, session) => {
             if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
-                this.onUserSignIn(session);
+                await this.onUserSignIn(session);
+            } else if (event === 'INITIAL_SESSION' && !session) {
+                // Initialize guest session
+                await this.game.loadGame();
+                this.game.loadSettings();
+                this.game.updateUI();
+                if (this.game.ui) {
+                    this.game.ui.setAuthLoading(false);
+                }
             } else if (event === 'SIGNED_OUT') {
                 this.onUserSignOut();
             }
